@@ -36,16 +36,6 @@ export const productRepository = {
       const bcSnap = await getDocs(bcQ);
       if (!bcSnap.empty && bcSnap.docs.some(d => d.id !== excludeId)) return 'Barcode already exists';
     }
-    if (name && brandId) {
-      const nameQ = query(
-        productRepository.getCollection(), 
-        where('companyId', '==', companyId), 
-        where('name', '==', name),
-        where('brandId', '==', brandId)
-      );
-      const nameSnap = await getDocs(nameQ);
-      if (!nameSnap.empty && nameSnap.docs.some(d => d.id !== excludeId)) return 'A product with this Name and Brand already exists';
-    }
     return null;
   },
 
@@ -100,9 +90,6 @@ export const productRepository = {
 
     const docRef = doc(db, 'products', id);
     const payload = { ...data, updatedAt: serverTimestamp(), updatedBy: userId };
-    
-    // Protect currentStock from being updated manually here
-    delete payload.currentStock;
 
     await updateDoc(docRef, payload);
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'Product', id, payload);

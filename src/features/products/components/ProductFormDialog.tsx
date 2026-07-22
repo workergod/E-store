@@ -179,8 +179,7 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
 
                 <div>
                   <Label>Opening Stock</Label>
-                  <Input type="number" disabled={!!product?.id} {...methods.register('openingStock')} />
-                  {product?.id && <p className="text-xs text-muted-foreground mt-1">Use Stock Adjustments to change stock.</p>}
+                  <Input type="number" {...methods.register('openingStock')} />
                 </div>
                 <div>
                   <Label>Minimum Stock (Alert Level)</Label>
