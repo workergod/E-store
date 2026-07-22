@@ -9,6 +9,7 @@ import type { Product } from '../../../shared/types/Product';
 import type { StockTransaction } from '../../../shared/types/StockTransaction';
 import { ProductTimeline } from '../../stock/components/ProductTimeline';
 import { Button } from '../../../shared/ui/Button';
+import { ProductFormDialog } from '../components/ProductFormDialog';
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,29 +20,31 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [stockHistory, setStockHistory] = useState<StockTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const fetchDetails = async () => {
+    if (!companyId || !id) return;
+    try {
+      setIsLoading(true);
+      const p = await productRepository.getById(id, companyId);
+      if (!p) {
+        toast.error("Product not found");
+        navigate('/products');
+        return;
+      }
+      setProduct(p);
+      
+      const history = await stockLedgerRepository.getHistoryByProduct(id, companyId);
+      setStockHistory(history);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load product details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchDetails() {
-      if (!companyId || !id) return;
-      try {
-        setIsLoading(true);
-        const p = await productRepository.getById(id, companyId);
-        if (!p) {
-          toast.error("Product not found");
-          navigate('/products');
-          return;
-        }
-        setProduct(p);
-        
-        const history = await stockLedgerRepository.getHistoryByProduct(id, companyId);
-        setStockHistory(history);
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to load product details");
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchDetails();
   }, [id, companyId, navigate]);
 
@@ -66,8 +69,7 @@ export default function ProductDetailsPage() {
           <p className="text-muted-foreground mt-1">SKU: {product.sku}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline"><Barcode className="h-4 w-4 mr-2" /> Print Label</Button>
-          <Button><Edit className="h-4 w-4 mr-2" /> Edit Product</Button>
+          <Button onClick={() => setIsFormOpen(true)}><Edit className="h-4 w-4 mr-2" /> Edit Product</Button>
         </div>
       </div>
 
@@ -146,6 +148,15 @@ export default function ProductDetailsPage() {
 
         </div>
       </div>
+
+      {isFormOpen && (
+        <ProductFormDialog
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={fetchDetails}
+          product={product}
+        />
+      )}
     </div>
   );
 }
