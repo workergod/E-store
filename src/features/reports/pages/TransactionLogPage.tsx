@@ -18,7 +18,6 @@ interface LogEntry {
   customerOrTech: string;
   phone?: string;
   items: { name: string; qty: number; unit?: string }[];
-  totalAmount?: number;
   notes?: string;
   status?: string;
 }
@@ -53,8 +52,7 @@ export default function TransactionLogPage() {
       // 1. Issues
       const issueSnap = await getDocs(query(
         collection(db, 'issueTransactions'),
-        where('companyId', '==', companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', companyId)
       ));
       issueSnap.forEach(doc => {
         const d = doc.data();
@@ -73,8 +71,7 @@ export default function TransactionLogPage() {
       // 2. Returns
       const returnSnap = await getDocs(query(
         collection(db, 'returnTransactions'),
-        where('companyId', '==', companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', companyId)
       ));
       returnSnap.forEach(doc => {
         const d = doc.data();
@@ -92,8 +89,7 @@ export default function TransactionLogPage() {
       // 3. Purchase Orders
       const poSnap = await getDocs(query(
         collection(db, 'purchaseOrders'),
-        where('companyId', '==', companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', companyId)
       ));
       poSnap.forEach(doc => {
         const d = doc.data();
@@ -104,7 +100,6 @@ export default function TransactionLogPage() {
           staffName: d.createdBy || 'Staff',
           customerOrTech: d.supplierName || d.supplierId || 'Supplier',
           items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity })),
-          totalAmount: d.totalAmount,
           status: d.status,
           notes: d.notes,
         });
@@ -114,8 +109,7 @@ export default function TransactionLogPage() {
       try {
         const saleSnap = await getDocs(query(
           collection(db, 'customerSales'),
-          where('companyId', '==', companyId),
-          orderBy('createdAt', 'desc')
+          where('companyId', '==', companyId)
         ));
         saleSnap.forEach(doc => {
           const d = doc.data();
@@ -127,7 +121,6 @@ export default function TransactionLogPage() {
             customerOrTech: d.customerName,
             phone: d.customerPhone,
             items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity })),
-            totalAmount: d.totalAmount,
             notes: d.notes,
           });
         });
@@ -260,7 +253,6 @@ export default function TransactionLogPage() {
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Phone</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Items</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Given By / Staff</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -276,13 +268,10 @@ export default function TransactionLogPage() {
                   {log.items.map(it => `${it.name} × ${it.qty}`).join(', ')}
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>{log.staffName}</td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
-                  {log.totalAmount != null ? `₹${log.totalAmount.toFixed(2)}` : '-'}
-                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>No transactions found</td></tr>
+              <tr><td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>No transactions found</td></tr>
             )}
           </tbody>
         </table>
@@ -305,7 +294,6 @@ export default function TransactionLogPage() {
                   <th className="px-4 py-3 text-left">Phone</th>
                   <th className="px-4 py-3 text-left">Items</th>
                   <th className="px-4 py-3 text-left">Given By / Staff</th>
-                  <th className="px-4 py-3 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -336,9 +324,6 @@ export default function TransactionLogPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{log.staffName}</td>
-                      <td className="px-4 py-3 text-right font-semibold">
-                        {log.totalAmount != null ? `₹${log.totalAmount.toFixed(2)}` : '-'}
-                      </td>
                     </tr>
                   );
                 })}

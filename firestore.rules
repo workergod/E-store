@@ -26,6 +26,10 @@ service cloud.firestore {
       return getUserData() != null ? getUserData().companyId : null;
     }
 
+    function isCompanyMember(companyId) {
+      return getUserData() != null && getUserData().companyId == companyId;
+    }
+
     // -----------------------------------------------------
     // USERS COLLECTION
     // -----------------------------------------------------
@@ -54,8 +58,7 @@ service cloud.firestore {
     // -----------------------------------------------------
     match /companies/{companyId} {
       allow read: if isAuthenticated();
-      
-      allow write: if isAuthenticated() && isSuperAdmin();
+      allow write: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(companyId));
     }
 
     // -----------------------------------------------------
