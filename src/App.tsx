@@ -38,9 +38,7 @@ import SettingsPage from './features/settings/pages/SettingsPage';
 import HelpPage from './features/settings/pages/HelpPage';
 
 import { AppShell } from './shared/layouts/AppShell';
-
-
-
+import { Toaster } from 'sonner';
 
 function MainApp() {
   useAuth(); // Hook to initialize and listen to Firebase auth
@@ -105,6 +103,7 @@ function MainApp() {
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
       <MainApp />
     </BrowserRouter>
   );

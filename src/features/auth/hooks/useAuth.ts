@@ -49,6 +49,7 @@ export function useAuth() {
             
             if (!userDoc) {
               await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document not found and not an employee');
+              toast.error(`Email ${firebaseUser.email} is not registered as an Employee. Please add it first.`);
               logout();
               setIsLoading(false);
               return;
