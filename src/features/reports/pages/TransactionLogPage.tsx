@@ -239,7 +239,7 @@ export default function TransactionLogPage() {
       </div>
 
       {/* Print-ready content */}
-      <div ref={printRef} className="hidden-print-wrapper">
+      <div ref={printRef} className="hidden">
         <h2 style={{ textAlign: 'center', margin: '0 0 4px' }}>Transaction Log Report</h2>
         <p style={{ textAlign: 'center', fontSize: '11px', color: '#666', marginBottom: '16px' }}>
           {company?.companyName || 'E Store Pro'} • Filtered: {filter}
