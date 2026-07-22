@@ -13,16 +13,18 @@ export const purchaseOrderRepository = {
     // Simple sequence generator: find last PO and increment
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('companyId', '==', companyId),
-      orderBy('poNumber', 'desc'),
-      limit(1)
+      where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
     const year = new Date().getFullYear();
     if (snapshot.empty) {
       return `PO-${year}-000001`;
     }
-    const lastPO = snapshot.docs[0].data().poNumber as string;
+    
+    // Sort in memory to find the highest PO number
+    const pos = snapshot.docs.map(doc => doc.data().poNumber as string).filter(Boolean);
+    pos.sort((a, b) => b.localeCompare(a));
+    const lastPO = pos[0];
     const parts = lastPO.split('-');
     if (parts.length === 3) {
       const lastNum = parseInt(parts[2], 10);
@@ -33,9 +35,14 @@ export const purchaseOrderRepository = {
   },
 
   getAll: async (companyId: string): Promise<PurchaseOrder[]> => {
-    const q = query(collection(db, COLLECTION_NAME), where('companyId', '==', companyId), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, COLLECTION_NAME), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+    const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+    return pos.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   getById: async (id: string, companyId: string): Promise<PurchaseOrder | null> => {

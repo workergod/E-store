@@ -10,11 +10,15 @@ export const stockLedgerRepository = {
     const q = query(
       stockLedgerRepository.getCollection(),
       where('companyId', '==', companyId),
-      where('productId', '==', productId),
-      orderBy('date', 'desc')
+      where('productId', '==', productId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockTransaction));
+    const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockTransaction));
+    return history.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   /**

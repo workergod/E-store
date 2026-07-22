@@ -45,11 +45,15 @@ class SalesRepository {
   async getAll(companyId: string): Promise<CustomerSale[]> {
     const q = query(
       collection(db, this.col),
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc')
+      where('companyId', '==', companyId)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomerSale));
+    const sales = snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomerSale));
+    return sales.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   }
 
   async getById(id: string): Promise<CustomerSale | null> {

@@ -8,26 +8,34 @@ const COLLECTION_NAME = 'stockSnapshots';
 export const stockSnapshotRepository = {
   getCollection: () => collection(db, COLLECTION_NAME),
 
-  getAll: async (companyId: string): Promise<StockSnapshot[]> => {
+  getSnapshots: async (companyId: string): Promise<StockSnapshot[]> => {
     const q = query(
-      stockSnapshotRepository.getCollection(),
-      where('companyId', '==', companyId),
-      orderBy('snapshotDate', 'desc')
+      collection(db, COLLECTION_NAME),
+      where('companyId', '==', companyId)
     );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockSnapshot));
+    const snap = await getDocs(q);
+    const snapshots = snap.docs.map(d => ({ id: d.id, ...d.data() } as StockSnapshot));
+    return snapshots.sort((a, b) => {
+      const timeA = a.snapshotDate?.toDate ? a.snapshotDate.toDate().getTime() : (a.snapshotDate ? new Date(a.snapshotDate as any).getTime() : 0);
+      const timeB = b.snapshotDate?.toDate ? b.snapshotDate.toDate().getTime() : (b.snapshotDate ? new Date(b.snapshotDate as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   getLatest: async (companyId: string): Promise<StockSnapshot | null> => {
     const q = query(
-      stockSnapshotRepository.getCollection(),
-      where('companyId', '==', companyId),
-      orderBy('snapshotDate', 'desc'),
-      limit(1)
+      collection(db, COLLECTION_NAME),
+      where('companyId', '==', companyId)
     );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as StockSnapshot;
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const snapshots = snap.docs.map(d => ({ id: d.id, ...d.data() } as StockSnapshot));
+    snapshots.sort((a, b) => {
+      const timeA = a.snapshotDate?.toDate ? a.snapshotDate.toDate().getTime() : (a.snapshotDate ? new Date(a.snapshotDate as any).getTime() : 0);
+      const timeB = b.snapshotDate?.toDate ? b.snapshotDate.toDate().getTime() : (b.snapshotDate ? new Date(b.snapshotDate as any).getTime() : 0);
+      return timeB - timeA;
+    });
+    return snapshots[0];
   },
 
   /**

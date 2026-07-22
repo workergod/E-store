@@ -12,11 +12,15 @@ export const employeeSkillRepository = {
     const q = query(
       employeeSkillRepository.getCollection(),
       where('companyId', '==', companyId),
-      where('employeeId', '==', employeeId),
-      orderBy('createdAt', 'desc')
+      where('employeeId', '==', employeeId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeSkill));
+    const skills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeSkill));
+    return skills.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   create: async (data: Omit<EmployeeSkill, 'id' | 'createdAt'>, userId: string): Promise<string> => {

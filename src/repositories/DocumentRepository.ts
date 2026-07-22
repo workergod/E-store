@@ -13,11 +13,15 @@ export const documentRepository = {
       documentRepository.getCollection(),
       where('companyId', '==', companyId),
       where('entityType', '==', entityType),
-      where('entityId', '==', entityId),
-      orderBy('createdAt', 'desc')
+      where('entityId', '==', entityId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DocumentRecord));
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DocumentRecord));
+    return docs.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   create: async (data: Omit<DocumentRecord, 'id' | 'createdAt'>, userId: string): Promise<string> => {

@@ -10,11 +10,15 @@ export const issueRepository = {
   getAll: async (companyId: string): Promise<IssueTransaction[]> => {
     const q = query(
       issueRepository.getCollection(), 
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc')
+      where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IssueTransaction));
+    const issues = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IssueTransaction));
+    return issues.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   getById: async (id: string, companyId: string): Promise<IssueTransaction | null> => {

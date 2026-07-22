@@ -10,12 +10,16 @@ export const stockAdjustmentRepository = {
 
   getAll: async (companyId: string): Promise<StockAdjustment[]> => {
     const q = query(
-      stockAdjustmentRepository.getCollection(),
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc')
+      collection(db, COLLECTION_NAME),
+      where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockAdjustment));
+    const adjustments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockAdjustment));
+    return adjustments.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return timeB - timeA;
+    });
   },
 
   getById: async (id: string, companyId: string): Promise<StockAdjustment | null> => {
