@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 1. Colors */
+    --primary: #0F7B46;
+    --primary-dark: #14532D;
+    
+    --background: #F7F8FA;
+    --card: #FFFFFF;
+    --border: #E8EBEF;
+    --input: #E8EBEF;
+    
+    --foreground: #111827; /* Text Primary */
+    --muted-foreground: #6B7280; /* Text Secondary */
+    --muted: #F3F4F6;
+    
+    --success: #10B981;
+    --success-foreground: #FFFFFF;
+    --warning: #F59E0B;
+    --warning-foreground: #FFFFFF;
+    --destructive: #EF4444;
+    --destructive-foreground: #FFFFFF;
+    
+    --accent: #F3F4F6;
+    --accent-foreground: #111827;
+    --popover: #FFFFFF;
+    --popover-foreground: #111827;
+    --secondary: #F8FAFC;
+    --secondary-foreground: #0F172A;
+    --ring: #0F7B46;
+    
+    /* 2. Spacing Scale (in rems for Tailwind, base 16px) 
+       Used natively by tailwind, but can define css vars if needed.
+    */
+    --spacing-xs: 0.25rem; /* 4px */
+    --spacing-sm: 0.5rem;  /* 8px */
+    --spacing-md: 0.75rem; /* 12px */
+    --spacing-lg: 1rem;    /* 16px */
+    --spacing-xl: 1.25rem; /* 20px */
+    --spacing-2xl: 1.5rem; /* 24px */
+    --spacing-3xl: 2rem;   /* 32px */
+    --spacing-4xl: 2.5rem; /* 40px */
+    --spacing-5xl: 3rem;   /* 48px */
+    --spacing-6xl: 4rem;   /* 64px */
+
+    /* 3. Border Radii */
+    --radius: 20px;
+    --radius-btn: 14px;
+    --radius-input: 16px;
+
+    /* 4. Shadows */
+    --shadow-premium: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+    --shadow-floating: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+
+  .dark {
+    /* Basic dark mode overrides if needed in future */
+    --background: #0B0F19;
+    --card: #111827;
+    --border: #1F2937;
+    --input: #1F2937;
+    --foreground: #F9FAFB;
+    --muted-foreground: #9CA3AF;
+    --muted: #1F2937;
+    --popover: #111827;
+    --popover-foreground: #F9FAFB;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Universal Page Container Standard */
+  .page-container {
+    @apply w-full mx-auto px-[var(--spacing-3xl)] max-w-[1800px];
+  }
+
+  /* Typography Scale */
+  .text-display {
+    @apply text-[40px] leading-[48px] font-bold tracking-tight;
+  }
+  .text-page-title {
+    @apply text-[36px] leading-[44px] font-bold tracking-tight;
+  }
+  .text-section-title {
+    @apply text-[24px] leading-[32px] font-semibold tracking-tight;
+  }
+  .text-card-title {
+    @apply text-[18px] leading-[28px] font-semibold tracking-tight;
+  }
+  .text-card-number {
+    @apply text-[34px] leading-[40px] font-bold tracking-tight;
+  }
+  .text-body {
+    @apply text-[14px] leading-[20px] font-medium;
+  }
+  .text-caption {
+    @apply text-[12px] leading-[16px] font-normal;
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
