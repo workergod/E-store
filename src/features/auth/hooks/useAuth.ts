@@ -4,6 +4,7 @@ import { getDocs, collection, query, where, doc, setDoc, serverTimestamp } from 
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../../../firebase/auth';
 import { db } from '../../../firebase/firestore';
+import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { userRepository } from '../../../repositories/UserRepository';
 import { companyRepository } from '../../../repositories/CompanyRepository';
@@ -126,8 +127,9 @@ export function useAuth() {
           await loginHistoryRepository.logSignIn(userDoc.uid);
           
           setUser(userDoc);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Auth sync error:", error);
+          toast.error(error.message || 'Authentication failed. Please contact your administrator.');
           logout();
         }
       } else {

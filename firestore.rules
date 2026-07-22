@@ -7,22 +7,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Function to fetch the user's role from the users collection
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // Function to get the user's company ID
-    function getUserCompanyId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId;
+    // Function to fetch the user's data safely
+    function getUserData() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data 
+        : null;
     }
 
     function isSuperAdmin() {
-      return getUserRole() == 'SuperAdmin';
+      return getUserData() != null && getUserData().role == 'SuperAdmin';
     }
 
     function isOwner() {
-      return getUserRole() == 'Owner';
+      return getUserData() != null && getUserData().role == 'Owner';
+    }
+
+    function getUserCompanyId() {
+      return getUserData() != null ? getUserData().companyId : null;
     }
 
     // -----------------------------------------------------
