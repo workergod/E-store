@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserCheck, UserMinus, PackageOpen, Eye, Plus } from 'lucide-react';
+import { Users, UserCheck, UserMinus, PackageOpen, Eye, Plus, Trash2 } from 'lucide-react';
 import { useAuthStore } from "../../../store/authStore";
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import type { Employee } from '../../../shared/types/Employee';
@@ -14,7 +14,7 @@ import { AppCard } from '../../../shared/app/AppCard';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
-  const { company } = useAuthStore();
+  const { company, user } = useAuthStore();
   const companyId = company?.companyId;
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -38,6 +38,19 @@ export default function EmployeeDashboard() {
 
   const activeEmployees = employees.filter(e => e.status === 'ACTIVE');
   const inactiveEmployees = employees.filter(e => e.status !== 'ACTIVE');
+
+  const handleDelete = async (id: string) => {
+    if (!companyId || !user) return;
+    if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+      try {
+        await employeeRepository.delete(id, companyId, user.uid);
+        setEmployees(employees.filter(e => e.id !== id));
+      } catch (error) {
+        console.error('Failed to delete employee', error);
+        alert('Failed to delete employee');
+      }
+    }
+  };
 
   const columns = [
     {
@@ -100,6 +113,9 @@ export default function EmployeeDashboard() {
         <div className="flex justify-end gap-2">
           <AppButton variant="ghost" size="icon" onClick={() => navigate(`/employees/${row.original.id}`)}>
             <Eye className="h-4 w-4" />
+          </AppButton>
+          <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original.id!)} className="text-destructive hover:bg-destructive/10">
+            <Trash2 className="h-4 w-4" />
           </AppButton>
         </div>
       )
