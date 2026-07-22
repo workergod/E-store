@@ -235,91 +235,108 @@ export default function IssueMaterialsPage() {
 
       <FormProvider {...methods}>
         <AppForm onSubmit={methods.handleSubmit(onSubmit)}>
-          <FormSection title="Transaction Details" description="Select the employee receiving the items.">
-            <FormRow>
-              <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
-                <AppInput 
-                  list="employees-list" 
-                  placeholder="Type name to select or create..." 
-                  {...methods.register('employeeName')} 
-                />
-                <datalist id="employees-list">
-                  {employees.map(e => (
-                    <option key={e.id} value={`${e.firstName} ${e.lastName}`} />
-                  ))}
-                </datalist>
-              </FormField>
-              <FormField label="Date" required error={methods.formState.errors.issueDate?.message}>
-                <AppInput type="date" {...methods.register('issueDate')} />
-              </FormField>
-            </FormRow>
-          </FormSection>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Items */}
+            <div className="lg:col-span-2 space-y-6">
+              <FormSection title="Items to Issue" description="Select products and quantities. Stock will be immediately deducted.">
+                <div className="flex justify-end mb-4">
+                  <AppButton type="button" variant="outline" size="sm" onClick={() => append({ productId: '', issuedQty: 1 })}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Item
+                  </AppButton>
+                </div>
 
-          <FormSection title="Items to Issue" description="Select products and quantities. Stock will be immediately deducted.">
-            <div className="flex justify-end mb-4">
-              <AppButton type="button" variant="outline" size="sm" onClick={() => append({ productId: '', issuedQty: 1 })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Item
-              </AppButton>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Product</th>
-                    <th className="px-4 py-3 font-medium w-32">Current Stock</th>
-                    <th className="px-4 py-3 font-medium w-40">Qty to Issue</th>
-                    <th className="px-4 py-3 font-medium w-12 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fields.map((field, index) => {
-                    const wItem = watchedItems[index];
-                    const prod = products.find(p => p.id === wItem?.productId);
-                    return (
-                      <tr key={field.id} className="border-b border-border">
-                        <td className="px-2 py-2">
-                          <select {...methods.register(`items.${index}.productId` as const)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm">
-                            <option value="">Select Product...</option>
-                            {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
-                          </select>
-                        </td>
-                        <td className="px-4 py-2 font-medium">
-                          {prod ? (
-                            <span className={prod.currentStock > 0 ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"}>
-                              {prod.currentStock}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td className="px-2 py-2">
-                          <AppInput type="number" step="0.01" {...methods.register(`items.${index}.issuedQty` as const)} />
-                        </td>
-                        <td className="px-2 py-2 text-center">
-                          <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]">
-                            <Trash2 className="h-4 w-4" />
-                          </AppButton>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Product</th>
+                        <th className="px-4 py-3 font-medium w-32">Current Stock</th>
+                        <th className="px-4 py-3 font-medium w-32">Qty to Issue</th>
+                        <th className="px-4 py-3 font-medium w-12 text-center"></th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-2 text-xs text-[hsl(var(--destructive))]">
-               {methods.formState.errors.items?.message}
-            </div>
-          </FormSection>
+                    </thead>
+                    <tbody>
+                      {fields.map((field, index) => {
+                        const wItem = watchedItems[index];
+                        const prod = products.find(p => p.id === wItem?.productId);
+                        return (
+                          <tr key={field.id} className="border-b border-border">
+                            <td className="px-2 py-2">
+                              <select {...methods.register(`items.${index}.productId` as const)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm">
+                                <option value="">Select Product...</option>
+                                {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                              </select>
+                            </td>
+                            <td className="px-4 py-2 font-medium">
+                              {prod ? (
+                                <span className={prod.currentStock > 0 ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"}>
+                                  {prod.currentStock}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-2 py-2">
+                              <AppInput type="number" step="0.01" {...methods.register(`items.${index}.issuedQty` as const)} />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]">
+                                <Trash2 className="h-4 w-4" />
+                              </AppButton>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-2 text-xs text-[hsl(var(--destructive))]">
+                   {methods.formState.errors.items?.message}
+                </div>
+              </FormSection>
 
-          <FormSection title="Additional Notes" description="Any special instructions or job reference numbers.">
-            <FormField label="Notes" error={methods.formState.errors.notes?.message}>
-              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" {...methods.register('notes')} placeholder="e.g. For AC Installation at Building 4..."></textarea>
-            </FormField>
-          </FormSection>
+              <FormSection title="Additional Notes" description="Any special instructions or job reference numbers.">
+                <FormField label="Notes" error={methods.formState.errors.notes?.message}>
+                  <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" {...methods.register('notes')} placeholder="e.g. For AC Installation at Building 4..."></textarea>
+                </FormField>
+              </FormSection>
+            </div>
 
-          <FormActions>
-            <AppButton type="button" variant="outline" onClick={() => navigate('/inventory')} disabled={isSaving}>Cancel</AppButton>
-            <AppButton type="submit" disabled={isSaving}>{isSaving ? 'Processing...' : 'Issue & Generate Receipt'}</AppButton>
-          </FormActions>
+            {/* Right Column: Transaction Details & Submit */}
+            <div className="space-y-6">
+              <FormSection title="Transaction Details" description="Select the employee receiving the items.">
+                <div className="space-y-4">
+                  <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
+                    <AppInput 
+                      list="employees-list" 
+                      placeholder="Type name to select or create..." 
+                      {...methods.register('employeeName')} 
+                    />
+                    <datalist id="employees-list">
+                      {employees.map(e => (
+                        <option key={e.id} value={`${e.firstName} ${e.lastName}`} />
+                      ))}
+                    </datalist>
+                  </FormField>
+                  <FormField label="Date" required error={methods.formState.errors.issueDate?.message}>
+                    <AppInput type="date" {...methods.register('issueDate')} />
+                  </FormField>
+                </div>
+              </FormSection>
+
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6 sticky top-[90px]">
+                <h3 className="font-semibold mb-4 text-lg border-b border-border pb-2">Summary</h3>
+                <div className="flex justify-between items-center mb-6 text-sm">
+                   <span className="text-muted-foreground">Total Unique Items</span>
+                   <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
+                </div>
+                <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
+                  {isSaving ? 'Processing...' : 'Issue & Generate Receipt'}
+                </AppButton>
+                <AppButton type="button" variant="ghost" onClick={() => navigate('/inventory')} disabled={isSaving} className="w-full text-muted-foreground">
+                  Cancel Transaction
+                </AppButton>
+              </div>
+            </div>
+          </div>
         </AppForm>
       </FormProvider>
     </PageContainer>
