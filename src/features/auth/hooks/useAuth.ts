@@ -34,7 +34,7 @@ export function useAuth() {
                   email: firebaseUser.email,
                   fullName: firebaseUser.displayName || `${empData.firstName} ${empData.lastName}`,
                   photoURL: firebaseUser.photoURL || '',
-                  role: empData.role === 'Manager' ? Role.MANAGER : Role.TECHNICIAN, // Map employee role to system role
+                  role: empData.role === 'Manager' ? Role.MANAGER : Role.STAFF, // Map employee role to system role
                   companyId: empData.companyId,
                   status: UserStatus.ACTIVE,
                   permissions: [],
