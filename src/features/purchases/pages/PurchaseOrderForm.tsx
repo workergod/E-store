@@ -23,12 +23,8 @@ import { FormField } from '../../../shared/forms/FormField';
 
 import { AppInput } from '../../../shared/forms/AppInput';
 
-const itemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.coerce.number().min(1, "Must be > 0"),
-  unitCost: z.coerce.number().min(0),
-  discount: z.coerce.number().min(0).default(0),
-  taxAmount: z.coerce.number().min(0).default(0),
 });
 
 const poSchema = z.object({
@@ -47,9 +43,6 @@ type POFormData = {
   items: {
     productId: string;
     quantity: number;
-    unitCost: number;
-    discount: number;
-    taxAmount: number;
   }[];
 };
 
@@ -67,7 +60,7 @@ export default function PurchaseOrderForm() {
     defaultValues: {
       supplierId: '',
       purchaseDate: new Date().toISOString().split('T')[0],
-      items: [{ productId: '', quantity: 1, unitCost: 0, discount: 0, taxAmount: 0 }]
+      items: [{ productId: '', quantity: 1 }]
     }
   });
 
@@ -77,10 +70,6 @@ export default function PurchaseOrderForm() {
   });
 
   const watchedItems = methods.watch("items");
-  const totalAmount = watchedItems.reduce((acc, item) => {
-    const rowTotal = (item.quantity * item.unitCost) - item.discount + item.taxAmount;
-    return acc + rowTotal;
-  }, 0);
 
   useEffect(() => {
     if (!companyId) return;
@@ -102,13 +91,11 @@ export default function PurchaseOrderForm() {
       
       const enrichedItems = data.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
-        const total = (item.quantity * item.unitCost) - item.discount + item.taxAmount;
         return {
           ...item,
           productName: prod?.name || 'Unknown',
           sku: prod?.sku || '',
-          receivedQuantity: 0,
-          total
+          receivedQuantity: 0
         };
       });
 
@@ -120,8 +107,6 @@ export default function PurchaseOrderForm() {
         expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate) : undefined,
         notes: data.notes,
         items: enrichedItems,
-        totalAmount,
-        taxes: [],
         createdBy: user.uid
       };
 
@@ -171,7 +156,7 @@ export default function PurchaseOrderForm() {
 
           <FormSection title="Line Items" description="Add products to this order.">
             <div className="flex justify-end mb-4">
-              <AppButton type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, unitCost: 0, discount: 0, taxAmount: 0 })}>
+              <AppButton type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Item
               </AppButton>
             </div>
@@ -181,18 +166,13 @@ export default function PurchaseOrderForm() {
                 <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                   <tr>
                     <th className="px-4 py-3 font-medium">Product</th>
-                    <th className="px-4 py-3 font-medium w-24">Qty</th>
-                    <th className="px-4 py-3 font-medium w-32">Unit Cost</th>
-                    <th className="px-4 py-3 font-medium w-28">Discount</th>
-                    <th className="px-4 py-3 font-medium w-28">Tax</th>
-                    <th className="px-4 py-3 font-medium text-right">Total</th>
+                    <th className="px-4 py-3 font-medium w-32">Qty</th>
                     <th className="px-4 py-3 font-medium w-12 text-center"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {fields.map((field, index) => {
                     const wItem = watchedItems[index];
-                    const rowTotal = wItem ? ((wItem.quantity * wItem.unitCost) - wItem.discount + wItem.taxAmount) : 0;
                     return (
                       <tr key={field.id} className="border-b border-border">
                         <td className="px-2 py-2">
@@ -204,16 +184,6 @@ export default function PurchaseOrderForm() {
                         <td className="px-2 py-2">
                           <AppInput type="number" {...methods.register(`items.${index}.quantity` as const)} />
                         </td>
-                        <td className="px-2 py-2">
-                          <AppInput type="number" step="0.01" {...methods.register(`items.${index}.unitCost` as const)} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <AppInput type="number" step="0.01" {...methods.register(`items.${index}.discount` as const)} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <AppInput type="number" step="0.01" {...methods.register(`items.${index}.taxAmount` as const)} />
-                        </td>
-                        <td className="px-4 py-2 text-right font-medium">₹{rowTotal.toFixed(2)}</td>
                         <td className="px-2 py-2 text-center">
                           <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
@@ -226,12 +196,7 @@ export default function PurchaseOrderForm() {
               </table>
             </div>
             
-            <div className="flex justify-end mt-6 pt-4 border-t border-border">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-                <p className="text-2xl font-bold text-foreground">₹{totalAmount.toFixed(2)}</p>
-              </div>
-            </div>
+            <div className="mt-6 pt-4 border-t border-border" />
           </FormSection>
 
           <FormSection title="Additional Details" description="Provide any extra notes for the supplier.">

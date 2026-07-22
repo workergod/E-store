@@ -18,7 +18,6 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [metrics, setMetrics] = useState({
     totalProducts: 0,
-    stockValue: 0,
     lowStock: 0,
     pendingReturns: 0,
   })
@@ -36,13 +35,11 @@ export default function DashboardPage() {
         ])
 
         const totalProducts = products.length
-        const stockValue = products.reduce((acc, p) => acc + ((p.currentStock || 0) * (p.purchasePrice || 0)), 0)
         const lowStock = products.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0)).length
         const pendingReturns = issues.filter(i => i.status === 'PARTIALLY_RETURNED' || i.status === 'ISSUED').length
 
         setMetrics({
           totalProducts,
-          stockValue,
           lowStock,
           pendingReturns
         })
@@ -91,18 +88,12 @@ export default function DashboardPage() {
         description="Overview of your inventory and operations."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[var(--spacing-3xl)]">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-[var(--spacing-3xl)]">
         <MetricCard 
           title="Total Products" 
           value={isLoading ? "..." : metrics.totalProducts.toString()} 
           icon={<Package className="h-5 w-5" />} 
           description="Active catalog items"
-        />
-        <MetricCard 
-          title="Est. Stock Value" 
-          value={isLoading ? "..." : `$${metrics.stockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
-          icon={<TrendingUp className="h-5 w-5" />} 
-          description="Based on purchase cost"
         />
         <MetricCard 
           title="Low Stock Alerts" 

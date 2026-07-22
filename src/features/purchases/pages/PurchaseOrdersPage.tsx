@@ -71,11 +71,6 @@ export default function PurchaseOrdersPage() {
       cell: ({ row }: any) => suppliers[row.original.supplierId]?.companyName || 'Unknown'
     },
     {
-      header: 'Total Amount',
-      accessorKey: 'totalAmount',
-      cell: ({ row }: any) => <span className="font-medium">${row.original.totalAmount.toFixed(2)}</span>,
-    },
-    {
       header: 'Status',
       accessorKey: 'status',
       cell: ({ row }: any) => (

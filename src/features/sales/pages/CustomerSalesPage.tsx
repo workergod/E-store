@@ -14,8 +14,7 @@ interface SaleItem {
   productName: string;
   sku: string;
   quantity: number;
-  unitPrice: number;
-  total: number;
+  quantity: number;
 }
 
 export default function CustomerSalesPage() {
@@ -34,9 +33,8 @@ export default function CustomerSalesPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [servedBy, setServedBy] = useState(user?.fullName || '');
   const [notes, setNotes] = useState('');
-  const [discount, setDiscount] = useState(0);
   const [items, setItems] = useState<SaleItem[]>([
-    { productId: '', productName: '', sku: '', quantity: 1, unitPrice: 0, total: 0 }
+    { productId: '', productName: '', sku: '', quantity: 1 }
   ]);
 
   useEffect(() => {
@@ -63,8 +61,6 @@ export default function CustomerSalesPage() {
       productId,
       productName: prod?.name || '',
       sku: prod?.sku || '',
-      unitPrice: prod?.sellingPrice || 0,
-      total: (prod?.sellingPrice || 0) * item.quantity,
     } : item));
   };
 
@@ -72,23 +68,13 @@ export default function CustomerSalesPage() {
     setItems(prev => prev.map((item, i) => i === index ? {
       ...item,
       quantity: qty,
-      total: qty * item.unitPrice,
     } : item));
   };
 
-  const handlePriceChange = (index: number, price: number) => {
-    setItems(prev => prev.map((item, i) => i === index ? {
-      ...item,
-      unitPrice: price,
-      total: price * item.quantity,
-    } : item));
-  };
 
-  const addRow = () => setItems(prev => [...prev, { productId: '', productName: '', sku: '', quantity: 1, unitPrice: 0, total: 0 }]);
+
+  const addRow = () => setItems(prev => [...prev, { productId: '', productName: '', sku: '', quantity: 1 }]);
   const removeRow = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
-
-  const subtotal = items.reduce((s, it) => s + it.total, 0);
-  const totalAmount = Math.max(0, subtotal - discount);
 
   const handleSave = async () => {
     if (!companyId || !user) return;
@@ -104,9 +90,6 @@ export default function CustomerSalesPage() {
         servedBy: servedBy.trim() || user.fullName || 'Staff',
         saleDate: new Date(),
         items: validItems,
-        subtotal,
-        discount,
-        totalAmount,
         notes,
       }, user.uid);
       const newReceipt = await salesRepository.getById(id);
@@ -148,8 +131,8 @@ export default function CustomerSalesPage() {
   };
 
   const resetForm = () => {
-    setCustomerName(''); setCustomerPhone(''); setNotes(''); setDiscount(0);
-    setItems([{ productId: '', productName: '', sku: '', quantity: 1, unitPrice: 0, total: 0 }]);
+    setCustomerName(''); setCustomerPhone(''); setNotes('');
+    setItems([{ productId: '', productName: '', sku: '', quantity: 1 }]);
     setReceipt(null); setView('new');
   };
 
@@ -192,8 +175,6 @@ export default function CustomerSalesPage() {
                   <tr style={{borderBottom:'1px solid #ccc'}}>
                     <th style={{textAlign:'left',padding:'3px 4px',fontSize:'11px'}}>Item</th>
                     <th style={{textAlign:'right',padding:'3px 4px',fontSize:'11px'}}>Qty</th>
-                    <th style={{textAlign:'right',padding:'3px 4px',fontSize:'11px'}}>Rate</th>
-                    <th style={{textAlign:'right',padding:'3px 4px',fontSize:'11px'}}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -201,27 +182,11 @@ export default function CustomerSalesPage() {
                     <tr key={i} style={{borderBottom:'1px dotted #eee'}}>
                       <td style={{padding:'3px 4px',fontSize:'12px'}}>{it.productName}</td>
                       <td style={{textAlign:'right',padding:'3px 4px',fontSize:'12px'}}>{it.quantity}</td>
-                      <td style={{textAlign:'right',padding:'3px 4px',fontSize:'12px'}}>₹{it.unitPrice.toFixed(2)}</td>
-                      <td style={{textAlign:'right',padding:'3px 4px',fontSize:'12px'}}>₹{it.total.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr><td colSpan={4} style={{borderTop:'1px solid #ccc',padding:'2px'}} /></tr>
-                  <tr>
-                    <td colSpan={3} style={{padding:'3px 4px',fontSize:'12px'}}>Subtotal</td>
-                    <td style={{textAlign:'right',padding:'3px 4px',fontSize:'12px'}}>₹{receipt.subtotal.toFixed(2)}</td>
-                  </tr>
-                  {receipt.discount > 0 && (
-                    <tr>
-                      <td colSpan={3} style={{padding:'3px 4px',fontSize:'12px'}}>Discount</td>
-                      <td style={{textAlign:'right',padding:'3px 4px',fontSize:'12px',color:'green'}}>-₹{receipt.discount.toFixed(2)}</td>
-                    </tr>
-                  )}
-                  <tr style={{borderTop:'2px solid #000'}}>
-                    <td colSpan={3} style={{padding:'4px',fontWeight:'bold',fontSize:'14px'}}>TOTAL</td>
-                    <td style={{textAlign:'right',padding:'4px',fontWeight:'bold',fontSize:'14px'}}>₹{receipt.totalAmount.toFixed(2)}</td>
-                  </tr>
+                  <tr><td colSpan={2} style={{borderTop:'1px solid #ccc',padding:'2px'}} /></tr>
                 </tfoot>
               </table>
               {receipt.notes && (
@@ -258,7 +223,6 @@ export default function CustomerSalesPage() {
                 <th className="px-4 py-3 text-left">Phone</th>
                 <th className="px-4 py-3 text-left">Served By</th>
                 <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-right">Amount</th>
                 <th className="px-4 py-3 text-center">Print</th>
               </tr>
             </thead>
@@ -273,7 +237,6 @@ export default function CustomerSalesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{sale.customerPhone || '-'}</td>
                   <td className="px-4 py-3">{sale.servedBy}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(sale.createdAt)}</td>
-                  <td className="px-4 py-3 text-right font-semibold">₹{sale.totalAmount.toFixed(2)}</td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => { setReceipt(sale); setView('receipt'); }}
@@ -353,8 +316,6 @@ export default function CustomerSalesPage() {
                 <tr>
                   <th className="px-3 py-2 text-left">Product</th>
                   <th className="px-3 py-2 text-left w-24">Qty</th>
-                  <th className="px-3 py-2 text-left w-32">Unit Price (₹)</th>
-                  <th className="px-3 py-2 text-right w-28">Total</th>
                   <th className="px-3 py-2 w-10" />
                 </tr>
               </thead>
@@ -382,15 +343,6 @@ export default function CustomerSalesPage() {
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
-                        type="number" step="0.01" min="0"
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        value={item.unitPrice}
-                        onChange={e => handlePriceChange(i, Number(e.target.value))}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium">₹{item.total.toFixed(2)}</td>
-                    <td className="px-2 py-2">
                       {items.length > 1 && (
                         <button onClick={() => removeRow(i)} className="text-destructive hover:bg-destructive/10 p-1 rounded">
                           <Trash2 className="h-4 w-4" />
@@ -401,29 +353,6 @@ export default function CustomerSalesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-
-          {/* Totals */}
-          <div className="flex justify-end mt-6 pt-4 border-t border-border">
-            <div className="w-64 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Discount (₹)</span>
-                <input
-                  type="number" min="0" step="0.01"
-                  className="w-24 h-8 rounded-md border border-input bg-background px-2 text-sm text-right focus:outline-none"
-                  value={discount}
-                  onChange={e => setDiscount(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex justify-between pt-2 border-t border-border font-bold text-base">
-                <span>Total</span>
-                <span className="text-primary">₹{totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
           </div>
         </AppCard>
 

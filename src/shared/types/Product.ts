@@ -22,14 +22,6 @@ export interface Product {
   barcode?: string;
   qrCode?: string;
   
-  // Pricing & Costing
-  purchasePrice: number; // The manually set reference purchase price
-  sellingPrice: number;
-  mrp?: number;
-  lastPurchaseCost?: number; // Automatically updated from latest PO
-  averageCost?: number; // Automatically computed from weighted average
-  standardCost?: number; // Accounting standard cost if needed
-  
   // Stock (Cached/Calculated)
   openingStock: number;
   minimumStock: number;

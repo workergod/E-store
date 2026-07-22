@@ -34,10 +34,6 @@ export interface StockTransaction {
   beforeQuantity: number;
   afterQuantity: number;
   
-  // Financial impact
-  unitCost?: number;
-  totalCost?: number;
-  
   remarks?: string;
   
   createdAt: Timestamp | Date;

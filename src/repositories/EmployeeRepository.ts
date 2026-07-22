@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { Employee, EmployeeStatus } from '../shared/types/Employee';
 import { auditLogRepository } from './AuditLogRepository';
@@ -95,6 +95,20 @@ export const employeeRepository = {
       'Employee',
       id,
       { status }
+    );
+  },
+
+  delete: async (id: string, companyId: string, userId: string): Promise<void> => {
+    const docRef = doc(db, COLLECTION_NAME, id);
+    await deleteDoc(docRef);
+
+    await auditLogRepository.logAction(
+      userId,
+      companyId,
+      'DELETE',
+      'Employee',
+      id,
+      {}
     );
   }
 };

@@ -70,20 +70,20 @@ export default function ProductsPage() {
       const existingSkus = new Set(existingProducts.map(p => p.sku));
 
       const demoProducts = [
-        { name: 'Copper Pipe 1/4" (per meter)', shortName: 'Cop Pipe 1/4"', sku: 'COP-14-M', sellingPrice: 6.0, openingStock: 100, minimumStock: 20 },
-        { name: 'Copper Pipe 1/2" (per meter)', shortName: 'Cop Pipe 1/2"', sku: 'COP-12-M', sellingPrice: 10.0, openingStock: 50, minimumStock: 10 },
-        { name: 'Copper Pipe 3/4" (per meter)', shortName: 'Cop Pipe 3/4"', sku: 'COP-34-M', sellingPrice: 14.0, openingStock: 30, minimumStock: 5 },
-        { name: 'Insulation Tape (Black)', shortName: 'Ins Tape Blk', sku: 'TAPE-INS-BLK', sellingPrice: 1.5, openingStock: 200, minimumStock: 50 },
-        { name: 'Teflon Tape (Roll)', shortName: 'Teflon Tape', sku: 'TAPE-TEF-01', sellingPrice: 1.0, openingStock: 500, minimumStock: 100 },
-        { name: 'Capacitor 1.5 uF', shortName: 'Cap 1.5uF', sku: 'CAP-15-UF', sellingPrice: 5.0, openingStock: 40, minimumStock: 10 },
-        { name: 'Capacitor 2.5 uF', shortName: 'Cap 2.5uF', sku: 'CAP-25-UF', sellingPrice: 6.0, openingStock: 30, minimumStock: 10 },
-        { name: 'Capacitor 4 uF', shortName: 'Cap 4uF', sku: 'CAP-4-UF', sellingPrice: 7.0, openingStock: 20, minimumStock: 5 },
-        { name: 'AC Refrigerant R410A (Cylinder)', shortName: 'R410A Cyl', sku: 'REF-R410A', sellingPrice: 80.0, openingStock: 15, minimumStock: 5 },
-        { name: 'AC Refrigerant R22 (Cylinder)', shortName: 'R22 Cyl', sku: 'REF-R22', sellingPrice: 60.0, openingStock: 10, minimumStock: 3 },
-        { name: 'PVC Conduit Pipe (per meter)', shortName: 'PVC Conduit', sku: 'PVC-COND-M', sellingPrice: 2.0, openingStock: 300, minimumStock: 50 },
-        { name: 'Electrical Wire 1.5mm (per meter)', shortName: 'Wire 1.5mm', sku: 'WIRE-15-M', sellingPrice: 0.8, openingStock: 1000, minimumStock: 200 },
-        { name: 'Cable Tie (Pack of 100)', shortName: 'Cable Ties', sku: 'CTIE-100', sellingPrice: 3.0, openingStock: 100, minimumStock: 20 },
-        { name: 'Thermostat (Digital)', shortName: 'Thermostat', sku: 'THERM-DIG', sellingPrice: 25.0, openingStock: 25, minimumStock: 5 },
+        { name: 'Copper Pipe 1/4" (per meter)', shortName: 'Cop Pipe 1/4"', sku: 'COP-14-M', openingStock: 100, minimumStock: 20 },
+        { name: 'Copper Pipe 1/2" (per meter)', shortName: 'Cop Pipe 1/2"', sku: 'COP-12-M', openingStock: 50, minimumStock: 10 },
+        { name: 'Copper Pipe 3/4" (per meter)', shortName: 'Cop Pipe 3/4"', sku: 'COP-34-M', openingStock: 30, minimumStock: 5 },
+        { name: 'Insulation Tape (Black)', shortName: 'Ins Tape Blk', sku: 'TAPE-INS-BLK', openingStock: 200, minimumStock: 50 },
+        { name: 'Teflon Tape (Roll)', shortName: 'Teflon Tape', sku: 'TAPE-TEF-01', openingStock: 500, minimumStock: 100 },
+        { name: 'Capacitor 1.5 uF', shortName: 'Cap 1.5uF', sku: 'CAP-15-UF', openingStock: 40, minimumStock: 10 },
+        { name: 'Capacitor 2.5 uF', shortName: 'Cap 2.5uF', sku: 'CAP-25-UF', openingStock: 30, minimumStock: 10 },
+        { name: 'Capacitor 4 uF', shortName: 'Cap 4uF', sku: 'CAP-4-UF', openingStock: 20, minimumStock: 5 },
+        { name: 'AC Refrigerant R410A (Cylinder)', shortName: 'R410A Cyl', sku: 'REF-R410A', openingStock: 15, minimumStock: 5 },
+        { name: 'AC Refrigerant R22 (Cylinder)', shortName: 'R22 Cyl', sku: 'REF-R22', openingStock: 10, minimumStock: 3 },
+        { name: 'PVC Conduit Pipe (per meter)', shortName: 'PVC Conduit', sku: 'PVC-COND-M', openingStock: 300, minimumStock: 50 },
+        { name: 'Electrical Wire 1.5mm (per meter)', shortName: 'Wire 1.5mm', sku: 'WIRE-15-M', openingStock: 1000, minimumStock: 200 },
+        { name: 'Cable Tie (Pack of 100)', shortName: 'Cable Ties', sku: 'CTIE-100', openingStock: 100, minimumStock: 20 },
+        { name: 'Thermostat (Digital)', shortName: 'Thermostat', sku: 'THERM-DIG', openingStock: 25, minimumStock: 5 },
       ];
 
       let added = 0;
@@ -103,8 +103,6 @@ export default function ProductsPage() {
             categoryId: 'general',
             brandId: 'general',
             unitId: 'pcs',
-            purchasePrice: 0,
-            sellingPrice: prod.sellingPrice,
             openingStock: prod.openingStock,
             currentStock: prod.openingStock,
             minimumStock: prod.minimumStock,
@@ -153,11 +151,6 @@ export default function ProductsPage() {
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.sku}</span>
       },
       {
-        accessorKey: 'sellingPrice',
-        header: 'Price',
-        cell: ({ row }) => <span>${row.original.sellingPrice?.toFixed(2) || '0.00'}</span>
-      },
-      {
         accessorKey: 'currentStock',
         header: 'Stock',
         cell: ({ row }) => {
@@ -195,7 +188,7 @@ export default function ProductsPage() {
     <PageContainer>
       <PageHeader 
         title="Products" 
-        description="Manage inventory items, variants, and pricing."
+        description="Manage inventory items and variants."
         actions={
           <div className="flex gap-2">
             <AppButton variant="outline" onClick={handleSeed}>

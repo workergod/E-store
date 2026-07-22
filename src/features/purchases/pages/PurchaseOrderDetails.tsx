@@ -138,8 +138,6 @@ export default function PurchaseOrderDetails() {
                 <th className="px-4 py-3">Product</th>
                 <th className="px-4 py-3 text-right">Ordered Qty</th>
                 <th className="px-4 py-3 text-right">Received Qty</th>
-                <th className="px-4 py-3 text-right">Unit Cost</th>
-                <th className="px-4 py-3 text-right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -155,18 +153,10 @@ export default function PurchaseOrderDetails() {
                       {item.receivedQuantity || 0}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-foreground">₹{item.unitCost.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-foreground">₹{item.total.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="flex justify-end mt-6 pt-4 border-t border-border">
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground mb-1">Total PO Amount</p>
-              <p className="text-2xl font-bold text-foreground">₹{po.totalAmount.toFixed(2)}</p>
-            </div>
         </div>
       </AppCard>
 

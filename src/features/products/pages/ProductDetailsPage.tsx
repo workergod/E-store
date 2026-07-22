@@ -87,10 +87,6 @@ export default function ProductDetailsPage() {
                 <p className="font-medium">{product.brandId}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Selling Price</p>
-                <p className="font-medium text-lg">${product.sellingPrice?.toFixed(2)}</p>
-              </div>
-              <div>
                 <p className="text-muted-foreground">Status</p>
                 <p className="font-medium">{product.status}</p>
               </div>
@@ -130,14 +126,6 @@ export default function ProductDetailsPage() {
                <div className="flex justify-between">
                  <span className="text-muted-foreground">Min / Max Level</span>
                  <span className="font-medium">{product.minimumStock} / {product.maximumStock || '-'}</span>
-               </div>
-               <div className="pt-2 mt-2 border-t border-border flex justify-between">
-                 <span className="text-muted-foreground">Average Cost</span>
-                 <span className="font-medium">${product.averageCost?.toFixed(2) || '0.00'}</span>
-               </div>
-               <div className="flex justify-between">
-                 <span className="text-muted-foreground">Last Purchase Cost</span>
-                 <span className="font-medium">${product.lastPurchaseCost?.toFixed(2) || '0.00'}</span>
                </div>
              </div>
           </div>

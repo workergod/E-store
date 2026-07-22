@@ -21,9 +21,6 @@ const productSchema = z.object({
   productTypeId: z.string().optional(),
   unitId: z.string().optional().default('pcs'),
   rackLocationId: z.string().optional(),
-  purchasePrice: z.coerce.number().optional().default(0),
-  sellingPrice: z.coerce.number().min(0).default(0),
-  mrp: z.coerce.number().optional(),
   openingStock: z.coerce.number().min(0).default(0),
   minimumStock: z.coerce.number().min(0).default(0),
   maximumStock: z.coerce.number().optional(),
@@ -57,9 +54,6 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
       productTypeId: product.productTypeId || '',
       unitId: product.unitId || 'pcs',
       rackLocationId: product.rackLocationId || '',
-      purchasePrice: product.purchasePrice || 0,
-      sellingPrice: product.sellingPrice || 0,
-      mrp: product.mrp || 0,
       openingStock: product.openingStock || 0,
       minimumStock: product.minimumStock || 0,
       maximumStock: product.maximumStock || 0,
@@ -69,7 +63,6 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
       name: '', shortName: '', description: '',
       categoryId: 'general', brandId: 'general', unitId: 'pcs',
       manufacturerId: '', productTypeId: '', rackLocationId: '',
-      purchasePrice: 0, sellingPrice: 0, mrp: 0,
       openingStock: 0, minimumStock: 0, maximumStock: 0,
       isSerialized: false, status: 'Active',
     }
@@ -105,7 +98,7 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
 
   const tabs = [
     { id: 'basic', label: 'Basic Info' },
-    { id: 'inventory', label: 'Inventory & Pricing' },
+    { id: 'inventory', label: 'Inventory' },
   ];
 
   return (
@@ -180,19 +173,9 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
               </div>
             )}
 
-            {/* INVENTORY & PRICING TAB */}
+            {/* INVENTORY TAB */}
             {activeTab === 'inventory' && (
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Selling Price (₹)</Label>
-                  <Input type="number" step="0.01" {...methods.register('sellingPrice')} />
-                </div>
-                <div>
-                  <Label>MRP (₹)</Label>
-                  <Input type="number" step="0.01" {...methods.register('mrp')} />
-                </div>
-
-                <div className="col-span-2 border-t border-border my-1" />
 
                 <div>
                   <Label>Opening Stock</Label>
