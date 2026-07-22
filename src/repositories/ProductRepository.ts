@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, getDocs, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { Product } from '../shared/types/Product';
 import { auditLogRepository } from './AuditLogRepository';
@@ -93,5 +93,11 @@ export const productRepository = {
 
     await updateDoc(docRef, payload);
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'Product', id, payload);
+  },
+
+  delete: async (id: string, companyId: string, userId: string): Promise<void> => {
+    const docRef = doc(db, 'products', id);
+    await deleteDoc(docRef);
+    await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Product', id, {});
   }
 };

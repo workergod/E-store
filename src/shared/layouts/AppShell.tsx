@@ -67,7 +67,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {user?.fullName?.charAt(0) || 'A'}
                 </div>
                 {/* Minimal dropdown placeholder */}
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius)] bg-popover p-2 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right">
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-[var(--radius)] bg-popover p-2 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right">
+                  <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border mb-1 truncate">
+                    {user?.email || 'admin@example.com'}
+                  </div>
                   <button onClick={async () => { await signOut(); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors">
                     <LogOut className="h-4 w-4" />
                     Sign out

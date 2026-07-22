@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Eye, Tag, Archive } from 'lucide-react';
+import { Plus, Edit, Eye, Tag, Archive, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { productRepository } from '../../../repositories/ProductRepository';
@@ -55,6 +55,21 @@ export default function ProductsPage() {
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
     setIsFormOpen(true);
+  };
+
+  const handleDelete = async (product: Product) => {
+    if (!companyId || !user) return;
+    if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
+      try {
+        setIsLoading(true);
+        await productRepository.delete(product.id, companyId, user.uid);
+        toast.success('Product deleted successfully');
+        loadProducts();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to delete product');
+        setIsLoading(false);
+      }
+    }
   };
 
   const handleSeed = async () => {
@@ -176,6 +191,9 @@ export default function ProductsPage() {
             </AppButton>
             <AppButton variant="ghost" size="icon" onClick={() => navigate(`/products/${row.original.id}`)}>
               <Eye className="h-4 w-4" />
+            </AppButton>
+            <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4" />
             </AppButton>
           </div>
         )
