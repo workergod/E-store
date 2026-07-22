@@ -140,8 +140,9 @@ export default function PurchaseOrderForm() {
             {/* Left Column: Line Items & Notes */}
             <div className="lg:col-span-2 space-y-6">
               <FormSection title="Line Items" description="Add products to this order.">
-                <div className="flex justify-end mb-4">
-                  <AppButton type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })}>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
+                  <AppButton type="button" variant="secondary" size="sm" onClick={() => append({ productId: '', quantity: 1 })} className="shadow-sm">
                     <Plus className="h-4 w-4 mr-2" /> Add Item
                   </AppButton>
                 </div>
@@ -150,26 +151,26 @@ export default function PurchaseOrderForm() {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium">Product</th>
-                        <th className="px-4 py-3 font-medium w-32">Qty</th>
-                        <th className="px-4 py-3 font-medium w-12 text-center"></th>
+                        <th className="px-4 py-3 font-medium text-left w-[65%]">Product</th>
+                        <th className="px-4 py-3 font-medium text-left w-[25%]">Qty</th>
+                        <th className="px-4 py-3 font-medium text-center w-[10%]"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {fields.map((field, index) => {
                         return (
-                          <tr key={field.id} className="border-b border-border">
-                            <td className="px-2 py-2">
-                              <select {...methods.register(`items.${index}.productId` as const)} className="flex h-10 w-full rounded-[var(--radius-input)] border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-sm">
-                                <option value="">Select Product...</option>
+                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
+                            <td className="p-2">
+                              <select {...methods.register(`items.${index}.productId` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none">
+                                <option value="" disabled>Select Product...</option>
                                 {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                               </select>
                             </td>
-                            <td className="px-2 py-2">
-                              <AppInput type="number" {...methods.register(`items.${index}.quantity` as const)} />
+                            <td className="p-2">
+                              <input type="number" {...methods.register(`items.${index}.quantity` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all outline-none" placeholder="Qty" />
                             </td>
-                            <td className="px-2 py-2 text-center">
-                              <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                            <td className="p-2 text-center">
+                              <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">
                                 <Trash2 className="h-4 w-4" />
                               </AppButton>
                             </td>
@@ -183,7 +184,7 @@ export default function PurchaseOrderForm() {
 
               <FormSection title="Additional Details" description="Provide any extra notes for the supplier.">
                 <FormField label="Notes / Remarks" error={methods.formState.errors.notes?.message}>
-                  <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" {...methods.register('notes')} placeholder="Any instructions for the supplier..." rows={4}></textarea>
+                  <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="Any instructions for the supplier..." rows={4}></textarea>
                 </FormField>
               </FormSection>
             </div>
