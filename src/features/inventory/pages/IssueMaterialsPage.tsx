@@ -223,7 +223,7 @@ export default function IssueMaterialsPage() {
   return (
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
-        <AppButton variant="ghost" size="sm" onClick={() => navigate('/inventory')} className="-ml-4 text-muted-foreground">
+        <AppButton variant="ghost" size="sm" onClick={() => navigate('/products')} className="-ml-4 text-muted-foreground">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </AppButton>
       </div>
@@ -332,7 +332,7 @@ export default function IssueMaterialsPage() {
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
                   {isSaving ? 'Processing...' : 'Issue & Generate Receipt'}
                 </AppButton>
-                <AppButton type="button" variant="ghost" onClick={() => navigate('/inventory')} disabled={isSaving} className="w-full text-muted-foreground">
+                <AppButton type="button" variant="ghost" onClick={() => navigate('/products')} disabled={isSaving} className="w-full text-muted-foreground">
                   Cancel Transaction
                 </AppButton>
               </div>

@@ -88,7 +88,7 @@ export default function ReturnMaterialsPage() {
       setIsSaving(true);
       await issueRepository.returnItems(selectedIssueId, data.returns, companyId, user.uid);
       toast.success("Materials returned successfully");
-      navigate('/inventory');
+      navigate('/products');
     } catch (error: any) {
       toast.error(error.message || "Failed to return materials");
     } finally {
@@ -101,7 +101,7 @@ export default function ReturnMaterialsPage() {
   return (
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
-        <AppButton variant="ghost" size="sm" onClick={() => navigate('/inventory')} className="-ml-4 text-muted-foreground">
+        <AppButton variant="ghost" size="sm" onClick={() => navigate('/products')} className="-ml-4 text-muted-foreground">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </AppButton>
       </div>
@@ -192,7 +192,7 @@ export default function ReturnMaterialsPage() {
             </FormSection>
             
             <FormActions>
-              <AppButton type="button" variant="outline" onClick={() => navigate('/inventory')} disabled={isSaving}>Cancel</AppButton>
+              <AppButton type="button" variant="outline" onClick={() => navigate('/products')} disabled={isSaving}>Cancel</AppButton>
               <AppButton type="submit" disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? 'Processing...' : 'Confirm Return & Restock'}
