@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../../../firebase/auth';
 import { db } from '../../../firebase/firestore';
@@ -20,13 +20,38 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const userDoc = await userRepository.getUser(firebaseUser.uid);
+          let userDoc = await userRepository.getUser(firebaseUser.uid);
           
           if (!userDoc) {
-            await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document not found');
-            logout();
-            setIsLoading(false);
-            return;
+            if (firebaseUser.email) {
+              // Check if they are an employee in any company
+              const empSnap = await getDocs(query(collection(db, 'employees'), where('email', '==', firebaseUser.email)));
+              if (!empSnap.empty) {
+                const empData = empSnap.docs[0].data();
+                const newUser = {
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email,
+                  fullName: firebaseUser.displayName || `${empData.firstName} ${empData.lastName}`,
+                  photoURL: firebaseUser.photoURL || '',
+                  role: empData.role === 'Manager' ? Role.MANAGER : Role.TECHNICIAN, // Map employee role to system role
+                  companyId: empData.companyId,
+                  status: UserStatus.ACTIVE,
+                  permissions: [],
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                  lastLogin: serverTimestamp(),
+                };
+                await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+                userDoc = await userRepository.getUser(firebaseUser.uid);
+              }
+            }
+            
+            if (!userDoc) {
+              await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document not found and not an employee');
+              logout();
+              setIsLoading(false);
+              return;
+            }
           }
 
           if (userDoc.status !== UserStatus.ACTIVE) {
