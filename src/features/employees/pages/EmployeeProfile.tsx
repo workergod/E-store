@@ -14,6 +14,7 @@ import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 import { DocumentUploader } from '../../../shared/documents/DocumentUploader';
 import { EmployeeTimeline } from '../components/EmployeeTimeline';
 import type { TimelineEvent } from '../components/EmployeeTimeline';
+import { issueRepository } from '../../../repositories/IssueRepository';
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function EmployeeProfile() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [stats, setStats] = useState({ issued: 0, returned: 0 });
 
   useEffect(() => {
     async function loadData() {
@@ -48,7 +50,38 @@ export default function EmployeeProfile() {
             description: `Started as ${emp.designation || emp.role} in ${emp.department || 'General'}`
           });
         }
+
+        const allIssues = await issueRepository.getAll(companyId);
+        const empIssues = allIssues.filter(i => i.employeeId === id);
+        
+        let totalIssued = 0;
+        let totalReturned = 0;
+
+        empIssues.forEach(issue => {
+          let issueCount = 0;
+          let returnCount = 0;
+          
+          issue.items.forEach(item => {
+            totalIssued += item.issuedQty;
+            totalReturned += item.returnedQty;
+            issueCount += item.issuedQty;
+            returnCount += item.returnedQty;
+          });
+
+          if (issueCount > 0) {
+            const date = issue.createdAt?.toDate ? issue.createdAt.toDate() : (issue.issueDate ? new Date(issue.issueDate) : new Date());
+            timeline.push({
+              type: 'UPDATE', // Use a standard type since ISSUE might not exist in TimelineEvent type enum
+              title: 'Material Issued',
+              date: date,
+              description: `Issued ${issueCount} items. ${issue.notes ? '(' + issue.notes + ')' : ''}`
+            });
+          }
+        });
+
+        timeline.sort((a, b) => b.date.getTime() - a.date.getTime());
         setEvents(timeline);
+        setStats({ issued: totalIssued, returned: totalReturned });
       } catch (error) {
         toast.error("Failed to load profile");
       } finally {
@@ -147,22 +180,18 @@ export default function EmployeeProfile() {
 
         {/* Right Column: Stats & Timeline */}
         <div className="md:col-span-2 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
              <AppCard className="p-4 text-center">
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Products Issued</p>
-                <p className="text-2xl font-bold text-primary">0</p>
+                <p className="text-2xl font-bold text-primary">{stats.issued}</p>
              </AppCard>
              <AppCard className="p-4 text-center">
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Items Returned</p>
-                <p className="text-2xl font-bold text-[hsl(var(--success))]">0</p>
+                <p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.returned}</p>
              </AppCard>
              <AppCard className="p-4 text-center">
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Damaged/Lost</p>
                 <p className="text-2xl font-bold text-[hsl(var(--destructive))]">0</p>
-             </AppCard>
-             <AppCard className="p-4 text-center">
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Holding Value</p>
-                <p className="text-2xl font-bold text-[hsl(var(--warning))]">$0.00</p>
              </AppCard>
           </div>
 
@@ -173,13 +202,6 @@ export default function EmployeeProfile() {
             </div>
             
             <EmployeeTimeline events={events} />
-
-            <div className="mt-8 bg-blue-50 text-blue-800 p-4 rounded-[var(--radius-lg)] flex gap-3 text-sm border border-blue-200">
-              <Info className="h-5 w-5 text-blue-600 shrink-0" />
-              <p>
-                <strong>Phase 8 Preview:</strong> Once Issue & Return Management is completed, all products issued to and returned by this technician will automatically populate in this timeline and compute live statistics above.
-              </p>
-            </div>
           </AppCard>
         </div>
       </div>
