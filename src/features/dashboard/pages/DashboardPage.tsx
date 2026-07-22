@@ -47,12 +47,14 @@ export default function DashboardPage() {
         // In a real app, we would query the stockLedgerRepository directly with limit(5).
         // Since we don't have a getRecent() method yet, we'll leave the table empty for now 
         // or just show a message. Let's populate it with issues as activity.
-        const recent = issues.slice(0, 5).map(i => ({
+        // Only show recent active issues
+        const activeIssues = issues.filter(i => i.status === 'ISSUED');
+        const recent = activeIssues.slice(0, 5).map(i => ({
           id: i.id,
-          action: i.status === 'ISSUED' ? 'Issued' : 'Returned',
+          action: 'Issued',
           item: i.items.map(it => it.productName).join(', '),
-          date: new Date((i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : i.createdAt).toLocaleDateString(),
-          user: i.employeeId // Ideally join with employee name
+          date: new Date((i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : (i.issueDate ? new Date(i.issueDate) : new Date())).toLocaleDateString(),
+          user: i.employeeId
         }))
         setRecentActivity(recent)
 

@@ -45,13 +45,62 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-[var(--spacing-xl)] ml-auto shrink-0 pl-8">
             <div className="flex items-center gap-2">
-              <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border border-background"></span>
-              </button>
-              <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                <MessageSquare className="h-5 w-5" />
-              </button>
+              <div className="group relative">
+                <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border border-background"></span>
+                </button>
+                <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
+                    <span className="font-semibold text-sm">Notifications</span>
+                    <span className="text-xs text-primary cursor-pointer hover:underline">Mark all read</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    <div className="p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                       <div className="flex gap-3">
+                         <div className="w-2 h-2 mt-1.5 bg-primary rounded-full shrink-0"></div>
+                         <div>
+                           <p className="text-sm font-medium">New Feature Live</p>
+                           <p className="text-xs text-muted-foreground mt-0.5">Material Issues now have a beautiful new receipt layout.</p>
+                           <p className="text-[10px] text-muted-foreground mt-1">Just now</p>
+                         </div>
+                       </div>
+                    </div>
+                    <div className="p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer opacity-60">
+                       <div className="flex gap-3">
+                         <div className="w-2 h-2 mt-1.5 bg-transparent rounded-full shrink-0"></div>
+                         <div>
+                           <p className="text-sm font-medium">Low Stock Alert</p>
+                           <p className="text-xs text-muted-foreground mt-0.5">Capacitor 1.5 uF is running low (40 left)</p>
+                           <p className="text-[10px] text-muted-foreground mt-1">2 hours ago</p>
+                         </div>
+                       </div>
+                    </div>
+                  </div>
+                  <div className="p-2 text-center border-t border-border bg-muted/10">
+                    <button className="text-xs text-primary hover:underline font-medium">View all notifications</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="group relative">
+                <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                  <MessageSquare className="h-5 w-5" />
+                </button>
+                <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
+                    <span className="font-semibold text-sm">Messages</span>
+                    <span className="text-xs text-primary cursor-pointer hover:underline">New Message</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-8 text-center flex flex-col items-center justify-center">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">No messages yet</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">When team members or customers message you, they'll appear here.</p>
+                  </div>
+                </div>
+              </div>
               <button onClick={toggleTheme} className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
