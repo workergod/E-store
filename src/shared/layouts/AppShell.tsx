@@ -20,10 +20,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background font-sans antialiased overflow-hidden text-foreground selection:bg-primary/20">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      <div className="print:hidden h-full">
+        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      </div>
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <header className="h-[72px] bg-background/80 backdrop-blur-md border-b border-border flex items-center px-8 justify-between sticky top-0 z-10 shrink-0">
+        <header className="h-[72px] bg-background/80 backdrop-blur-md border-b border-border flex items-center px-8 justify-between sticky top-0 z-10 shrink-0 print:hidden">
           
           <div className="flex-1 flex items-center max-w-xl">
             <div className="relative w-full flex items-center group">
@@ -81,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:h-auto">
           {children}
         </main>
       </div>

@@ -144,67 +144,76 @@ export default function IssueMaterialsPage() {
     const selectedEmp = employees.find(e => `${e.firstName} ${e.lastName}`.toLowerCase() === empName.toLowerCase().trim());
     return (
       <PageContainer>
-        <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-sm border border-border p-8 print:shadow-none print:border-none print:p-0">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold tracking-tight">Material Issue Receipt</h2>
-            <p className="text-muted-foreground mt-1">Transaction ID: {issuedId}</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-8 text-sm">
+        <div className="max-w-3xl mx-auto bg-card rounded-xl shadow-lg border border-border print:shadow-none print:border-none print:w-full overflow-hidden">
+          {/* Header */}
+          <div className="bg-primary/10 p-8 border-b-4 border-primary flex justify-between items-center print:bg-primary/10 print:border-primary print:break-inside-avoid">
             <div>
-              <p className="text-muted-foreground">Issued To:</p>
-              <p className="font-semibold text-lg">{selectedEmp?.firstName} {selectedEmp?.lastName}</p>
-              <p>{selectedEmp?.role} • {selectedEmp?.department}</p>
+              <h2 className="text-3xl font-black text-primary tracking-tight uppercase">Material Issue</h2>
+              <p className="text-sm font-medium text-muted-foreground mt-1 tracking-widest">OFFICIAL RECEIPT</p>
             </div>
             <div className="text-right">
-              <p className="text-muted-foreground">Date:</p>
-              <p className="font-semibold">{new Date(methods.getValues().issueDate).toLocaleDateString()}</p>
+              <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Transaction ID</p>
+              <p className="font-mono text-sm font-semibold">{issuedId}</p>
             </div>
           </div>
-
-          <table className="w-full text-sm text-left border-collapse mb-8">
-            <thead className="bg-muted/50 border-b border-border">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Product</th>
-                <th className="px-4 py-3 font-semibold">SKU</th>
-                <th className="px-4 py-3 font-semibold text-right">Qty Issued</th>
-              </tr>
-            </thead>
-            <tbody>
-              {watchedItems.map((item, idx) => {
-                const prod = products.find(p => p.id === item.productId);
-                return (
-                  <tr key={idx} className="border-b border-border">
-                    <td className="px-4 py-3 font-medium">{prod?.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{prod?.sku}</td>
-                    <td className="px-4 py-3 text-right font-bold">{item.issuedQty}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {methods.getValues().notes && (
-            <div className="mb-8 p-4 bg-muted/30 rounded-lg">
-              <p className="text-xs text-muted-foreground font-semibold uppercase mb-1">Notes</p>
-              <p className="text-sm">{methods.getValues().notes}</p>
+          
+          <div className="p-8 print:p-4">
+            <div className="grid grid-cols-2 gap-6 mb-10 text-sm bg-muted/20 p-6 rounded-lg border border-border print:bg-transparent">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase font-bold mb-2">Issued To</p>
+                <p className="font-bold text-lg text-foreground">{selectedEmp?.firstName} {selectedEmp?.lastName}</p>
+                <p className="text-muted-foreground font-medium">{selectedEmp?.role} {selectedEmp?.department ? `• ${selectedEmp.department}` : ''}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase font-bold mb-2">Issue Date</p>
+                <p className="font-bold text-lg text-foreground">{new Date(methods.getValues().issueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-2 gap-16 mt-16 text-center text-sm">
-            <div>
-              <div className="border-b border-border w-48 mx-auto mb-2"></div>
-              <p className="font-semibold">Issued By</p>
-            </div>
-            <div>
-              <div className="border-b border-border w-48 mx-auto mb-2"></div>
-              <p className="font-semibold">Received By (Signature)</p>
-            </div>
-          </div>
+            <table className="w-full text-sm text-left border-collapse mb-10">
+              <thead className="bg-primary text-primary-foreground print:bg-primary print:text-white">
+                <tr>
+                  <th className="px-5 py-4 font-bold rounded-tl-lg">Product Description</th>
+                  <th className="px-5 py-4 font-bold">SKU</th>
+                  <th className="px-5 py-4 font-bold text-right rounded-tr-lg">Qty Issued</th>
+                </tr>
+              </thead>
+              <tbody>
+                {watchedItems.map((item, idx) => {
+                  const prod = products.find(p => p.id === item.productId);
+                  return (
+                    <tr key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="px-5 py-4 font-medium text-foreground">{prod?.name}</td>
+                      <td className="px-5 py-4 text-muted-foreground font-mono text-xs">{prod?.sku}</td>
+                      <td className="px-5 py-4 text-right font-black text-primary text-lg">{item.issuedQty}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-          <div className="mt-12 flex justify-center gap-4 print:hidden">
-             <AppButton onClick={() => setIssuedId(null)} variant="outline">Issue More</AppButton>
-             <AppButton onClick={handlePrint}><Printer className="h-4 w-4 mr-2"/> Print Receipt</AppButton>
+            {methods.getValues().notes && (
+              <div className="mb-10 p-5 bg-amber-500/10 border-l-4 border-amber-500 rounded-r-lg">
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-black uppercase mb-2 tracking-wider">Additional Notes</p>
+                <p className="text-sm font-medium">{methods.getValues().notes}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-16 mt-16 text-center text-sm">
+              <div className="flex flex-col items-center">
+                <div className="border-b-2 border-dashed border-border w-56 mb-3"></div>
+                <p className="font-bold text-muted-foreground uppercase tracking-wider text-xs">Issued By</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="border-b-2 border-dashed border-border w-56 mb-3"></div>
+                <p className="font-bold text-muted-foreground uppercase tracking-wider text-xs">Received By (Signature)</p>
+              </div>
+            </div>
+
+            <div className="mt-16 flex justify-center gap-4 print:hidden">
+               <AppButton onClick={() => setIssuedId(null)} variant="outline" size="lg">Issue More Materials</AppButton>
+               <AppButton onClick={handlePrint} size="lg"><Printer className="h-5 w-5 mr-2"/> Print Receipt</AppButton>
+            </div>
           </div>
         </div>
       </PageContainer>
