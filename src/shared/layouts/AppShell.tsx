@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Bell, Search, Sun, Moon, LogOut, MessageSquare } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
+import { signOut } from "../../firebase/auth"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore()
@@ -67,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 {/* Minimal dropdown placeholder */}
                 <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius)] bg-popover p-2 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right">
-                  <button onClick={() => logout()} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors">
+                  <button onClick={async () => { await signOut(); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors">
                     <LogOut className="h-4 w-4" />
                     Sign out
                   </button>

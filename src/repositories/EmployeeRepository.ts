@@ -11,11 +11,15 @@ export const employeeRepository = {
   getAll: async (companyId: string): Promise<Employee[]> => {
     const q = query(
       employeeRepository.getCollection(),
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc')
+      where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+    const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+    return employees.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return timeB - timeA; // desc
+    });
   },
 
   getById: async (id: string, companyId: string): Promise<Employee | null> => {
