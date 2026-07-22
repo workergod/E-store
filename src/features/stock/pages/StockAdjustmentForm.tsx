@@ -103,10 +103,6 @@ export default function StockAdjustmentForm() {
         
         const systemStock = prod.currentStock || 0;
         const difference = item.actualCount - systemStock;
-        const unitCost = prod.averageCost || prod.lastPurchaseCost || prod.purchasePrice || 0;
-        const impact = difference * unitCost;
-        
-        totalValueImpact += impact;
 
         return {
           productId: prod.id!,
@@ -114,9 +110,7 @@ export default function StockAdjustmentForm() {
           sku: prod.sku,
           systemStock,
           actualCount: item.actualCount,
-          difference,
-          unitCost,
-          totalValueImpact: impact
+          difference
         };
       });
 
@@ -125,7 +119,6 @@ export default function StockAdjustmentForm() {
         reason: data.reason,
         notes: data.notes,
         items: enrichedItems,
-        totalValueImpact,
         createdBy: user.uid
       }, user.uid);
 
@@ -265,16 +258,7 @@ export default function StockAdjustmentForm() {
               )}
             </div>
             
-            {isViewMode && adjustment && (
-              <div className="flex justify-end mt-6 pt-4 border-t border-border">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Total Value Impact</p>
-                  <p className={`text-2xl font-bold ${adjustment.totalValueImpact > 0 ? 'text-green-600' : adjustment.totalValueImpact < 0 ? 'text-red-600' : 'text-foreground'}`}>
-                    ${adjustment.totalValueImpact.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* View Mode Extra Details */}
           </div>
 
           {!isViewMode && (

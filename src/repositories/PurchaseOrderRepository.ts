@@ -145,12 +145,8 @@ export const purchaseOrderRepository = {
           const currentStock = productData.currentStock || 0;
           const newStock = currentStock + receivedItem.qtyToReceive;
           
-          // Cost tracking updates
-          const lastPurchaseCost = itemLine.unitCost;
-          
           transaction.update(productRef, {
             currentStock: newStock,
-            lastPurchaseCost: lastPurchaseCost,
             updatedAt: serverTimestamp()
           });
 
@@ -168,26 +164,11 @@ export const purchaseOrderRepository = {
             quantity: receivedItem.qtyToReceive,
             beforeQuantity: currentStock,
             afterQuantity: newStock,
-            unitCost: itemLine.unitCost,
-            totalCost: itemLine.unitCost * receivedItem.qtyToReceive,
             createdAt: serverTimestamp(),
             performedBy: userId
           });
           
-          // Product Price History Entry if cost changed (simplified)
-          if (productData.lastPurchaseCost !== lastPurchaseCost) {
-             const phRef = doc(collection(db, PRICE_HISTORY_COL));
-             transaction.set(phRef, {
-               companyId,
-               productId: itemLine.productId,
-               purchaseOrderId: poId,
-               supplierId: poData.supplierId,
-               oldCost: productData.lastPurchaseCost || 0,
-               newCost: lastPurchaseCost,
-               effectiveDate: serverTimestamp(),
-               performedBy: userId
-             });
-          }
+
         }
       }
     });

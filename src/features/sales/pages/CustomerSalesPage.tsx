@@ -14,7 +14,6 @@ interface SaleItem {
   productName: string;
   sku: string;
   quantity: number;
-  quantity: number;
 }
 
 export default function CustomerSalesPage() {

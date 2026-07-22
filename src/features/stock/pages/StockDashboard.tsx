@@ -76,36 +76,6 @@ export default function StockDashboard() {
               </div>
               <p className="text-3xl font-bold">{metrics.totalProducts}</p>
             </div>
-            
-            <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
-              <div className="flex items-center gap-3 text-blue-600 mb-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h3 className="font-medium">Current Value (Cost)</h3>
-              </div>
-              <p className="text-3xl font-bold">${metrics.currentStockValue.toFixed(2)}</p>
-            </div>
-
-            <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
-              <div className="flex items-center gap-3 text-green-600 mb-2">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h3 className="font-medium">Potential Sales Value</h3>
-              </div>
-              <p className="text-3xl font-bold">${metrics.sellingValue.toFixed(2)}</p>
-            </div>
-
-            <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
-              <div className="flex items-center gap-3 text-purple-600 mb-2">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <h3 className="font-medium">Potential Profit</h3>
-              </div>
-              <p className="text-3xl font-bold">${metrics.potentialProfit.toFixed(2)}</p>
-            </div>
           </div>
 
           {/* Alert Cards */}

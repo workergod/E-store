@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { Employee, EmployeeStatus } from '../shared/types/Employee';
 import { auditLogRepository } from './AuditLogRepository';
@@ -16,8 +16,8 @@ export const employeeRepository = {
     const snapshot = await getDocs(q);
     const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
     return employees.sort((a, b) => {
-      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
       return timeB - timeA; // desc
     });
   },

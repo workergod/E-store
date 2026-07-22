@@ -17,8 +17,6 @@ export interface StockAdjustmentItem {
   systemStock: number;
   actualCount: number;
   difference: number;
-  unitCost: number;
-  totalValueImpact: number; // difference * unitCost
 }
 
 export interface StockAdjustment {
@@ -30,8 +28,6 @@ export interface StockAdjustment {
   notes?: string;
   
   items: StockAdjustmentItem[];
-  
-  totalValueImpact: number;
   
   createdBy: string;
   createdAt: Timestamp | Date;

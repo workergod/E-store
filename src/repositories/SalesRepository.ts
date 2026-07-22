@@ -9,8 +9,6 @@ export interface SaleItem {
   productName: string;
   sku: string;
   quantity: number;
-  unitPrice: number;
-  total: number;
 }
 
 export interface CustomerSale {
@@ -20,9 +18,6 @@ export interface CustomerSale {
   customerPhone: string;
   saleDate: Date | any;
   items: SaleItem[];
-  subtotal: number;
-  discount: number;
-  totalAmount: number;
   notes?: string;
   servedBy: string; // staff name
   receiptNo?: string;

@@ -4,7 +4,7 @@ import { PageHeader } from '../../../shared/layouts/PageHeader'
 import { MetricCard } from '../../../shared/widgets/MetricWidget'
 import { ChartCard } from '../../../shared/widgets/ChartWidget'
 import { AppTable } from '../../../shared/tables/AppTable'
-import { Package, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react'
+import { Package, AlertCircle, RefreshCw } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
 import { useAuthStore } from "../../../store/authStore"

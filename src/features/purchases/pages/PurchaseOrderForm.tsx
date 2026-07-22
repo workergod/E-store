@@ -23,6 +23,7 @@ import { FormField } from '../../../shared/forms/FormField';
 
 import { AppInput } from '../../../shared/forms/AppInput';
 
+const itemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.coerce.number().min(1, "Must be > 0"),
 });
@@ -172,7 +173,6 @@ export default function PurchaseOrderForm() {
                 </thead>
                 <tbody>
                   {fields.map((field, index) => {
-                    const wItem = watchedItems[index];
                     return (
                       <tr key={field.id} className="border-b border-border">
                         <td className="px-2 py-2">
