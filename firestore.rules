@@ -137,5 +137,19 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin() || isCompanyMember(resource.data.companyId);
       allow create: if isSuperAdmin() || isCompanyMember(request.resource.data.companyId);
     }
+
+    // --- Transactions ---
+    match /issueTransactions/{document} {
+      allow read, write: if isSuperAdmin() || isCompanyMember(resource.data.companyId);
+      allow create: if isSuperAdmin() || isCompanyMember(request.resource.data.companyId);
+    }
+    match /returnTransactions/{document} {
+      allow read, write: if isSuperAdmin() || isCompanyMember(resource.data.companyId);
+      allow create: if isSuperAdmin() || isCompanyMember(request.resource.data.companyId);
+    }
+    match /customerSales/{document} {
+      allow read, write: if isSuperAdmin() || isCompanyMember(resource.data.companyId);
+      allow create: if isSuperAdmin() || isCompanyMember(request.resource.data.companyId);
+    }
   }
 }
