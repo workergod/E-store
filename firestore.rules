@@ -53,9 +53,7 @@ service cloud.firestore {
     // COMPANIES COLLECTION
     // -----------------------------------------------------
     match /companies/{companyId} {
-      allow read: if isAuthenticated() && (
-        isSuperAdmin() || resource.id == getUserCompanyId()
-      );
+      allow read: if isAuthenticated();
       
       allow write: if isAuthenticated() && isSuperAdmin();
     }

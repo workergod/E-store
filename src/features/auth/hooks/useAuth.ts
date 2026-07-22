@@ -25,31 +25,30 @@ export function useAuth() {
           
           if (!userDoc) {
             if (firebaseUser.email) {
-              // Check if they are an employee in any company
-              const empSnap = await getDocs(query(collection(db, 'employees'), where('email', '==', firebaseUser.email)));
-              if (!empSnap.empty) {
-                const empData = empSnap.docs[0].data();
-                const newUser = {
-                  uid: firebaseUser.uid,
-                  email: firebaseUser.email,
-                  fullName: firebaseUser.displayName || `${empData.firstName} ${empData.lastName}`,
-                  photoURL: firebaseUser.photoURL || '',
-                  role: empData.role === 'Manager' ? Role.MANAGER : Role.STAFF, // Map employee role to system role
-                  companyId: empData.companyId,
-                  status: UserStatus.ACTIVE,
-                  permissions: [],
-                  createdAt: serverTimestamp(),
-                  updatedAt: serverTimestamp(),
-                  lastLogin: serverTimestamp(),
-                };
-                await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-                userDoc = await userRepository.getUser(firebaseUser.uid);
-              }
+              // OPEN ACCESS: Auto-register ANY email as Staff
+              const companySnap = await getDocs(collection(db, 'companies'));
+              const defaultCompanyId = companySnap.empty ? `company_default` : companySnap.docs[0].id;
+
+              const newUser = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                fullName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                photoURL: firebaseUser.photoURL || '',
+                role: Role.STAFF,
+                companyId: defaultCompanyId,
+                status: UserStatus.ACTIVE,
+                permissions: [],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                lastLogin: serverTimestamp(),
+              };
+              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+              userDoc = await userRepository.getUser(firebaseUser.uid);
             }
             
             if (!userDoc) {
-              await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document not found and not an employee');
-              toast.error(`Email ${firebaseUser.email} is not registered as an Employee. Please add it first.`);
+              await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document auto-creation failed');
+              toast.error(`Failed to register account for ${firebaseUser.email}`);
               logout();
               setIsLoading(false);
               return;
