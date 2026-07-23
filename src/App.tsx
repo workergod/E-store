@@ -89,7 +89,6 @@ function MainApp() {
               <Route path="/returns" element={<ReturnMaterialsPage />} />
 
               <Route path="/transaction-log" element={<TransactionLogPage />} />
-              <Route path="/reports" element={<TransactionLogPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/help" element={<HelpPage />} />
             </Routes>

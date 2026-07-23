@@ -25,7 +25,6 @@ const PURCHASING_NAV = [
 
 const OPERATIONS_NAV = [
   { path: '/employees', label: 'Employees', icon: Users },
-  { path: '/reports', label: 'Analytics', icon: BarChart },
   { path: '/transaction-log', label: 'Transaction Log', icon: ClipboardList },
 ]
 
