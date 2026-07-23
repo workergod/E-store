@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
 import { useAuthStore } from '../../../store/authStore';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
@@ -7,7 +7,7 @@ import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
 import { AppCard } from '../../../shared/app/AppCard';
-import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag } from 'lucide-react';
+import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LogEntry {
@@ -143,6 +143,27 @@ export default function TransactionLogPage() {
   };
 
   useEffect(() => { loadLogs(); }, [companyId]);
+
+  const handleDelete = async (id: string, type: string) => {
+    if (!window.confirm('Are you sure you want to delete this transaction log? This will not revert inventory balances.')) return;
+    try {
+      setIsLoading(true);
+      let colName = '';
+      if (type === 'ISSUE') colName = 'issueTransactions';
+      else if (type === 'RETURN') colName = 'returnTransactions';
+      else if (type === 'PURCHASE') colName = 'purchaseOrders';
+      else if (type === 'SALE') colName = 'customerSales';
+
+      if (colName) {
+        await deleteDoc(doc(db, colName, id));
+        toast.success('Transaction deleted');
+        loadLogs();
+      }
+    } catch (e: any) {
+      toast.error('Failed to delete transaction: ' + e.message);
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (d: any) => {
     if (!d) return '-';
@@ -294,6 +315,7 @@ export default function TransactionLogPage() {
                   <th className="px-4 py-3 text-left">Phone</th>
                   <th className="px-4 py-3 text-left">Items</th>
                   <th className="px-4 py-3 text-left">Given By / Staff</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,6 +346,11 @@ export default function TransactionLogPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{log.staffName}</td>
+                      <td className="px-4 py-3 text-right">
+                        <AppButton variant="ghost" size="icon" onClick={() => handleDelete(log.id, log.type)} className="text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </AppButton>
+                      </td>
                     </tr>
                   );
                 })}
