@@ -22,6 +22,7 @@ export default function DashboardPage() {
   })
   
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [recentReturns, setRecentReturns] = useState<any[]>([])
 
   useEffect(() => {
     if (!companyId) return
@@ -47,7 +48,7 @@ export default function DashboardPage() {
         // Since we don't have a getRecent() method yet, we'll leave the table empty for now 
         // or just show a message. Let's populate it with issues as activity.
         // Only show recent active issues
-        const activeIssues = issues.filter(i => i.status === 'ISSUED');
+        const activeIssues = issues.filter(i => i.status === 'ISSUED' || i.status === 'PARTIALLY_RETURNED');
         const recent = activeIssues.slice(0, 5).map(i => ({
           id: i.id,
           action: 'Issued',
@@ -56,6 +57,21 @@ export default function DashboardPage() {
           user: i.employeeId
         }))
         setRecentActivity(recent)
+
+        // Show recent returns
+        const returnedIssues = issues.filter(i => i.items.some(it => (it.returnedQty || 0) > 0));
+        const recentReturnsList = returnedIssues.sort((a, b) => {
+          const ta = (a.updatedAt as any)?.toDate ? (a.updatedAt as any).toDate().getTime() : 0;
+          const tb = (b.updatedAt as any)?.toDate ? (b.updatedAt as any).toDate().getTime() : 0;
+          return tb - ta;
+        }).slice(0, 5).map(i => ({
+          id: i.id + '_ret',
+          action: 'Returned',
+          item: i.items.filter(it => (it.returnedQty || 0) > 0).map(it => it.productName).join(', '),
+          date: new Date((i.updatedAt as any)?.toDate ? (i.updatedAt as any).toDate() : new Date()).toLocaleDateString(),
+          user: i.employeeId
+        }))
+        setRecentReturns(recentReturnsList)
 
       } catch (error) {
         console.error("Dashboard error", error)
@@ -101,17 +117,32 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mt-8">
-        <div className="mb-4">
-          <h3 className="text-card-title">Recent Issues</h3>
-          <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--spacing-3xl)] mt-8">
+        <div>
+          <div className="mb-4">
+            <h3 className="text-card-title">Recent Issues</h3>
+            <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
+          </div>
+          <AppTable 
+            columns={recentActivityCols} 
+            data={recentActivity} 
+            isLoading={isLoading}
+            emptyTitle="No activity yet"
+          />
         </div>
-        <AppTable 
-          columns={recentActivityCols} 
-          data={recentActivity} 
-          isLoading={isLoading}
-          emptyTitle="No activity yet"
-        />
+
+        <div>
+          <div className="mb-4">
+            <h3 className="text-card-title">Recent Returns</h3>
+            <p className="text-caption text-muted-foreground mt-1">Latest materials returned from techs.</p>
+          </div>
+          <AppTable 
+            columns={recentActivityCols} 
+            data={recentReturns} 
+            isLoading={isLoading}
+            emptyTitle="No returns yet"
+          />
+        </div>
       </div>
     </PageContainer>
   )
