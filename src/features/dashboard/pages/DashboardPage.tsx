@@ -117,7 +117,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--spacing-3xl)] mt-8">
+      <div className="space-y-8 mt-8">
         <div>
           <div className="mb-4">
             <h3 className="text-card-title">Recent Issues</h3>
