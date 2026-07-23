@@ -50,8 +50,8 @@ export default function HelpPage() {
             Need direct assistance? Our dedicated technical team is available 24/7 to resolve your issues.
           </p>
           <div className="flex flex-col gap-2 w-full mt-auto">
-            <a href="mailto:support@estorepro.com" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
-              <Mail className="h-4 w-4 mr-2" /> support@estorepro.com
+            <a href="mailto:edgaredgefx@gmail.com" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+              <Mail className="h-4 w-4 mr-2" /> edgaredgefx@gmail.com
             </a>
             <span className="flex items-center text-sm text-muted-foreground hover:text-foreground">
               <MessageCircle className="h-4 w-4 mr-2" /> Live Chat Available
