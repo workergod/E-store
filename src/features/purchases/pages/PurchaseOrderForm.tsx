@@ -29,17 +29,15 @@ const itemSchema = z.object({
 });
 
 const poSchema = z.object({
-  supplierId: z.string().min(1, "Supplier is required"),
+  supplierId: z.string().optional(),
   purchaseDate: z.string().min(1, "Date is required"),
-  expectedDeliveryDate: z.string().optional(),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1, "Add at least one item")
 });
 
 type POFormData = {
-  supplierId: string;
+  supplierId?: string;
   purchaseDate: string;
-  expectedDeliveryDate?: string;
   notes?: string;
   items: {
     productId: string;
@@ -102,10 +100,9 @@ export default function PurchaseOrderForm() {
 
       const payload = {
         companyId,
-        supplierId: data.supplierId,
+        supplierId: data.supplierId || '',
         status: 'Draft' as const,
         purchaseDate: new Date(data.purchaseDate),
-        expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate) : undefined,
         notes: data.notes,
         items: enrichedItems,
         createdBy: user.uid
@@ -191,9 +188,9 @@ export default function PurchaseOrderForm() {
 
             {/* Right Column: Supplier & Dates & Summary */}
             <div className="space-y-6">
-              <FormSection title="Supplier & Dates" description="Select the vendor and expected delivery timeline.">
+              <FormSection title="Supplier & Dates" description="Select the vendor and purchase timeline.">
                 <div className="space-y-4">
-                  <FormField label="Supplier" required error={methods.formState.errors.supplierId?.message}>
+                  <FormField label="Supplier" error={methods.formState.errors.supplierId?.message}>
                     <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                       {...methods.register('supplierId')} 
                     >
@@ -203,9 +200,6 @@ export default function PurchaseOrderForm() {
                   </FormField>
                   <FormField label="Purchase Date" required error={methods.formState.errors.purchaseDate?.message}>
                     <AppInput type="date" {...methods.register('purchaseDate')} />
-                  </FormField>
-                  <FormField label="Expected Delivery Date" error={methods.formState.errors.expectedDeliveryDate?.message}>
-                    <AppInput type="date" {...methods.register('expectedDeliveryDate')} />
                   </FormField>
                 </div>
               </FormSection>
