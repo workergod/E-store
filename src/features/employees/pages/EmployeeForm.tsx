@@ -19,17 +19,17 @@ import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
 
-const ROLES: EmployeeRole[] = ['Technician', 'Sales', 'Manager', 'Store Keeper', 'Accountant'];
+const ROLES: EmployeeRole[] = ['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception'];
 const STATUSES: EmployeeStatus[] = ['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED'];
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  role: z.enum(['Technician', 'Sales', 'Manager', 'Store Keeper', 'Accountant']),
+  role: z.enum(['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception']),
   department: z.string().optional(),
   designation: z.string().optional(),
   status: z.enum(['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED']),
-  mobile: z.string().min(1, 'Mobile is required'),
+  mobile: z.string().optional().or(z.literal('')),
   whatsapp: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   address: z.string().optional(),
@@ -72,7 +72,7 @@ export default function EmployeeForm() {
             department: emp.department || '',
             designation: emp.designation || '',
             status: emp.status,
-            mobile: emp.mobile,
+            mobile: emp.mobile || '',
             whatsapp: emp.whatsapp || '',
             email: emp.email || '',
             address: emp.address || '',
@@ -159,7 +159,7 @@ export default function EmployeeForm() {
             </FormRow>
 
             <FormRow>
-              <FormField label="Mobile" required error={methods.formState.errors.mobile?.message}>
+              <FormField label="Mobile" error={methods.formState.errors.mobile?.message}>
                 <AppInput {...methods.register('mobile')} placeholder="+1 234 567 8900" />
               </FormField>
               <FormField label="WhatsApp" error={methods.formState.errors.whatsapp?.message}>
