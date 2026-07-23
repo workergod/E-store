@@ -5,7 +5,6 @@ import { MetricCard } from '../../../shared/widgets/MetricWidget'
 import { ChartCard } from '../../../shared/widgets/ChartWidget'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { Package, AlertCircle, RefreshCw } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
 import { useAuthStore } from "../../../store/authStore"
 import { productRepository } from '../../../repositories/ProductRepository'
@@ -67,15 +66,6 @@ export default function DashboardPage() {
     loadDashboard()
   }, [companyId])
 
-  const mockChartData = [
-    { name: 'Mon', sales: 4000, purchases: 2400 },
-    { name: 'Tue', sales: 3000, purchases: 1398 },
-    { name: 'Wed', sales: 2000, purchases: 9800 },
-    { name: 'Thu', sales: 2780, purchases: 3908 },
-    { name: 'Fri', sales: 1890, purchases: 4800 },
-    { name: 'Sat', sales: 2390, purchases: 3800 },
-    { name: 'Sun', sales: 3490, purchases: 4300 },
-  ]
 
   const recentActivityCols = [
     { header: 'Action', accessorKey: 'action' },
@@ -111,35 +101,17 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--spacing-3xl)] mt-8">
-        <div className="lg:col-span-2">
-          <ChartCard title="Movement Overview" subtitle="Stock in vs Stock out for the past week" height={350}>
-            <BarChart data={mockChartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} />
-              <Tooltip 
-                cursor={{ fill: 'var(--muted)' }}
-                contentStyle={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-floating)' }}
-              />
-              <Bar dataKey="sales" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="purchases" fill="var(--muted-foreground)" opacity={0.3} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ChartCard>
+      <div className="mt-8">
+        <div className="mb-4">
+          <h3 className="text-card-title">Recent Issues</h3>
+          <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
         </div>
-        
-        <div className="lg:col-span-1">
-          <div className="mb-4">
-            <h3 className="text-card-title">Recent Issues</h3>
-            <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
-          </div>
-          <AppTable 
-            columns={recentActivityCols} 
-            data={recentActivity} 
-            isLoading={isLoading}
-            emptyTitle="No activity yet"
-          />
-        </div>
+        <AppTable 
+          columns={recentActivityCols} 
+          data={recentActivity} 
+          isLoading={isLoading}
+          emptyTitle="No activity yet"
+        />
       </div>
     </PageContainer>
   )
