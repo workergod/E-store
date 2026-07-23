@@ -1,8 +1,10 @@
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
+import { useNavigate } from 'react-router-dom';
 import { LifeBuoy, BookOpen, Mail, MessageCircle, FileText } from 'lucide-react';
 
 export default function HelpPage() {
+  const navigate = useNavigate();
   return (
     <PageContainer>
       <PageHeader 
@@ -13,7 +15,7 @@ export default function HelpPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
         
         {/* Knowledge Base */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col items-start transition-all hover:shadow-md cursor-pointer">
+        <div onClick={() => navigate('/knowledge-base')} className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col items-start transition-all hover:shadow-md cursor-pointer">
           <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
             <BookOpen className="h-6 w-6" />
           </div>

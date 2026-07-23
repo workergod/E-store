@@ -36,6 +36,7 @@ import ReturnMaterialsPage from './features/inventory/pages/ReturnMaterialsPage'
 import TransactionLogPage from './features/reports/pages/TransactionLogPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
 import HelpPage from './features/settings/pages/HelpPage';
+import KnowledgeBasePage from './features/settings/pages/KnowledgeBasePage';
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
@@ -91,6 +92,7 @@ function MainApp() {
               <Route path="/transaction-log" element={<TransactionLogPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/help" element={<HelpPage />} />
+              <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
             </Routes>
           </AppShell>
         </ProtectedRoute>
