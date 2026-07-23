@@ -3,7 +3,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../shared/ui/Dialog';
-import { Button } from '../../../shared/ui/Button';
+import { AppButton } from '../../../shared/app/AppButton';
 import { Input } from '../../../shared/ui/Input';
 import { Label } from '../../../shared/ui/Label';
 import { useAuthStore } from "../../../store/authStore";
@@ -199,10 +199,10 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
         </FormProvider>
 
         <DialogFooter className="mt-4 pt-4 border-t border-border">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
-          <Button type="submit" form="product-form" disabled={isSaving}>
+          <AppButton variant="outline" onClick={onClose} disabled={isSaving}>Cancel</AppButton>
+          <AppButton type="submit" form="product-form" disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Product'}
-          </Button>
+          </AppButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
