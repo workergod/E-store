@@ -19,13 +19,13 @@ import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
 
-const ROLES: EmployeeRole[] = ['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception'];
+const ROLES: EmployeeRole[] = ['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception', 'CRM'];
 const STATUSES: EmployeeStatus[] = ['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED'];
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  role: z.enum(['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception']),
+  role: z.enum(['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception', 'CRM']),
   department: z.string().optional(),
   designation: z.string().optional(),
   status: z.enum(['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED']),

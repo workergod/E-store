@@ -4,12 +4,14 @@ import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
 import { signOut } from "../../firebase/auth"
+import { useNavigate } from 'react-router-dom'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore()
   const [collapsed, setCollapsed] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(true)
+  const navigate = useNavigate()
 
   const toggleTheme = () => {
     setIsDark(!isDark)
@@ -55,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden z-50">
                   <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
                     <span className="font-semibold text-sm">Notifications</span>
-                    <span onClick={() => { setHasNotifications(false); toast.success('All marked as read'); }} className="text-xs text-primary cursor-pointer hover:underline">Mark all read</span>
+                    <button onClick={() => { setHasNotifications(false); document.activeElement?.blur(); }} className="text-xs text-primary cursor-pointer hover:underline">Mark all read</button>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {hasNotifications ? (
@@ -88,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     )}
                   </div>
                   <div className="p-2 text-center border-t border-border bg-muted/10">
-                    <button onClick={() => toast.info('Notification center coming soon')} className="text-xs text-primary hover:underline font-medium">View all notifications</button>
+                    <button onClick={() => { navigate('/notifications'); document.activeElement?.blur(); }} className="text-xs text-primary hover:underline font-medium">View all notifications</button>
                   </div>
                 </div>
               </div>
@@ -100,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden">
                   <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
                     <span className="font-semibold text-sm">Messages</span>
-                    <span onClick={() => toast.info('Messaging feature is under development')} className="text-xs text-primary cursor-pointer hover:underline">New Message</span>
+                    <button onClick={() => { navigate('/messages'); document.activeElement?.blur(); }} className="text-xs text-primary cursor-pointer hover:underline">New Message</button>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto p-8 text-center flex flex-col items-center justify-center">
                     <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">

@@ -37,6 +37,8 @@ import TransactionLogPage from './features/reports/pages/TransactionLogPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
 import HelpPage from './features/settings/pages/HelpPage';
 import KnowledgeBasePage from './features/settings/pages/KnowledgeBasePage';
+import NotificationsPage from './features/settings/pages/NotificationsPage';
+import MessagesPage from './features/settings/pages/MessagesPage';
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
@@ -93,6 +95,8 @@ function MainApp() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/help" element={<HelpPage />} />
               <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
             </Routes>
           </AppShell>
         </ProtectedRoute>

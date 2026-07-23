@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type EmployeeRole = 'Technician' | 'Manager' | 'Store Keeper' | 'Accountant' | 'Supervisor' | 'Engineer' | 'GEM' | 'Reception';
+export type EmployeeRole = 'Technician' | 'Manager' | 'Store Keeper' | 'Accountant' | 'Supervisor' | 'Engineer' | 'GEM' | 'Reception' | 'CRM';
 export type EmployeeStatus = 'ACTIVE' | 'ON_LEAVE' | 'SUSPENDED' | 'RESIGNED' | 'TERMINATED';
 
 export interface Employee {
