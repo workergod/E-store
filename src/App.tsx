@@ -32,7 +32,7 @@ import EmployeeForm from './features/employees/pages/EmployeeForm';
 import EmployeeProfile from './features/employees/pages/EmployeeProfile';
 import IssueMaterialsPage from './features/inventory/pages/IssueMaterialsPage';
 import ReturnMaterialsPage from './features/inventory/pages/ReturnMaterialsPage';
-import CustomerSalesPage from './features/sales/pages/CustomerSalesPage';
+
 import TransactionLogPage from './features/reports/pages/TransactionLogPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
 import HelpPage from './features/settings/pages/HelpPage';
@@ -87,7 +87,7 @@ function MainApp() {
 
               <Route path="/issue" element={<IssueMaterialsPage />} />
               <Route path="/returns" element={<ReturnMaterialsPage />} />
-              <Route path="/sales" element={<CustomerSalesPage />} />
+
               <Route path="/transaction-log" element={<TransactionLogPage />} />
               <Route path="/reports" element={<TransactionLogPage />} />
               <Route path="/settings" element={<SettingsPage />} />

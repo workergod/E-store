@@ -22,9 +22,6 @@ const PURCHASING_NAV = [
   { path: '/purchases', label: 'Purchasing', icon: ShoppingCart },
 ]
 
-const SALES_NAV = [
-  { path: '/sales', label: 'Customer Sales', icon: ShoppingBag },
-]
 
 const OPERATIONS_NAV = [
   { path: '/employees', label: 'Employees', icon: Users },
@@ -106,12 +103,6 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           </div>
         </div>
 
-        <div className="px-4">
-          {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sales</h4>}
-          <div className="space-y-[var(--spacing-xs)]">
-            {SALES_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
-          </div>
-        </div>
 
         <div className="px-4">
           {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operations</h4>}
