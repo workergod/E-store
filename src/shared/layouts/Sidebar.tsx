@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
@@ -7,6 +8,7 @@ import {
   } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
+import { SupervisorLoginModal } from '../../features/supervisor/components/SupervisorLoginModal'
 
 const MAIN_NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -53,6 +55,28 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
   const location = useLocation()
   const { company } = useAuthStore()
 
+  const [clickCount, setClickCount] = useState(0)
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [showSupervisorModal, setShowSupervisorModal] = useState(false)
+
+  const handleCompanyNameClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current)
+    }
+    
+    const newCount = clickCount + 1
+    setClickCount(newCount)
+    
+    if (newCount >= 7) {
+      setClickCount(0)
+      setShowSupervisorModal(true)
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        setClickCount(0)
+      }, 1000) // Reset if 1 second passes without a click
+    }
+  }
+
   return (
     <aside 
       className={cn(
@@ -62,11 +86,11 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
     >
       <div className="h-[72px] flex items-center px-6 border-b border-border/50 shrink-0">
         <div className={cn("flex items-center gap-3 overflow-hidden transition-all", collapsed ? "w-8" : "w-full")}>
-          <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden shadow-sm flex items-center justify-center bg-white">
+          <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden shadow-sm flex items-center justify-center bg-white cursor-pointer" onClick={handleCompanyNameClick}>
             <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
-            <span className="font-bold tracking-tight text-foreground truncate text-lg">
+            <span className="font-bold tracking-tight text-foreground truncate text-lg cursor-pointer select-none" onClick={handleCompanyNameClick}>
               {company?.companyName || 'E Store Pro'}
             </span>
           )}
@@ -124,6 +148,10 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           </div>
         )}
       </div>
+
+      {showSupervisorModal && (
+        <SupervisorLoginModal onClose={() => setShowSupervisorModal(false)} />
+      )}
     </aside>
   )
 }

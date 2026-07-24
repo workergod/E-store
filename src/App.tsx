@@ -40,6 +40,7 @@ import HelpPage from './features/settings/pages/HelpPage';
 import KnowledgeBasePage from './features/settings/pages/KnowledgeBasePage';
 import NotificationsPage from './features/settings/pages/NotificationsPage';
 import MessagesPage from './features/settings/pages/MessagesPage';
+import SupervisorCornerPage from './features/supervisor/pages/SupervisorCorner';
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
@@ -99,6 +100,7 @@ function MainApp() {
               <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/supervisor" element={<SupervisorCornerPage />} />
             </Routes>
           </AppShell>
         </ProtectedRoute>
