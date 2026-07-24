@@ -97,7 +97,8 @@ export const productRepository = {
 
   delete: async (id: string, companyId: string, userId: string): Promise<void> => {
     const docRef = doc(db, 'products', id);
-    await deleteDoc(docRef);
-    await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Product', id, {});
+    const payload = { status: 'DELETED', updatedAt: serverTimestamp(), updatedBy: userId };
+    await updateDoc(docRef, payload);
+    await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Product', id, payload);
   }
 };

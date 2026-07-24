@@ -27,6 +27,7 @@ export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
   const [showLowStock, setShowLowStock] = useState(location.state?.filter === 'low-stock');
+  const [showDeleted, setShowDeleted] = useState(false);
 
   const loadProducts = useCallback(async () => {
     if (!companyId) {
@@ -74,16 +75,18 @@ export default function ProductsPage() {
     }
   };
   const displayedProducts = useMemo(() => {
-    if (showLowStock) {
-      return products.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0));
+    let filtered = products;
+    if (showDeleted) {
+      filtered = filtered.filter(p => p.status === 'DELETED');
+    } else {
+      filtered = filtered.filter(p => p.status !== 'DELETED');
     }
-    return products;
-  }, [products, showLowStock]);
-
-
-
-
-  const columns = useMemo<ColumnDef<Product>[]>(
+    
+    if (showLowStock) {
+      filtered = filtered.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0));
+    }
+    return filtered;
+  }, [products, showLowStock, showDeleted]);  const columns = useMemo<ColumnDef<Product>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -121,15 +124,19 @@ export default function ProductsPage() {
         id: 'actions',
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            <AppButton variant="ghost" size="icon" onClick={() => handleEdit(row.original)}>
-              <Edit className="h-4 w-4" />
-            </AppButton>
+            {row.original.status !== 'DELETED' && (
+              <AppButton variant="ghost" size="icon" onClick={() => handleEdit(row.original)}>
+                <Edit className="h-4 w-4" />
+              </AppButton>
+            )}
             <AppButton variant="ghost" size="icon" onClick={() => navigate(`/products/${row.original.id}`)}>
               <Eye className="h-4 w-4" />
             </AppButton>
-            <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-              <Trash2 className="h-4 w-4" />
-            </AppButton>
+            {row.original.status !== 'DELETED' && (
+              <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                <Trash2 className="h-4 w-4" />
+              </AppButton>
+            )}
           </div>
         )
       }
@@ -157,9 +164,24 @@ export default function ProductsPage() {
             or we can just leave the space for future advanced filters. AppTable takes a searchKey so it renders its own search. */}
         <div className="flex items-center gap-3 ml-auto">
           <AppButton 
+            variant={showDeleted ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => {
+              setShowDeleted(!showDeleted);
+              if (!showDeleted) setShowLowStock(false);
+            }}
+            className={showDeleted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+          >
+            <Trash2 className="h-4 w-4 mr-2"/> 
+            Deleted Products
+          </AppButton>
+          <AppButton 
             variant={showLowStock ? "default" : "outline"} 
             size="sm" 
-            onClick={() => setShowLowStock(!showLowStock)}
+            onClick={() => {
+              setShowLowStock(!showLowStock);
+              if (!showLowStock) setShowDeleted(false);
+            }}
           >
             <AlertCircle className="h-4 w-4 mr-2"/> 
             Low Stock Only
