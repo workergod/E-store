@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
-import { Camera, X, User } from 'lucide-react';
+import { Camera, X, User, Trash2 } from 'lucide-react';
 import { AppButton } from '../app/AppButton';
 
 const createImage = (url: string) =>
@@ -45,7 +45,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<string |
   });
 }
 
-export function ProfilePictureUploader({ value, onChange }: { value?: string, onChange: (url: string) => void }) {
+export function ProfilePictureUploader({ value, onChange, fallbackName }: { value?: string, onChange: (url: string) => void, fallbackName?: string }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -83,11 +83,25 @@ export function ProfilePictureUploader({ value, onChange }: { value?: string, on
         <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-background shadow-md bg-muted flex items-center justify-center relative z-10">
           {value ? (
             <img src={value} alt="Profile" className="w-full h-full object-cover" />
+          ) : fallbackName ? (
+            <span className="text-4xl font-bold text-muted-foreground uppercase">{fallbackName.charAt(0)}</span>
           ) : (
             <User className="h-10 w-10 text-muted-foreground opacity-50" />
           )}
         </div>
-        <label className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg cursor-pointer hover:bg-primary/90 transition-colors z-20 hover:scale-105 active:scale-95">
+
+        {value && (
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); onChange(''); }}
+            className="absolute top-0 right-0 p-1.5 bg-destructive text-destructive-foreground rounded-full shadow-lg cursor-pointer hover:bg-destructive/90 transition-colors z-20 hover:scale-105 active:scale-95"
+            title="Remove picture"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+
+        <label className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg cursor-pointer hover:bg-primary/90 transition-colors z-20 hover:scale-105 active:scale-95" title="Upload new picture">
           <Camera className="h-4 w-4" />
           <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         </label>

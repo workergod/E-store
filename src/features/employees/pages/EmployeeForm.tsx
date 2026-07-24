@@ -159,6 +159,7 @@ export default function EmployeeForm() {
                 <ProfilePictureUploader 
                   value={methods.watch('photoUrl')} 
                   onChange={(url) => methods.setValue('photoUrl', url, { shouldDirty: true })} 
+                  fallbackName={methods.watch('firstName')}
                 />
               </div>
               <div className="flex-1 w-full space-y-6">
