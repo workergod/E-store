@@ -21,6 +21,8 @@ interface LogEntry {
   items: { name: string; qty: number; unit?: string }[];
   notes?: string;
   status?: string;
+  siteName?: string;
+  additionalTechnicians?: string[];
 }
 
 const typeConfig = {
@@ -69,6 +71,8 @@ export default function TransactionLogPage() {
           items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.issuedQty })),
           notes: d.notes,
           status: d.status,
+          siteName: d.siteName,
+          additionalTechnicians: d.additionalTechnicians,
         });
       });
 
@@ -214,6 +218,9 @@ export default function TransactionLogPage() {
       const s = search.toLowerCase();
       return l.customerOrTech.toLowerCase().includes(s)
         || l.staffName.toLowerCase().includes(s)
+        || (l.notes && l.notes.toLowerCase().includes(s))
+        || (l.siteName && l.siteName.toLowerCase().includes(s))
+        || (l.additionalTechnicians && l.additionalTechnicians.some(t => t.toLowerCase().includes(s)))
         || l.items.some(it => it.name.toLowerCase().includes(s));
     }
     return true;
@@ -334,7 +341,19 @@ export default function TransactionLogPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.date)}</td>
-                      <td className="px-4 py-3 font-medium">{log.customerOrTech}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {log.customerOrTech}
+                        {log.additionalTechnicians && log.additionalTechnicians.length > 0 && (
+                          <span className="text-muted-foreground font-normal ml-1 text-xs">
+                            (+{log.additionalTechnicians.length} others)
+                          </span>
+                        )}
+                        {log.siteName && (
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1">
+                            Site: {log.siteName}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{log.phone || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="max-w-xs">

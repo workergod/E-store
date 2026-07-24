@@ -26,6 +26,8 @@ const itemSchema = z.object({
 
 const issueSchema = z.object({
   employeeName: z.string().min(1, 'Employee is required'),
+  additionalTechnicians: z.array(z.object({ name: z.string().min(1, "Name is required") })).optional(),
+  siteName: z.string().optional(),
   issueDate: z.string().min(1, 'Date is required'),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item')
@@ -47,6 +49,8 @@ export default function IssueMaterialsPage() {
     resolver: zodResolver(issueSchema) as any,
     defaultValues: {
       employeeName: '',
+      additionalTechnicians: [],
+      siteName: '',
       issueDate: new Date().toISOString().split('T')[0],
       items: [{ productId: '', issuedQty: 1 }]
     }
@@ -55,6 +59,11 @@ export default function IssueMaterialsPage() {
   const { fields, append, remove } = useFieldArray({
     control: methods.control,
     name: "items"
+  });
+
+  const { fields: techFields, append: appendTech, remove: removeTech } = useFieldArray({
+    control: methods.control,
+    name: "additionalTechnicians"
   });
 
   const watchedItems = methods.watch("items");
@@ -120,6 +129,8 @@ export default function IssueMaterialsPage() {
       const payload = {
         companyId,
         employeeId: finalEmployeeId,
+        additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+        siteName: data.siteName || '',
         issueDate: new Date(data.issueDate),
         notes: data.notes,
         items: enrichedItems,
@@ -162,11 +173,17 @@ export default function IssueMaterialsPage() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-bold mb-2">Issued To</p>
                 <p className="font-bold text-lg text-foreground">{selectedEmp?.firstName} {selectedEmp?.lastName}</p>
-                <p className="text-muted-foreground font-medium">{selectedEmp?.role} {selectedEmp?.department ? `• ${selectedEmp.department}` : ''}</p>
+                {methods.getValues().additionalTechnicians && methods.getValues().additionalTechnicians!.length > 0 && (
+                  <p className="text-sm font-medium mt-1">+ {methods.getValues().additionalTechnicians!.map(t => t.name).join(', ')}</p>
+                )}
+                <p className="text-muted-foreground font-medium mt-1">{selectedEmp?.role} {selectedEmp?.department ? `• ${selectedEmp.department}` : ''}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground uppercase font-bold mb-2">Issue Date</p>
-                <p className="font-bold text-lg text-foreground">{new Date(methods.getValues().issueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="text-xs text-muted-foreground uppercase font-bold mb-2">Issue Details</p>
+                <p className="font-bold text-foreground mb-1">{new Date(methods.getValues().issueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                {methods.getValues().siteName && (
+                  <p className="text-sm font-medium text-muted-foreground">Site: {methods.getValues().siteName}</p>
+                )}
               </div>
             </div>
 
@@ -295,8 +312,11 @@ export default function IssueMaterialsPage() {
               </FormSection>
 
               <FormSection title="Additional Notes" description="Any special instructions for the technician.">
+                <FormField label="Site Name (Optional)" error={methods.formState.errors.siteName?.message}>
+                  <AppInput placeholder="e.g. Building A, Floor 2" {...methods.register('siteName')} />
+                </FormField>
                 <FormField label="Notes / Remarks" error={methods.formState.errors.notes?.message}>
-                  <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="e.g. For AC Installation at Building 4..."></textarea>
+                  <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="e.g. For AC Installation..."></textarea>
                 </FormField>
               </FormSection>
             </div>
@@ -317,6 +337,28 @@ export default function IssueMaterialsPage() {
                       ))}
                     </datalist>
                   </FormField>
+                  
+                  {techFields.map((field, index) => (
+                    <div key={field.id} className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <FormField label={`Additional Technician ${index + 1}`}>
+                          <AppInput 
+                            list="employees-list" 
+                            placeholder="Type name..." 
+                            {...methods.register(`additionalTechnicians.${index}.name` as const)} 
+                          />
+                        </FormField>
+                      </div>
+                      <AppButton type="button" variant="ghost" size="icon" onClick={() => removeTech(index)} className="text-[hsl(var(--destructive))] mb-2">
+                        <Trash2 className="h-4 w-4" />
+                      </AppButton>
+                    </div>
+                  ))}
+
+                  <AppButton type="button" variant="outline" size="sm" onClick={() => appendTech({ name: '' })} className="w-full text-xs border-dashed">
+                    <Plus className="h-4 w-4 mr-2" /> Add Additional Technician
+                  </AppButton>
+
                   <FormField label="Date" required error={methods.formState.errors.issueDate?.message}>
                     <AppInput type="date" {...methods.register('issueDate')} />
                   </FormField>

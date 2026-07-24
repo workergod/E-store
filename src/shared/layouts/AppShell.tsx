@@ -11,7 +11,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate('/transaction-log', { state: { filter: 'ALL', searchQuery: searchQuery.trim() } })
+    }
+  }
 
   const toggleTheme = () => {
     setIsDark(!isDark)
@@ -36,8 +43,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
-                placeholder="Search products, SKU, Barcode..." 
+                placeholder="Search products, SKU, Barcode, Site..." 
                 className="w-full h-[52px] bg-muted/50 border border-transparent focus:bg-card focus:border-border pl-[44px] pr-4 rounded-[var(--radius-input)] text-sm outline-none transition-all focus:ring-2 focus:ring-primary/20 shadow-sm"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1">
                 <kbd className="inline-flex h-6 items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
