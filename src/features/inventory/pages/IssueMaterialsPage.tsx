@@ -200,8 +200,10 @@ export default function IssueMaterialsPage() {
                   const prod = products.find(p => p.id === item.productId);
                   return (
                     <tr key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-5 py-4 font-medium text-foreground">{prod?.name}</td>
-                      <td className="px-5 py-4 text-muted-foreground font-mono text-xs">{prod?.sku}</td>
+                      <td className="px-5 py-4 font-medium text-foreground">
+                        {prod?.name || <span className="text-destructive font-bold uppercase text-xs tracking-wider">Product not selected</span>}
+                      </td>
+                      <td className="px-5 py-4 text-muted-foreground font-mono text-xs">{prod?.sku || '-'}</td>
                       <td className="px-5 py-4 text-right font-black text-primary text-lg">{item.issuedQty}</td>
                     </tr>
                   );
@@ -277,10 +279,11 @@ export default function IssueMaterialsPage() {
                       {fields.map((field, index) => {
                         const wItem = watchedItems[index];
                         const prod = products.find(p => p.id === wItem?.productId);
+                        const error = methods.formState.errors.items?.[index]?.productId;
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                             <td className="p-2">
-                              <select {...methods.register(`items.${index}.productId` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none">
+                              <select {...methods.register(`items.${index}.productId` as const)} className={`w-full h-10 bg-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none border ${error ? 'border-destructive/50 ring-1 ring-destructive/30' : 'border-transparent'}`}>
                                 <option value="" disabled>Select Product...</option>
                                 {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                               </select>
