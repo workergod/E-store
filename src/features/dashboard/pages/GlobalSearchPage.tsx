@@ -141,114 +141,23 @@ export default function GlobalSearchPage() {
     performSearch();
   }, [companyId, searchQuery]);
 
-  const handlePrintHistory = (result: any) => {
-    const w = window.open('', '_blank', 'width=900,height=700');
-    if (!w) {
-      window.print();
-      return;
-    }
-
-    const title = result.type === 'EMPLOYEE' 
-      ? `Material History: ${result.employee.firstName} ${result.employee.lastName}`
-      : `Material History: Site ${result.siteName}`;
-    
-    const subtitle = result.type === 'EMPLOYEE'
-      ? `Role: ${result.employee.role} | Contact: ${result.employee.mobile}`
-      : 'Site History Report';
-
-    let html = `
-      <html><head><title>${title}</title>
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; color: #333; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-        h1 { margin: 0 0 5px 0; font-size: 24px; color: #000; }
-        .subtitle { color: #666; font-size: 14px; margin: 0; }
-        .transaction { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
-        .transaction-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; font-size: 13px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
-        .transaction-meta { font-size: 11px; color: #666; font-weight: normal; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-        th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; }
-        th { font-weight: bold; color: #555; background: #f9f9f9; }
-        .qty { text-align: right; font-weight: bold; width: 100px; }
-        .notes { font-style: italic; font-size: 11px; color: #666; margin-top: 5px; padding: 5px; background: #f9f9f9; }
-        .footer { text-align: center; margin-top: 40px; font-size: 10px; color: #999; }
-        .section-title { margin-top: 30px; margin-bottom: 15px; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #444; }
-        .empty { font-style: italic; color: #999; margin-left: 10px; }
-      </style></head><body>
-      
-      <div class="header">
-        <h1>${title}</h1>
-        <p class="subtitle">${subtitle}</p>
-      </div>
-    `;
-
-    // Issued Section
-    html += \`<div class="section-title">📦 Issued Materials</div>\`;
-    if (result.issuedMaterials.length > 0) {
-      result.issuedMaterials.forEach((issue: any) => {
-        html += \`<div class="transaction">
-          <div class="transaction-header">
-            <span>\${issue.date.toLocaleDateString('en-IN')} \${issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span class="transaction-meta">ID: \${issue.id?.slice(-6) || 'N/A'} \${issue.siteName ? '| Site: ' + issue.siteName : ''} \${issue.employeeName ? '| Tech: ' + issue.employeeName : ''}</span>
-          </div>
-          <table>
-            <thead><tr><th>Product Name</th><th class="qty">Qty Issued</th></tr></thead>
-            <tbody>
-              \${issue.items.map((mat: any) => \`<tr><td>\${mat.productName}</td><td class="qty">\${mat.issuedQty}</td></tr>\`).join('')}
-            </tbody>
-          </table>
-          \${issue.notes ? \`<div class="notes">Note: \${issue.notes}</div>\` : ''}
-        </div>\`;
-      });
-    } else {
-      html += \`<p class="empty">No materials issued.</p>\`;
-    }
-
-    // Returned Section
-    html += \`<div class="section-title" style="margin-top:40px;">🔄 Returned Materials</div>\`;
-    if (result.returnedMaterials.length > 0) {
-      result.returnedMaterials.forEach((issue: any) => {
-        html += \`<div class="transaction">
-          <div class="transaction-header">
-            <span>\${issue.date.toLocaleDateString('en-IN')} \${issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span class="transaction-meta">ID: \${issue.id?.slice(-6) || 'N/A'} \${issue.siteName ? '| Site: ' + issue.siteName : ''} \${issue.employeeName ? '| Tech: ' + issue.employeeName : ''}</span>
-          </div>
-          <table>
-            <thead><tr><th>Product Name</th><th class="qty">Qty Returned</th></tr></thead>
-            <tbody>
-              \${issue.items.map((mat: any) => \`<tr><td>\${mat.productName}</td><td class="qty">\${mat.returnedQty}</td></tr>\`).join('')}
-            </tbody>
-          </table>
-        </div>\`;
-      });
-    } else {
-      html += \`<p class="empty">No materials returned.</p>\`;
-    }
-
-    html += \`
-      <div class="footer">
-        Printed on \${new Date().toLocaleString('en-IN')}
-      </div>
-      </body></html>
-    \`;
-
-    w.document.write(html);
-    w.document.close();
-    
-    setTimeout(() => w.print(), 250);
+  const handlePrintHistory = () => {
+    window.print();
   };
 
   return (
     <PageContainer>
-      <div className="mb-[var(--spacing-md)]">
+      <div className="mb-[var(--spacing-md)] print:hidden">
         <AppButton variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-4 text-muted-foreground">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </AppButton>
       </div>
-      <PageHeader 
-        title={`Search Results for "${searchQuery}"`}
-        description="Employee records and their material transactions."
-      />
+      <div className="print:hidden">
+        <PageHeader 
+          title={`Search Results for "${searchQuery}"`}
+          description="Employee records and their material transactions."
+        />
+      </div>
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">Searching...</div>
@@ -263,8 +172,10 @@ export default function GlobalSearchPage() {
       ) : (
         <div className="space-y-8">
           {results.map((result, idx) => (
-            <AppCard key={idx} className="overflow-hidden print:shadow-none print:border-none">
-              <div className="bg-muted/30 p-6 border-b border-border flex justify-between items-center print:bg-transparent">
+            <div key={idx} className="print:break-after-page">
+              {/* SCREEN UI */}
+              <AppCard className="overflow-hidden print:hidden">
+                <div className="bg-muted/30 p-6 border-b border-border flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   {result.type === 'EMPLOYEE' ? (
                     <>
@@ -292,7 +203,7 @@ export default function GlobalSearchPage() {
                     </>
                   )}
                 </div>
-                <AppButton variant="outline" size="sm" onClick={() => handlePrintHistory(result)} className="print:hidden">
+                <AppButton variant="outline" size="sm" onClick={handlePrintHistory}>
                   <Printer className="h-4 w-4 mr-2" /> Print History
                 </AppButton>
               </div>
@@ -374,6 +285,103 @@ export default function GlobalSearchPage() {
                 </div>
               </div>
             </AppCard>
+
+            {/* PRINT UI */}
+            <div className="hidden print:block w-full bg-white text-black p-8">
+                <div className="border-b-2 border-black pb-4 mb-6 text-center">
+                  <h1 className="text-2xl font-bold uppercase tracking-wider">
+                    {result.type === 'EMPLOYEE' ? `Material History: ${result.employee.firstName} ${result.employee.lastName}` : `Material History: Site ${result.siteName}`}
+                  </h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {result.type === 'EMPLOYEE' ? `Role: ${result.employee.role} | Contact: ${result.employee.mobile}` : 'Site History Report'}
+                  </p>
+                </div>
+
+                {result.issuedMaterials.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-bold border-b border-gray-300 mb-3 pb-1">ISSUED MATERIALS</h2>
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 border-b-2 border-gray-300">
+                          <th className="text-left py-2 px-3 font-bold">Date & Time</th>
+                          <th className="text-left py-2 px-3 font-bold">Transaction Details</th>
+                          <th className="text-left py-2 px-3 font-bold">Materials Issued</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.issuedMaterials.map((issue: any, i: number) => (
+                          <tr key={i} className="border-b border-gray-200 align-top">
+                            <td className="py-3 px-3 w-40">
+                              <div className="font-semibold">{issue.date.toLocaleDateString('en-IN')}</div>
+                              <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                            </td>
+                            <td className="py-3 px-3 w-64">
+                              <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
+                              {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
+                              {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
+                              {issue.notes && <div className="text-xs italic mt-1 text-gray-600">Note: {issue.notes}</div>}
+                            </td>
+                            <td className="py-3 px-3">
+                              <ul className="list-disc list-inside">
+                                {issue.items.map((mat: any, j: number) => (
+                                  <li key={j} className="mb-1">
+                                    <span className="font-medium">{mat.productName}</span> 
+                                    <span className="font-bold ml-2">(Qty: {mat.issuedQty})</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {result.returnedMaterials.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-bold border-b border-gray-300 mb-3 pb-1">RETURNED MATERIALS</h2>
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 border-b-2 border-gray-300">
+                          <th className="text-left py-2 px-3 font-bold">Date & Time</th>
+                          <th className="text-left py-2 px-3 font-bold">Transaction Details</th>
+                          <th className="text-left py-2 px-3 font-bold">Materials Returned</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.returnedMaterials.map((issue: any, i: number) => (
+                          <tr key={i} className="border-b border-gray-200 align-top">
+                            <td className="py-3 px-3 w-40">
+                              <div className="font-semibold">{issue.date.toLocaleDateString('en-IN')}</div>
+                              <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                            </td>
+                            <td className="py-3 px-3 w-64">
+                              <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
+                              {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
+                              {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
+                            </td>
+                            <td className="py-3 px-3">
+                              <ul className="list-disc list-inside">
+                                {issue.items.map((mat: any, j: number) => (
+                                  <li key={j} className="mb-1">
+                                    <span className="font-medium">{mat.productName}</span> 
+                                    <span className="font-bold ml-2">(Returned: {mat.returnedQty})</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="text-center text-xs text-gray-400 mt-8 pt-4 border-t border-gray-200">
+                  Printed on {new Date().toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
