@@ -315,7 +315,7 @@ export default function GlobalSearchPage() {
                               <div className="font-semibold">{issue.date.toLocaleDateString('en-IN')}</div>
                               <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
                             </td>
-                            <td className="py-3 px-3 w-64">
+                            <td className="py-3 px-3 w-48">
                               <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
                               {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
                               {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
@@ -326,7 +326,7 @@ export default function GlobalSearchPage() {
                                 {issue.items.map((mat: any, j: number) => (
                                   <li key={j} className="mb-1">
                                     <span className="font-medium">{mat.productName}</span> 
-                                    <span className="font-bold ml-2">(Qty: {mat.issuedQty})</span>
+                                    <span className="font-bold ml-1 whitespace-nowrap text-gray-700">(Qty: {mat.issuedQty})</span>
                                   </li>
                                 ))}
                               </ul>
@@ -356,7 +356,7 @@ export default function GlobalSearchPage() {
                               <div className="font-semibold">{issue.date.toLocaleDateString('en-IN')}</div>
                               <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
                             </td>
-                            <td className="py-3 px-3 w-64">
+                            <td className="py-3 px-3 w-48">
                               <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
                               {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
                               {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
@@ -366,7 +366,7 @@ export default function GlobalSearchPage() {
                                 {issue.items.map((mat: any, j: number) => (
                                   <li key={j} className="mb-1">
                                     <span className="font-medium">{mat.productName}</span> 
-                                    <span className="font-bold ml-2">(Returned: {mat.returnedQty})</span>
+                                    <span className="font-bold ml-1 whitespace-nowrap text-gray-700">(Returned: {mat.returnedQty})</span>
                                   </li>
                                 ))}
                               </ul>
