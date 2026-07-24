@@ -18,6 +18,7 @@ import { FormSection } from '../../../shared/forms/FormSection';
 import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
+import { ProfilePictureUploader } from '../../../shared/documents/ProfilePictureUploader';
 
 const ROLES: EmployeeRole[] = ['Technician', 'Manager', 'Store Keeper', 'Accountant', 'Supervisor', 'Engineer', 'GEM', 'Reception', 'CRM'];
 const STATUSES: EmployeeStatus[] = ['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED'];
@@ -35,7 +36,8 @@ const formSchema = z.object({
   address: z.string().optional(),
   emergencyContact: z.string().optional(),
   joiningDate: z.string().min(1, 'Joining date is required'),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  photoUrl: z.string().optional()
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -55,7 +57,8 @@ export default function EmployeeForm() {
     defaultValues: {
       role: 'Technician',
       status: 'ACTIVE',
-      joiningDate: new Date().toISOString().split('T')[0]
+      joiningDate: new Date().toISOString().split('T')[0],
+      photoUrl: ''
     }
   });
 
@@ -80,7 +83,8 @@ export default function EmployeeForm() {
             joiningDate: emp.joiningDate && typeof (emp.joiningDate as any).toDate === 'function' 
               ? (emp.joiningDate as any).toDate().toISOString().split('T')[0] 
               : new Date().toISOString().split('T')[0],
-            notes: emp.notes || ''
+            notes: emp.notes || '',
+            photoUrl: emp.photoUrl || ''
           });
         }
       } catch (error) {
@@ -111,6 +115,7 @@ export default function EmployeeForm() {
         emergencyContact: data.emergencyContact,
         joiningDate: Timestamp.fromDate(new Date(data.joiningDate)),
         notes: data.notes,
+        photoUrl: data.photoUrl,
         createdBy: user.uid
       };
 
@@ -149,36 +154,46 @@ export default function EmployeeForm() {
         <AppForm onSubmit={methods.handleSubmit(onSubmit)}>
           
           <FormSection title="Basic Info" description="Personal details and contact information.">
-            <FormRow>
-              <FormField label="First Name" required error={methods.formState.errors.firstName?.message}>
-                <AppInput {...methods.register('firstName')} placeholder="John" />
-              </FormField>
-              <FormField label="Last Name" required error={methods.formState.errors.lastName?.message}>
-                <AppInput {...methods.register('lastName')} placeholder="Doe" />
-              </FormField>
-            </FormRow>
+            <div className="flex flex-col md:flex-row gap-8 items-start mb-6">
+              <div className="shrink-0">
+                <ProfilePictureUploader 
+                  value={methods.watch('photoUrl')} 
+                  onChange={(url) => methods.setValue('photoUrl', url, { shouldDirty: true })} 
+                />
+              </div>
+              <div className="flex-1 w-full space-y-6">
+                <FormRow>
+                  <FormField label="First Name" required error={methods.formState.errors.firstName?.message}>
+                    <AppInput {...methods.register('firstName')} placeholder="John" />
+                  </FormField>
+                  <FormField label="Last Name" required error={methods.formState.errors.lastName?.message}>
+                    <AppInput {...methods.register('lastName')} placeholder="Doe" />
+                  </FormField>
+                </FormRow>
 
-            <FormRow>
-              <FormField label="Mobile" error={methods.formState.errors.mobile?.message}>
-                <AppInput {...methods.register('mobile')} placeholder="+1 234 567 8900" />
-              </FormField>
-              <FormField label="WhatsApp" error={methods.formState.errors.whatsapp?.message}>
-                <AppInput {...methods.register('whatsapp')} placeholder="+1 234 567 8900" />
-              </FormField>
-            </FormRow>
+                <FormRow>
+                  <FormField label="Mobile" error={methods.formState.errors.mobile?.message}>
+                    <AppInput {...methods.register('mobile')} placeholder="+1 234 567 8900" />
+                  </FormField>
+                  <FormField label="WhatsApp" error={methods.formState.errors.whatsapp?.message}>
+                    <AppInput {...methods.register('whatsapp')} placeholder="+1 234 567 8900" />
+                  </FormField>
+                </FormRow>
 
-            <FormRow>
-              <FormField label="Email Address" error={methods.formState.errors.email?.message}>
-                <AppInput type="email" {...methods.register('email')} placeholder="john@example.com" />
-              </FormField>
-              <FormField label="Emergency Contact" error={methods.formState.errors.emergencyContact?.message}>
-                <AppInput {...methods.register('emergencyContact')} placeholder="Name & Phone" />
-              </FormField>
-            </FormRow>
+                <FormRow>
+                  <FormField label="Email Address" error={methods.formState.errors.email?.message}>
+                    <AppInput type="email" {...methods.register('email')} placeholder="john@example.com" />
+                  </FormField>
+                  <FormField label="Emergency Contact" error={methods.formState.errors.emergencyContact?.message}>
+                    <AppInput {...methods.register('emergencyContact')} placeholder="Name & Phone" />
+                  </FormField>
+                </FormRow>
 
-            <FormField label="Residential Address" error={methods.formState.errors.address?.message}>
-              <AppInput {...methods.register('address')} placeholder="Full address" />
-            </FormField>
+                <FormField label="Residential Address" error={methods.formState.errors.address?.message}>
+                  <AppInput {...methods.register('address')} placeholder="Full address" />
+                </FormField>
+              </div>
+            </div>
           </FormSection>
 
           <FormSection title="Employment Details" description="Job role, department, and current status.">
