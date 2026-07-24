@@ -3,17 +3,17 @@ import { db } from '../firebase/firestore';
 
 export const settingsRepository = {
   getSupervisorPasswordHash: async (companyId: string): Promise<string | null> => {
-    const docRef = doc(db, 'settings', `supervisor_${companyId}`);
+    const docRef = doc(db, 'companies', companyId);
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
-      return snapshot.data().passwordHash;
+      return snapshot.data().supervisorPasswordHash || null;
     }
     return null;
   },
 
   setSupervisorPasswordHash: async (companyId: string, hash: string): Promise<void> => {
-    const docRef = doc(db, 'settings', `supervisor_${companyId}`);
-    await setDoc(docRef, { passwordHash: hash }, { merge: true });
+    const docRef = doc(db, 'companies', companyId);
+    await setDoc(docRef, { supervisorPasswordHash: hash }, { merge: true });
   },
 
   hashPassword: async (password: string): Promise<string> => {
