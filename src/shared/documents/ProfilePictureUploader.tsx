@@ -112,7 +112,7 @@ export function ProfilePictureUploader({ value, onChange, fallbackName }: { valu
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card p-6 rounded-xl shadow-premium w-full max-w-md flex flex-col gap-4 border border-border relative">
             <h3 className="font-semibold text-lg">Crop Profile Picture</h3>
-            <button onClick={() => setImageSrc(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setImageSrc(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
               <X className="h-5 w-5" />
             </button>
             
@@ -131,8 +131,8 @@ export function ProfilePictureUploader({ value, onChange, fallbackName }: { valu
             </div>
             
             <div className="flex gap-2 justify-end mt-2">
-              <AppButton variant="outline" onClick={() => setImageSrc(null)}>Cancel</AppButton>
-              <AppButton onClick={showCroppedImage}>Apply Crop</AppButton>
+              <AppButton type="button" variant="outline" onClick={() => setImageSrc(null)}>Cancel</AppButton>
+              <AppButton type="button" onClick={showCroppedImage}>Apply Crop</AppButton>
             </div>
           </div>
         </div>
