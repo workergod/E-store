@@ -37,40 +37,47 @@ export default function GlobalSearchPage() {
           `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(queryLower)
         );
 
-        if (matchedEmployees.length > 0) {
+        // Deduplicate matchedEmployees by name to avoid showing the same person twice if they were recreated
+        const uniqueEmployeesMap = new Map();
+        matchedEmployees.forEach(emp => {
+          const name = `${emp.firstName} ${emp.lastName}`.toLowerCase().trim();
+          if (!uniqueEmployeesMap.has(name)) {
+            uniqueEmployeesMap.set(name, { ...emp, ids: [emp.id] });
+          } else {
+            uniqueEmployeesMap.get(name).ids.push(emp.id);
+          }
+        });
+        
+        const uniqueEmployees = Array.from(uniqueEmployeesMap.values());
+
+        if (uniqueEmployees.length > 0) {
           // Fetch issues to get their issued and returned materials
           const allIssues = await issueRepository.getAll(companyId);
           
-          const enrichedResults = matchedEmployees.map(emp => {
-            const empIssues = allIssues.filter(i => i.employeeId === emp.id);
+          const enrichedResults = uniqueEmployees.map(emp => {
+            const empIssues = allIssues.filter(i => emp.ids.includes(i.employeeId));
             
-            const issuedMaterials: any[] = [];
-            const returnedMaterials: any[] = [];
+            const issuesWithItems = empIssues.filter(i => i.items.some(it => it.issuedQty > 0)).map(issue => ({
+              id: issue.id,
+              date: issue.createdAt?.toDate ? issue.createdAt.toDate() : new Date(issue.issueDate as any),
+              siteName: issue.siteName,
+              notes: issue.notes,
+              items: issue.items.filter(it => it.issuedQty > 0)
+            })).sort((a, b) => b.date.getTime() - a.date.getTime());
 
-            empIssues.forEach(issue => {
-              issue.items.forEach(item => {
-                if (item.issuedQty > 0) {
-                  issuedMaterials.push({
-                    name: item.productName,
-                    qty: item.issuedQty,
-                    date: issue.createdAt?.toDate ? issue.createdAt.toDate() : new Date(issue.issueDate as any)
-                  });
-                }
-                if (item.returnedQty > 0) {
-                  returnedMaterials.push({
-                    name: item.productName,
-                    qty: item.returnedQty,
-                    date: issue.updatedAt?.toDate ? issue.updatedAt.toDate() : new Date()
-                  });
-                }
-              });
-            });
+            const returnsWithItems = empIssues.filter(i => i.items.some(it => it.returnedQty > 0)).map(issue => ({
+              id: issue.id,
+              date: issue.updatedAt?.toDate ? issue.updatedAt.toDate() : new Date(),
+              siteName: issue.siteName,
+              notes: issue.notes,
+              items: issue.items.filter(it => it.returnedQty > 0)
+            })).sort((a, b) => b.date.getTime() - a.date.getTime());
 
             return {
               type: 'EMPLOYEE',
               employee: emp,
-              issuedMaterials,
-              returnedMaterials
+              issuedMaterials: issuesWithItems,
+              returnedMaterials: returnsWithItems
             };
           });
 
@@ -131,19 +138,34 @@ export default function GlobalSearchPage() {
                     <Package className="h-4 w-4" /> Issued Materials
                   </h3>
                   {result.issuedMaterials.length > 0 ? (
-                    <ul className="space-y-3">
-                      {result.issuedMaterials.map((mat: any, i: number) => (
-                        <li key={i} className="flex justify-between items-center text-sm bg-muted/20 p-2 rounded-md">
-                          <span className="font-medium">{mat.name}</span>
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-primary">Qty: {mat.qty}</span>
-                            <span className="text-[10px] text-muted-foreground">{mat.date.toLocaleDateString()}</span>
+                    <div className="space-y-4">
+                      {result.issuedMaterials.map((issue: any, i: number) => (
+                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden">
+                          <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
+                            <div>
+                              <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
                           </div>
-                        </li>
+                          <ul className="divide-y divide-border">
+                            {issue.items.map((mat: any, j: number) => (
+                              <li key={j} className="flex justify-between items-center text-sm p-3 hover:bg-muted/5 transition-colors">
+                                <span className="font-medium">{mat.productName}</span>
+                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs">Qty: {mat.issuedQty}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {issue.notes && (
+                            <div className="px-4 py-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs italic border-t border-amber-500/20">
+                              Note: {issue.notes}
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground italic p-4 bg-muted/10 rounded-md text-center">
+                    <div className="text-sm text-muted-foreground italic p-4 bg-muted/10 rounded-md text-center border border-dashed border-border">
                       Not Issued Materials
                     </div>
                   )}
@@ -155,19 +177,29 @@ export default function GlobalSearchPage() {
                     <RefreshCw className="h-4 w-4" /> Returned Materials
                   </h3>
                   {result.returnedMaterials.length > 0 ? (
-                    <ul className="space-y-3">
-                      {result.returnedMaterials.map((mat: any, i: number) => (
-                        <li key={i} className="flex justify-between items-center text-sm bg-muted/20 p-2 rounded-md">
-                          <span className="font-medium">{mat.name}</span>
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-[hsl(var(--success))]">Qty: {mat.qty}</span>
-                            <span className="text-[10px] text-muted-foreground">{mat.date.toLocaleDateString()}</span>
+                    <div className="space-y-4">
+                      {result.returnedMaterials.map((issue: any, i: number) => (
+                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden">
+                          <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
+                            <div>
+                              <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
                           </div>
-                        </li>
+                          <ul className="divide-y divide-border">
+                            {issue.items.map((mat: any, j: number) => (
+                              <li key={j} className="flex justify-between items-center text-sm p-3 hover:bg-muted/5 transition-colors">
+                                <span className="font-medium">{mat.productName}</span>
+                                <span className="font-bold text-[hsl(var(--success))] bg-[hsl(var(--success))]/10 px-2 py-0.5 rounded text-xs">Returned: {mat.returnedQty}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground italic p-4 bg-muted/10 rounded-md text-center">
+                    <div className="text-sm text-muted-foreground italic p-4 bg-muted/10 rounded-md text-center border border-dashed border-border">
                       Not Returned Materials
                     </div>
                   )}
