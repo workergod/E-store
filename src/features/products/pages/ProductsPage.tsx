@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Edit, Eye, Tag, Archive, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Eye, Archive, Trash2, AlertCircle, Printer, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { productRepository } from '../../../repositories/ProductRepository';
@@ -28,6 +28,8 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
   const [showLowStock, setShowLowStock] = useState(location.state?.filter === 'low-stock');
   const [showDeleted, setShowDeleted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const printRef = useRef<HTMLDivElement>(null);
 
   const loadProducts = useCallback(async () => {
     if (!companyId) {
@@ -85,8 +87,38 @@ export default function ProductsPage() {
     if (showLowStock) {
       filtered = filtered.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0));
     }
+    
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(p => p.status === statusFilter);
+    }
+    
     return filtered;
-  }, [products, showLowStock, showDeleted]);
+  }, [products, showLowStock, showDeleted, statusFilter]);
+
+  const handlePrint = () => {
+    const content = printRef.current?.innerHTML;
+    if (!content) return;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) { window.print(); return; }
+    w.document.write(`
+      <html><head><title>Products Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
+        h2 { text-align: center; margin-bottom: 4px; }
+        p.sub { text-align: center; color: #666; margin-bottom: 16px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; padding: 8px; text-align: left; font-size: 11px; border: 1px solid #ddd; }
+        td { padding: 7px 8px; border: 1px solid #e5e7eb; font-size: 11px; vertical-align: top; }
+      </style></head><body>
+      ${content}
+      <p style="text-align:center;margin-top:20px;font-size:10px;color:#999;">
+        Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'E Store Pro'}
+      </p>
+      </body></html>
+    `);
+    w.document.close();
+    w.print();
+  };
 
   const handleExport = () => {
     if (displayedProducts.length === 0) {
@@ -220,9 +252,72 @@ export default function ProductsPage() {
             <AlertCircle className="h-4 w-4 mr-2"/> 
             Low Stock Only
           </AppButton>
+          
+          <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <select 
+              className="h-9 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Discontinued">Discontinued</option>
+              <option value="Coming Soon">Coming Soon</option>
+            </select>
+          </div>
+
           <AppButton variant="outline" size="sm" onClick={handleExport}><Archive className="h-4 w-4 mr-2"/> Export</AppButton>
+          <AppButton variant="outline" size="sm" onClick={handlePrint}><Printer className="h-4 w-4 mr-2"/> Print</AppButton>
         </div>
       </FilterBar>
+
+      {/* Hidden Print Layout */}
+      <div ref={printRef} className="hidden">
+        <h2>Products Inventory Report</h2>
+        <p className="sub">
+          Total Products: {displayedProducts.length} • Filter: {showDeleted ? 'Deleted' : (showLowStock ? 'Low Stock' : statusFilter)}
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>SKU / Barcode</th>
+              <th>Category / Brand</th>
+              <th>Current Stock</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedProducts.map(p => (
+              <tr key={p.id}>
+                <td>
+                  <strong>{p.name}</strong><br/>
+                  <span style={{color: '#666', fontSize: '10px'}}>{p.shortName || '-'}</span>
+                </td>
+                <td>
+                  SKU: {p.sku}<br/>
+                  <span style={{color: '#666', fontSize: '10px'}}>{p.barcode || '-'}</span>
+                </td>
+                <td>
+                  {/* Since categoryId and brandId might just be IDs without full join in this basic print view, we just show them or '-' if empty. 
+                      In a full app we'd map these to names, but showing ID is fine for a quick print if name is absent */}
+                  <span style={{fontSize: '10px'}}>{p.categoryId || 'No Category'}</span><br/>
+                  <span style={{color: '#666', fontSize: '10px'}}>{p.brandId || 'No Brand'}</span>
+                </td>
+                <td style={{ fontWeight: p.currentStock <= p.minimumStock ? 'bold' : 'normal', color: p.currentStock <= p.minimumStock ? '#dc2626' : '#16a34a' }}>
+                  {p.currentStock || 0}
+                </td>
+                <td>{p.status}</td>
+              </tr>
+            ))}
+            {displayedProducts.length === 0 && (
+              <tr><td colSpan={5} style={{textAlign: 'center', padding: '15px'}}>No products found</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <AppTable 
         columns={columns}
