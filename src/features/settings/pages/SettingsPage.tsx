@@ -21,9 +21,9 @@ const settingsSchema = z.object({
   businessAddress: z.string().optional(),
   supportEmail: z.string().email('Invalid email address').or(z.literal('')),
   supportPhone: z.string().optional(),
-  currency: z.string().min(1, 'Currency is required'),
+  currency: z.string().optional(),
   timezone: z.string().min(1, 'Timezone is required'),
-  defaultTaxRate: z.coerce.number().min(0, 'Tax rate cannot be negative')
+  defaultTaxRate: z.coerce.number().optional()
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -113,17 +113,8 @@ export default function SettingsPage() {
             </FormRow>
           </FormSection>
 
-          <FormSection title="Localization" description="Regional settings for currency, timezone, and taxes.">
+          <FormSection title="Timezone" description="Set your local timezone for accurate transaction logging.">
             <FormRow>
-              <FormField label="Currency" required error={methods.formState.errors.currency?.message}>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" {...methods.register('currency')}>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="INR">INR (₹)</option>
-                  <option value="AED">AED (د.إ)</option>
-                </select>
-              </FormField>
               <FormField label="Timezone" required error={methods.formState.errors.timezone?.message}>
                 <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" {...methods.register('timezone')}>
                   <option value="UTC">UTC</option>
@@ -135,12 +126,6 @@ export default function SettingsPage() {
                   <option value="Asia/Singapore">Asia/Singapore</option>
                   <option value="Australia/Sydney">Australia/Sydney</option>
                 </select>
-              </FormField>
-            </FormRow>
-            
-            <FormRow>
-              <FormField label="Default Tax Rate (%)" error={methods.formState.errors.defaultTaxRate?.message}>
-                <AppInput type="number" step="0.1" {...methods.register('defaultTaxRate')} />
               </FormField>
             </FormRow>
           </FormSection>
