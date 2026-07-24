@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,8 +31,8 @@ export default function ReturnMaterialsPage() {
   const companyId = company?.companyId;
 
   const [employees, setEmployees] = useState<any[]>([]);
+  const [allActiveIssues, setAllActiveIssues] = useState<IssueTransaction[]>([]);
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
-  const [issues, setIssues] = useState<IssueTransaction[]>([]);
   const [selectedIssueId, setSelectedIssueId] = useState<string>('');
   
   const [isSaving, setIsSaving] = useState(false);
@@ -47,27 +47,48 @@ export default function ReturnMaterialsPage() {
     name: "returns"
   });
 
-  // 1. Load Employees
+  // 1. Load Data
   useEffect(() => {
     if (!companyId) return;
-    employeeRepository.getAll(companyId).then(data => {
-      setEmployees(data.filter(e => e.status === 'ACTIVE'));
+    Promise.all([
+      employeeRepository.getAll(companyId),
+      issueRepository.getAll(companyId)
+    ]).then(([empData, issueData]) => {
+      setEmployees(empData);
+      setAllActiveIssues(issueData.filter(i => i.status !== 'CLOSED'));
     });
   }, [companyId]);
 
-  // 2. Load Issues for Employee
-  useEffect(() => {
-    if (!companyId || !selectedEmpId) {
-      setIssues([]);
-      setSelectedIssueId('');
-      return;
-    }
-    issueRepository.getAll(companyId).then(data => {
-      const activeIssues = data.filter(i => i.employeeId === selectedEmpId && i.status !== 'CLOSED');
-      setIssues(activeIssues);
-      setSelectedIssueId('');
+  // 2. Derive employees with issues
+  const employeesWithIssues = useMemo(() => {
+    const empIdsWithIssues = new Set(allActiveIssues.map(i => i.employeeId));
+    const validEmps = employees.filter(e => empIdsWithIssues.has(e.id));
+    
+    // Add fallback for deleted/unknown employees that still have active issues
+    const validEmpIds = new Set(validEmps.map(e => e.id));
+    allActiveIssues.forEach(issue => {
+      if (!validEmpIds.has(issue.employeeId)) {
+        validEmps.push({
+          id: issue.employeeId,
+          firstName: 'Unknown/Deleted',
+          lastName: 'Employee',
+          role: 'Unknown'
+        });
+        validEmpIds.add(issue.employeeId);
+      }
     });
-  }, [companyId, selectedEmpId]);
+    return validEmps;
+  }, [employees, allActiveIssues]);
+
+  // 3. Filter issues for selected employee
+  const issues = useMemo(() => {
+    return allActiveIssues.filter(i => i.employeeId === selectedEmpId);
+  }, [allActiveIssues, selectedEmpId]);
+
+  // Reset selected issue if employee changes
+  useEffect(() => {
+    setSelectedIssueId('');
+  }, [selectedEmpId]);
 
   // 3. Populate Form when Issue Selected
   useEffect(() => {
@@ -119,8 +140,8 @@ export default function ReturnMaterialsPage() {
             value={selectedEmpId}
             onChange={e => setSelectedEmpId(e.target.value)}
           >
-            <option value="">Choose technician...</option>
-            {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.role})</option>)}
+            <option value="">{employeesWithIssues.length > 0 ? 'Choose technician...' : 'No active returns pending'}</option>
+            {employeesWithIssues.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.role})</option>)}
           </select>
         </div>
         <div>
