@@ -6,7 +6,7 @@ import { AppCard } from '../../../shared/app/AppCard';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { issueRepository } from '../../../repositories/IssueRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { ArrowLeft, User, Package, RefreshCw } from 'lucide-react';
+import { ArrowLeft, User, Package, RefreshCw, Printer } from 'lucide-react';
 import { AppButton } from '../../../shared/app/AppButton';
 
 export default function GlobalSearchPage() {
@@ -120,15 +120,20 @@ export default function GlobalSearchPage() {
       ) : (
         <div className="space-y-8">
           {results.map((result, idx) => (
-            <AppCard key={idx} className="overflow-hidden">
-              <div className="bg-muted/30 p-6 border-b border-border flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                  {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
+            <AppCard key={idx} className="overflow-hidden print:shadow-none print:border-none">
+              <div className="bg-muted/30 p-6 border-b border-border flex justify-between items-center print:bg-transparent">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg print:border print:border-border">
+                    {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{result.employee.firstName} {result.employee.lastName}</h2>
+                    <p className="text-sm text-muted-foreground">{result.employee.role} • {result.employee.mobile}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">{result.employee.firstName} {result.employee.lastName}</h2>
-                  <p className="text-sm text-muted-foreground">{result.employee.role} • {result.employee.mobile}</p>
-                </div>
+                <AppButton variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+                  <Printer className="h-4 w-4 mr-2" /> Print History
+                </AppButton>
               </div>
               
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -140,7 +145,7 @@ export default function GlobalSearchPage() {
                   {result.issuedMaterials.length > 0 ? (
                     <div className="space-y-4">
                       {result.issuedMaterials.map((issue: any, i: number) => (
-                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden">
+                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden print:break-inside-avoid print:bg-transparent">
                           <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
                             <div>
                               <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -179,7 +184,7 @@ export default function GlobalSearchPage() {
                   {result.returnedMaterials.length > 0 ? (
                     <div className="space-y-4">
                       {result.returnedMaterials.map((issue: any, i: number) => (
-                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden">
+                        <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden print:break-inside-avoid print:bg-transparent">
                           <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
                             <div>
                               <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
