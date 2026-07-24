@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Eye, Tag, Archive, Trash2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, Edit, Eye, Tag, Archive, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { productRepository } from '../../../repositories/ProductRepository';
@@ -17,6 +17,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 export default function ProductsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, company } = useAuthStore();
   const companyId = company?.companyId;
 
@@ -25,6 +26,7 @@ export default function ProductsPage() {
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
+  const [showLowStock, setShowLowStock] = useState(location.state?.filter === 'low-stock');
 
   const loadProducts = useCallback(async () => {
     if (!companyId) {
@@ -71,6 +73,13 @@ export default function ProductsPage() {
       }
     }
   };
+  const displayedProducts = useMemo(() => {
+    if (showLowStock) {
+      return products.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0));
+    }
+    return products;
+  }, [products, showLowStock]);
+
 
 
 
@@ -147,6 +156,14 @@ export default function ProductsPage() {
         {/* The SearchBar is handled automatically by AppTable, we just place the secondary actions here if we want,
             or we can just leave the space for future advanced filters. AppTable takes a searchKey so it renders its own search. */}
         <div className="flex items-center gap-3 ml-auto">
+          <AppButton 
+            variant={showLowStock ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setShowLowStock(!showLowStock)}
+          >
+            <AlertCircle className="h-4 w-4 mr-2"/> 
+            Low Stock Only
+          </AppButton>
           <AppButton variant="outline" size="sm"><Tag className="h-4 w-4 mr-2"/> Filter</AppButton>
           <AppButton variant="outline" size="sm"><Archive className="h-4 w-4 mr-2"/> Export</AppButton>
         </div>
@@ -154,7 +171,7 @@ export default function ProductsPage() {
 
       <AppTable 
         columns={columns}
-        data={products}
+        data={displayedProducts}
         isLoading={isLoading}
         searchKey="name"
         searchPlaceholder="Search products, SKU, Barcode..."

@@ -113,12 +113,16 @@ export default function DashboardPage() {
           value={isLoading ? "..." : metrics.lowStock.toString()} 
           icon={<AlertCircle className={`h-5 w-5 ${metrics.lowStock > 0 ? 'text-[hsl(var(--destructive))]' : 'text-muted-foreground'}`} />} 
           description="Needs attention"
+          className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
+          onClick={() => navigate('/products', { state: { filter: 'low-stock' }})}
         />
         <MetricCard 
           title="Active Issues" 
           value={isLoading ? "..." : metrics.pendingReturns.toString()} 
           icon={<RefreshCw className={`h-5 w-5 ${metrics.pendingReturns > 0 ? 'text-[hsl(var(--warning))]' : 'text-muted-foreground'}`} />} 
           description="Pending returns"
+          className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
+          onClick={() => navigate('/transaction-log', { state: { filter: 'ISSUE' }})}
         />
       </div>
 
