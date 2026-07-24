@@ -9,6 +9,7 @@ import SetupPage from './features/auth/pages/SetupPage';
 
 // Master Data Pages
 import DashboardPage from './features/dashboard/pages/DashboardPage';
+import GlobalSearchPage from './features/dashboard/pages/GlobalSearchPage';
 import CategoriesPage from './features/masterData/pages/CategoriesPage';
 import BrandsPage from './features/masterData/pages/BrandsPage';
 import UnitsPage from './features/masterData/pages/UnitsPage';
@@ -61,6 +62,7 @@ function MainApp() {
           <AppShell>
             <Routes>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/search" element={<GlobalSearchPage />} />
               
               {/* Master Data Routes */}
               <Route path="/master-data/categories" element={<CategoriesPage />} />

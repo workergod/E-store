@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate('/transaction-log', { state: { filter: 'ALL', searchQuery: searchQuery.trim() } })
+      navigate('/search', { state: { searchQuery: searchQuery.trim() } })
     }
   }
 
