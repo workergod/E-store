@@ -37,6 +37,9 @@ export default function GlobalSearchPage() {
           `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(queryLower)
         );
 
+        // Fetch issues to get their issued and returned materials and check sites
+        const allIssues = await issueRepository.getAll(companyId);
+
         // Deduplicate matchedEmployees by name to avoid showing the same person twice if they were recreated
         const uniqueEmployeesMap = new Map();
         matchedEmployees.forEach(emp => {
@@ -49,11 +52,10 @@ export default function GlobalSearchPage() {
         });
         
         const uniqueEmployees = Array.from(uniqueEmployeesMap.values());
-
-        if (uniqueEmployees.length > 0) {
-          // Fetch issues to get their issued and returned materials
-          const allIssues = await issueRepository.getAll(companyId);
+        
+        let finalResults: any[] = [];
           
+        if (uniqueEmployees.length > 0) {
           const enrichedResults = uniqueEmployees.map(emp => {
             const empIssues = allIssues.filter(i => emp.ids.includes(i.employeeId));
             
@@ -81,10 +83,54 @@ export default function GlobalSearchPage() {
             };
           });
 
-          setResults(enrichedResults);
-        } else {
-          setResults([]);
+          finalResults = [...finalResults, ...enrichedResults];
         }
+
+        // Find matching sites
+        const matchedSitesMap = new Map();
+        allIssues.forEach(issue => {
+          if (issue.siteName && issue.siteName.toLowerCase().includes(queryLower)) {
+            const site = issue.siteName.trim();
+            if (!matchedSitesMap.has(site)) {
+              matchedSitesMap.set(site, []);
+            }
+            matchedSitesMap.get(site).push(issue);
+          }
+        });
+
+        const siteResults = Array.from(matchedSitesMap.entries()).map(([siteName, siteIssues]) => {
+            const issuesWithItems = siteIssues.filter((i: any) => i.items.some((it: any) => it.issuedQty > 0)).map((issue: any) => {
+              const e = allEmployees.find(emp => emp.id === issue.employeeId);
+              return {
+                id: issue.id,
+                date: issue.createdAt?.toDate ? issue.createdAt.toDate() : new Date(issue.issueDate as any),
+                employeeName: e ? `${e.firstName} ${e.lastName}` : 'Unknown',
+                notes: issue.notes,
+                items: issue.items.filter((it: any) => it.issuedQty > 0)
+              };
+            }).sort((a: any, b: any) => b.date.getTime() - a.date.getTime());
+
+            const returnsWithItems = siteIssues.filter((i: any) => i.items.some((it: any) => it.returnedQty > 0)).map((issue: any) => {
+              const e = allEmployees.find(emp => emp.id === issue.employeeId);
+              return {
+                id: issue.id,
+                date: issue.updatedAt?.toDate ? issue.updatedAt.toDate() : new Date(),
+                employeeName: e ? `${e.firstName} ${e.lastName}` : 'Unknown',
+                notes: issue.notes,
+                items: issue.items.filter((it: any) => it.returnedQty > 0)
+              };
+            }).sort((a: any, b: any) => b.date.getTime() - a.date.getTime());
+
+            return {
+              type: 'SITE',
+              siteName: siteName,
+              issuedMaterials: issuesWithItems,
+              returnedMaterials: returnsWithItems
+            };
+        });
+
+        finalResults = [...finalResults, ...siteResults];
+        setResults(finalResults);
       } catch (error) {
         console.error("Search failed", error);
       } finally {
@@ -123,13 +169,27 @@ export default function GlobalSearchPage() {
             <AppCard key={idx} className="overflow-hidden print:shadow-none print:border-none">
               <div className="bg-muted/30 p-6 border-b border-border flex justify-between items-center print:bg-transparent">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg print:border print:border-border">
-                    {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">{result.employee.firstName} {result.employee.lastName}</h2>
-                    <p className="text-sm text-muted-foreground">{result.employee.role} • {result.employee.mobile}</p>
-                  </div>
+                  {result.type === 'EMPLOYEE' ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg print:border print:border-border">
+                        {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">{result.employee.firstName} {result.employee.lastName}</h2>
+                        <p className="text-sm text-muted-foreground">{result.employee.role} • {result.employee.mobile}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-lg print:border print:border-border">
+                        {result.siteName.charAt(0)}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Site: {result.siteName}</h2>
+                        <p className="text-sm text-muted-foreground">Location Materials History</p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <AppButton variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
                   <Printer className="h-4 w-4 mr-2" /> Print History
@@ -150,6 +210,7 @@ export default function GlobalSearchPage() {
                             <div>
                               <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                               {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
+                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold"> • Tech: {issue.employeeName}</span>}
                             </div>
                             <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
                           </div>
@@ -189,6 +250,7 @@ export default function GlobalSearchPage() {
                             <div>
                               <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                               {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
+                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold"> • Tech: {issue.employeeName}</span>}
                             </div>
                             <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
                           </div>
