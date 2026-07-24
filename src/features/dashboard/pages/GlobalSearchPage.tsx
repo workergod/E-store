@@ -141,6 +141,103 @@ export default function GlobalSearchPage() {
     performSearch();
   }, [companyId, searchQuery]);
 
+  const handlePrintHistory = (result: any) => {
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) {
+      window.print();
+      return;
+    }
+
+    const title = result.type === 'EMPLOYEE' 
+      ? `Material History: ${result.employee.firstName} ${result.employee.lastName}`
+      : `Material History: Site ${result.siteName}`;
+    
+    const subtitle = result.type === 'EMPLOYEE'
+      ? `Role: ${result.employee.role} | Contact: ${result.employee.mobile}`
+      : 'Site History Report';
+
+    let html = `
+      <html><head><title>${title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; color: #333; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        h1 { margin: 0 0 5px 0; font-size: 24px; color: #000; }
+        .subtitle { color: #666; font-size: 14px; margin: 0; }
+        .transaction { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+        .transaction-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; font-size: 13px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .transaction-meta { font-size: 11px; color: #666; font-weight: normal; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; }
+        th { font-weight: bold; color: #555; background: #f9f9f9; }
+        .qty { text-align: right; font-weight: bold; width: 100px; }
+        .notes { font-style: italic; font-size: 11px; color: #666; margin-top: 5px; padding: 5px; background: #f9f9f9; }
+        .footer { text-align: center; margin-top: 40px; font-size: 10px; color: #999; }
+        .section-title { margin-top: 30px; margin-bottom: 15px; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #444; }
+        .empty { font-style: italic; color: #999; margin-left: 10px; }
+      </style></head><body>
+      
+      <div class="header">
+        <h1>${title}</h1>
+        <p class="subtitle">${subtitle}</p>
+      </div>
+    `;
+
+    // Issued Section
+    html += \`<div class="section-title">📦 Issued Materials</div>\`;
+    if (result.issuedMaterials.length > 0) {
+      result.issuedMaterials.forEach((issue: any) => {
+        html += \`<div class="transaction">
+          <div class="transaction-header">
+            <span>\${issue.date.toLocaleDateString('en-IN')} \${issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="transaction-meta">ID: \${issue.id?.slice(-6) || 'N/A'} \${issue.siteName ? '| Site: ' + issue.siteName : ''} \${issue.employeeName ? '| Tech: ' + issue.employeeName : ''}</span>
+          </div>
+          <table>
+            <thead><tr><th>Product Name</th><th class="qty">Qty Issued</th></tr></thead>
+            <tbody>
+              \${issue.items.map((mat: any) => \`<tr><td>\${mat.productName}</td><td class="qty">\${mat.issuedQty}</td></tr>\`).join('')}
+            </tbody>
+          </table>
+          \${issue.notes ? \`<div class="notes">Note: \${issue.notes}</div>\` : ''}
+        </div>\`;
+      });
+    } else {
+      html += \`<p class="empty">No materials issued.</p>\`;
+    }
+
+    // Returned Section
+    html += \`<div class="section-title" style="margin-top:40px;">🔄 Returned Materials</div>\`;
+    if (result.returnedMaterials.length > 0) {
+      result.returnedMaterials.forEach((issue: any) => {
+        html += \`<div class="transaction">
+          <div class="transaction-header">
+            <span>\${issue.date.toLocaleDateString('en-IN')} \${issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="transaction-meta">ID: \${issue.id?.slice(-6) || 'N/A'} \${issue.siteName ? '| Site: ' + issue.siteName : ''} \${issue.employeeName ? '| Tech: ' + issue.employeeName : ''}</span>
+          </div>
+          <table>
+            <thead><tr><th>Product Name</th><th class="qty">Qty Returned</th></tr></thead>
+            <tbody>
+              \${issue.items.map((mat: any) => \`<tr><td>\${mat.productName}</td><td class="qty">\${mat.returnedQty}</td></tr>\`).join('')}
+            </tbody>
+          </table>
+        </div>\`;
+      });
+    } else {
+      html += \`<p class="empty">No materials returned.</p>\`;
+    }
+
+    html += \`
+      <div class="footer">
+        Printed on \${new Date().toLocaleString('en-IN')}
+      </div>
+      </body></html>
+    \`;
+
+    w.document.write(html);
+    w.document.close();
+    
+    setTimeout(() => w.print(), 250);
+  };
+
   return (
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
@@ -195,7 +292,7 @@ export default function GlobalSearchPage() {
                     </>
                   )}
                 </div>
-                <AppButton variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+                <AppButton variant="outline" size="sm" onClick={() => handlePrintHistory(result)} className="print:hidden">
                   <Printer className="h-4 w-4 mr-2" /> Print History
                 </AppButton>
               </div>
