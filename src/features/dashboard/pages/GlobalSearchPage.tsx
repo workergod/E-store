@@ -171,9 +171,13 @@ export default function GlobalSearchPage() {
                 <div className="flex items-center gap-4">
                   {result.type === 'EMPLOYEE' ? (
                     <>
-                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg print:border print:border-border">
-                        {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
-                      </div>
+                      {result.employee.photoUrl ? (
+                        <img src={result.employee.photoUrl} alt="Profile" className="w-12 h-12 rounded-full object-cover border border-border shadow-sm print:border print:border-border shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg print:border print:border-border shrink-0">
+                          {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <h2 className="text-xl font-bold print:text-black">{result.employee.firstName} {result.employee.lastName}</h2>
                         <p className="text-sm text-muted-foreground print:text-gray-700">{result.employee.role} • {result.employee.mobile}</p>

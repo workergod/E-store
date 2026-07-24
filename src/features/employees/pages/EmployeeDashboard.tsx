@@ -121,9 +121,13 @@ export default function EmployeeDashboard() {
         const emp = row.original;
         return (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-              {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
-            </div>
+            {emp.photoUrl ? (
+              <img src={emp.photoUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-border shadow-sm shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+              </div>
+            )}
             <div>
               <div className="font-medium text-foreground">{emp.firstName} {emp.lastName}</div>
               <div className="text-xs text-muted-foreground">{emp.employeeCode}</div>

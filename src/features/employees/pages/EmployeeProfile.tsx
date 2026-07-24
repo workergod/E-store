@@ -105,9 +105,13 @@ export default function EmployeeProfile() {
 
       {/* Header Profile Card */}
       <AppCard className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
-        <div className="w-24 h-24 rounded-full bg-primary/10 text-primary flex items-center justify-center text-4xl font-bold border-4 border-background shadow-sm">
-          {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
-        </div>
+        {employee.photoUrl ? (
+          <img src={employee.photoUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-background shadow-sm shrink-0" />
+        ) : (
+          <div className="w-24 h-24 rounded-full bg-primary/10 text-primary flex items-center justify-center text-4xl font-bold border-4 border-background shadow-sm shrink-0">
+            {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+          </div>
+        )}
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>

@@ -85,10 +85,14 @@ export default function ReturnMaterialsPage() {
     return allActiveIssues.filter(i => i.employeeId === selectedEmpId);
   }, [allActiveIssues, selectedEmpId]);
 
-  // Reset selected issue if employee changes
+  // Reset or auto-select issue if employee changes
   useEffect(() => {
-    setSelectedIssueId('');
-  }, [selectedEmpId]);
+    if (issues.length === 1) {
+      setSelectedIssueId(issues[0].id!);
+    } else {
+      setSelectedIssueId('');
+    }
+  }, [selectedEmpId, issues]);
 
   // 3. Populate Form when Issue Selected
   useEffect(() => {
