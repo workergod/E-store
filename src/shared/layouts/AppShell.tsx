@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Bell, Search, Sun, Moon, LogOut, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
@@ -13,6 +13,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [hasNotifications, setHasNotifications] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+
+  const [time, setTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -58,6 +65,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-[var(--spacing-xl)] ml-auto shrink-0 pl-8">
+            <div className="hidden lg:flex flex-col items-end justify-center px-4 border-r border-border h-10">
+              <span className="text-sm font-semibold tracking-tight leading-none text-primary">
+                {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1.5">
+                {time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+            
             <div className="flex items-center gap-2">
               <div className="group relative">
                 <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">

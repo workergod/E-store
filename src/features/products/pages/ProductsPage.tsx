@@ -86,7 +86,41 @@ export default function ProductsPage() {
       filtered = filtered.filter(p => (p.currentStock || 0) <= (p.minimumStock || 0));
     }
     return filtered;
-  }, [products, showLowStock, showDeleted]);  const columns = useMemo<ColumnDef<Product>[]>(
+  }, [products, showLowStock, showDeleted]);
+
+  const handleExport = () => {
+    if (displayedProducts.length === 0) {
+      toast.error('No products to export');
+      return;
+    }
+
+    const headers = ['Product Name', 'Short Name', 'SKU', 'Barcode', 'Current Stock', 'Minimum Stock', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...displayedProducts.map(p => 
+        [
+          `"${(p.name || '').replace(/"/g, '""')}"`,
+          `"${(p.shortName || '').replace(/"/g, '""')}"`,
+          `"${(p.sku || '').replace(/"/g, '""')}"`,
+          `"${(p.barcode || '').replace(/"/g, '""')}"`,
+          p.currentStock || 0,
+          p.minimumStock || 0,
+          p.status
+        ].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const columns = useMemo<ColumnDef<Product>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -186,8 +220,7 @@ export default function ProductsPage() {
             <AlertCircle className="h-4 w-4 mr-2"/> 
             Low Stock Only
           </AppButton>
-          <AppButton variant="outline" size="sm"><Tag className="h-4 w-4 mr-2"/> Filter</AppButton>
-          <AppButton variant="outline" size="sm"><Archive className="h-4 w-4 mr-2"/> Export</AppButton>
+          <AppButton variant="outline" size="sm" onClick={handleExport}><Archive className="h-4 w-4 mr-2"/> Export</AppButton>
         </div>
       </FilterBar>
 
