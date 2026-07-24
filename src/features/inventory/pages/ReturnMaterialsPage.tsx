@@ -133,10 +133,10 @@ export default function ReturnMaterialsPage() {
           >
             <option value="">{issues.length > 0 ? 'Choose an issue...' : 'No active issues found'}</option>
             {issues.map(i => {
-              const dateObj = new Date((i.issueDate as any).toDate ? (i.issueDate as any).toDate() : i.issueDate);
+              const dateObj = new Date((i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : (i.createdAt || i.issueDate));
               return (
                 <option key={i.id} value={i.id!}>
-                  Issue {i.id?.slice(-6)} - {dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Issue {i.id?.slice(-6)} - {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                 </option>
               );
             })}
