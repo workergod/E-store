@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
 import { useAuthStore } from '../../../store/authStore';
@@ -35,7 +36,10 @@ export default function TransactionLogPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE' | 'SALE'>('ALL');
+  const location = useLocation();
+  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE' | 'SALE'>(
+    (location.state as any)?.filter || 'ALL'
+  );
   const [search, setSearch] = useState('');
 
   const loadLogs = async () => {

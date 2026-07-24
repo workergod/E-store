@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../../../firebase/firestore'
 import { PageContainer } from '../../../shared/layouts/PageContainer'
 import { PageHeader } from '../../../shared/layouts/PageHeader'
 import { MetricCard } from '../../../shared/widgets/MetricWidget'
 import { ChartCard } from '../../../shared/widgets/ChartWidget'
 import { AppTable } from '../../../shared/tables/AppTable'
-import { Package, AlertCircle, RefreshCw } from 'lucide-react'
+import { Package, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
 import { productRepository } from '../../../repositories/ProductRepository'
@@ -13,6 +16,7 @@ import { issueRepository } from '../../../repositories/IssueRepository'
 export default function DashboardPage() {
   const { company } = useAuthStore()
   const companyId = company?.companyId
+  const navigate = useNavigate()
 
   const [isLoading, setIsLoading] = useState(true)
   const [metrics, setMetrics] = useState({
@@ -29,9 +33,10 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       try {
         setIsLoading(true)
-        const [products, issues] = await Promise.all([
+        const [products, issues, returnSnap] = await Promise.all([
           productRepository.getAll(companyId),
           issueRepository.getAll(companyId),
+          getDocs(query(collection(db, 'returnTransactions'), where('companyId', '==', companyId)))
         ])
 
         const totalProducts = products.length
@@ -58,18 +63,18 @@ export default function DashboardPage() {
         }))
         setRecentActivity(recent)
 
-        // Show recent returns
-        const returnedIssues = issues.filter(i => i.items.some(it => (it.returnedQty || 0) > 0));
-        const recentReturnsList = returnedIssues.sort((a, b) => {
-          const ta = (a.updatedAt as any)?.toDate ? (a.updatedAt as any).toDate().getTime() : 0;
-          const tb = (b.updatedAt as any)?.toDate ? (b.updatedAt as any).toDate().getTime() : 0;
+        // Show recent returns from returnTransactions
+        const returnsData = returnSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        const recentReturnsList = returnsData.sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
           return tb - ta;
-        }).slice(0, 5).map(i => ({
-          id: i.id + '_ret',
+        }).slice(0, 5).map(r => ({
+          id: r.id,
           action: 'Returned',
-          item: i.items.filter(it => (it.returnedQty || 0) > 0).map(it => it.productName).join(', '),
-          date: new Date((i.updatedAt as any)?.toDate ? (i.updatedAt as any).toDate() : new Date()).toLocaleDateString(),
-          user: i.employeeId
+          item: (r.items || []).map((it:any) => it.productName).join(', '),
+          date: new Date(r.createdAt?.toDate ? r.createdAt.toDate() : new Date()).toLocaleDateString(),
+          user: r.employeeId
         }))
         setRecentReturns(recentReturnsList)
 
@@ -119,9 +124,14 @@ export default function DashboardPage() {
 
       <div className="space-y-8 mt-8">
         <div>
-          <div className="mb-4">
-            <h3 className="text-card-title">Recent Issues</h3>
-            <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-card-title">Recent Issues</h3>
+              <p className="text-caption text-muted-foreground mt-1">Latest materials issued to techs.</p>
+            </div>
+            <button onClick={() => navigate('/transaction-log', { state: { filter: 'ISSUE' }})} className="text-sm font-medium text-primary hover:underline flex items-center">
+              See All Issues <ArrowRight className="h-4 w-4 ml-1" />
+            </button>
           </div>
           <AppTable 
             columns={recentActivityCols} 
@@ -132,9 +142,14 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <div className="mb-4">
-            <h3 className="text-card-title">Recent Returns</h3>
-            <p className="text-caption text-muted-foreground mt-1">Latest materials returned from techs.</p>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-card-title">Recent Returns</h3>
+              <p className="text-caption text-muted-foreground mt-1">Latest materials returned from techs.</p>
+            </div>
+            <button onClick={() => navigate('/transaction-log', { state: { filter: 'RETURN' }})} className="text-sm font-medium text-primary hover:underline flex items-center">
+              See All Returns <ArrowRight className="h-4 w-4 ml-1" />
+            </button>
           </div>
           <AppTable 
             columns={recentActivityCols} 
