@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 interface LogEntry {
   id: string;
-  type: 'ISSUE' | 'RETURN' | 'PURCHASE' | 'SALE';
+  type: 'ISSUE' | 'RETURN' | 'PURCHASE';
   date: any;
   staffName: string;
   customerOrTech: string;
@@ -29,7 +29,6 @@ const typeConfig = {
   ISSUE:    { label: 'Issue',    color: 'text-orange-600 bg-orange-50 border-orange-200', icon: ArrowUpRight },
   RETURN:   { label: 'Return',   color: 'text-green-600 bg-green-50 border-green-200',    icon: ArrowDownLeft },
   PURCHASE: { label: 'Purchase', color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: ShoppingCart },
-  SALE:     { label: 'Sale',     color: 'text-purple-600 bg-purple-50 border-purple-200', icon: ShoppingBag },
 };
 
 export default function TransactionLogPage() {
@@ -39,7 +38,7 @@ export default function TransactionLogPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
-  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE' | 'SALE'>(
+  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE'>(
     (location.state as any)?.filter || 'ALL'
   );
   const [search, setSearch] = useState('');
@@ -113,26 +112,7 @@ export default function TransactionLogPage() {
         });
       });
 
-      // 4. Customer Sales
-      try {
-        const saleSnap = await getDocs(query(
-          collection(db, 'customerSales'),
-          where('companyId', '==', companyId)
-        ));
-        saleSnap.forEach(doc => {
-          const d = doc.data();
-          entries.push({
-            id: doc.id,
-            type: 'SALE',
-            date: d.createdAt,
-            staffName: d.servedBy || 'Staff',
-            customerOrTech: d.customerName,
-            phone: d.customerPhone,
-            items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity })),
-            notes: d.notes,
-          });
-        });
-      } catch (_) { /* sales collection may not exist yet */ }
+
 
       // Sort all by date descending
       entries.sort((a, b) => {
@@ -160,7 +140,6 @@ export default function TransactionLogPage() {
       if (type === 'ISSUE') colName = 'issueTransactions';
       else if (type === 'RETURN') colName = 'returnTransactions';
       else if (type === 'PURCHASE') colName = 'purchaseOrders';
-      else if (type === 'SALE') colName = 'customerSales';
 
       if (colName) {
         await deleteDoc(doc(db, colName, id));
@@ -245,7 +224,7 @@ export default function TransactionLogPage() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        {(['ALL', 'ISSUE', 'RETURN', 'PURCHASE', 'SALE'] as const).map(f => (
+        {(['ALL', 'ISSUE', 'RETURN', 'PURCHASE'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}

@@ -175,18 +175,18 @@ export default function GlobalSearchPage() {
                         {result.employee.firstName.charAt(0)}{result.employee.lastName.charAt(0)}
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">{result.employee.firstName} {result.employee.lastName}</h2>
-                        <p className="text-sm text-muted-foreground">{result.employee.role} • {result.employee.mobile}</p>
+                        <h2 className="text-xl font-bold print:text-black">{result.employee.firstName} {result.employee.lastName}</h2>
+                        <p className="text-sm text-muted-foreground print:text-gray-700">{result.employee.role} • {result.employee.mobile}</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-lg print:border print:border-border">
+                      <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-lg print:border print:border-gray-300 print:text-black">
                         {result.siteName.charAt(0)}
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">Site: {result.siteName}</h2>
-                        <p className="text-sm text-muted-foreground">Location Materials History</p>
+                        <h2 className="text-xl font-bold print:text-black">Site: {result.siteName}</h2>
+                        <p className="text-sm text-muted-foreground print:text-gray-700">Location Materials History</p>
                       </div>
                     </>
                   )}
@@ -208,17 +208,17 @@ export default function GlobalSearchPage() {
                         <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden print:break-inside-avoid print:bg-transparent">
                           <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
                             <div>
-                              <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
-                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold"> • Tech: {issue.employeeName}</span>}
+                              <span className="font-semibold text-sm block print:text-black">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700">Site: {issue.siteName}</span>}
+                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700"> • Tech: {issue.employeeName}</span>}
                             </div>
-                            <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">ID: {issue.id?.slice(-6)}</span>
                           </div>
                           <ul className="divide-y divide-border">
                             {issue.items.map((mat: any, j: number) => (
                               <li key={j} className="flex justify-between items-center text-sm p-3 hover:bg-muted/5 transition-colors">
-                                <span className="font-medium">{mat.productName}</span>
-                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs">Qty: {mat.issuedQty}</span>
+                                <span className="font-medium print:text-black">{mat.productName}</span>
+                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs print:text-black print:border print:border-gray-300">Qty: {mat.issuedQty}</span>
                               </li>
                             ))}
                           </ul>
@@ -248,17 +248,17 @@ export default function GlobalSearchPage() {
                         <div key={i} className="bg-muted/10 border border-border rounded-lg overflow-hidden print:break-inside-avoid print:bg-transparent">
                           <div className="bg-muted/20 px-4 py-2 border-b border-border flex justify-between items-center">
                             <div>
-                              <span className="font-semibold text-sm block">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Site: {issue.siteName}</span>}
-                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold"> • Tech: {issue.employeeName}</span>}
+                              <span className="font-semibold text-sm block print:text-black">{issue.date.toLocaleDateString('en-IN')} {issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700">Site: {issue.siteName}</span>}
+                              {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700"> • Tech: {issue.employeeName}</span>}
                             </div>
-                            <span className="text-[10px] text-muted-foreground font-mono">ID: {issue.id?.slice(-6)}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">ID: {issue.id?.slice(-6)}</span>
                           </div>
                           <ul className="divide-y divide-border">
                             {issue.items.map((mat: any, j: number) => (
                               <li key={j} className="flex justify-between items-center text-sm p-3 hover:bg-muted/5 transition-colors">
-                                <span className="font-medium">{mat.productName}</span>
-                                <span className="font-bold text-[hsl(var(--success))] bg-[hsl(var(--success))]/10 px-2 py-0.5 rounded text-xs">Returned: {mat.returnedQty}</span>
+                                <span className="font-medium print:text-black">{mat.productName}</span>
+                                <span className="font-bold text-[hsl(var(--success))] bg-[hsl(var(--success))]/10 px-2 py-0.5 rounded text-xs print:text-black print:border print:border-gray-300">Returned: {mat.returnedQty}</span>
                               </li>
                             ))}
                           </ul>
