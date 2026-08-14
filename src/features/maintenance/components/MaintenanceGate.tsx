@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../store/authStore';
-import { maintenanceRepository, MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
+import { maintenanceRepository, type MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
 import { Wrench, Clock, AlertTriangle } from 'lucide-react';
 import { AppButton } from '../../../shared/app/AppButton';
 

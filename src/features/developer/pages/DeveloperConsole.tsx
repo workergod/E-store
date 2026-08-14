@@ -5,7 +5,7 @@ import { AppCard } from '../../../shared/app/AppCard';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
-import { maintenanceRepository, MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
+import { maintenanceRepository, type MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
 import { useAuthStore } from '../../../store/authStore';
 import { Terminal, Activity, KeyRound, Settings, Scale, Save, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
