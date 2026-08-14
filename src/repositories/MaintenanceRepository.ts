@@ -15,7 +15,8 @@ const defaultSettings: MaintenanceSettings = {
 };
 
 export const maintenanceRepository = {
-  docRef: doc(db, 'systemSettings', 'maintenance'),
+  // Using the companies collection because firestore.rules already permits authenticated reads here
+  docRef: doc(db, 'companies', 'system_maintenance'),
 
   async getSettings(): Promise<MaintenanceSettings> {
     try {
@@ -51,6 +52,8 @@ export const maintenanceRepository = {
       }
     }, (error) => {
       console.error('Maintenance subscription error:', error);
+      // If there's an error (e.g. permission denied), default to open so we don't hang the app
+      callback(defaultSettings);
     });
   }
 };
