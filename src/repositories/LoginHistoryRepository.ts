@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 
 export const loginHistoryRepository = {
@@ -30,6 +30,20 @@ export const loginHistoryRepository = {
       });
     } catch (error) {
       console.error('Failed to log sign in failure history:', error);
+    }
+  },
+  
+  getAllHistory: async () => {
+    try {
+      const q = query(collection(db, 'loginHistory'), orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Failed to fetch login history:', error);
+      return [];
     }
   }
 };

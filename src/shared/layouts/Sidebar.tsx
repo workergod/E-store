@@ -53,13 +53,18 @@ const NavItem = ({ item, collapsed, pathname }: { item: { path: string, label: s
 
 export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
   const location = useLocation()
-  const { company } = useAuthStore()
+  const { company, user } = useAuthStore()
 
   const [clickCount, setClickCount] = useState(0)
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showSupervisorModal, setShowSupervisorModal] = useState(false)
 
   const handleCompanyNameClick = () => {
+    // SECURITY: Only OWNER and SUPER_ADMIN can trigger the Supervisor Corner password modal
+    if (company?.companyId !== 'company_default' && user?.email !== 'cryodeal2023@gmail.com' && user?.email !== 'workshop9283@gmail.com') {
+      return;
+    }
+
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current)
     }

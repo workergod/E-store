@@ -5,7 +5,8 @@ export const UserStatus = {
   ACTIVE: 'Active',
   INACTIVE: 'Inactive',
   SUSPENDED: 'Suspended',
-  PENDING: 'Pending'
+  PENDING: 'Pending',
+  PENDING_DEV_APPROVAL: 'Pending Dev Approval'
 } as const;
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
@@ -17,6 +18,7 @@ export interface User {
   photoURL?: string;
   role: Role;
   status: UserStatus;
+  isApproved?: boolean; // Required to fully access the app, unless OWNER or SUPER_ADMIN
   companyId?: string; // Optional because SuperAdmin might not belong to a specific company
   permissions?: Permission[]; // Overrides role-based permissions
   lastLoginIP?: string;

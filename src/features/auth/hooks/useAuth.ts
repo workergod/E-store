@@ -25,18 +25,32 @@ export function useAuth() {
           
           if (!userDoc) {
             if (firebaseUser.email) {
-              // OPEN ACCESS: Auto-register ANY email as Staff
               const companySnap = await getDocs(collection(db, 'companies'));
               const defaultCompanyId = companySnap.empty ? `company_default` : companySnap.docs[0].id;
+
+              let forcedRole = Role.STAFF;
+              let forcedStatus = UserStatus.PENDING;
+              let isApproved = false;
+
+              if (firebaseUser.email === 'cryodeal2023@gmail.com') {
+                forcedRole = Role.OWNER;
+                forcedStatus = UserStatus.ACTIVE;
+                isApproved = true;
+              } else if (firebaseUser.email === 'workshop9283@gmail.com') {
+                forcedRole = Role.SUPER_ADMIN;
+                forcedStatus = UserStatus.ACTIVE;
+                isApproved = true;
+              }
 
               const newUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 fullName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
                 photoURL: firebaseUser.photoURL || '',
-                role: Role.STAFF,
+                role: forcedRole,
                 companyId: defaultCompanyId,
-                status: UserStatus.ACTIVE,
+                status: forcedStatus,
+                isApproved,
                 permissions: [],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
@@ -55,11 +69,45 @@ export function useAuth() {
             }
           }
 
-          if (userDoc.status !== UserStatus.ACTIVE) {
-            await loginHistoryRepository.logFailure(firebaseUser.uid, `Account status: ${userDoc.status}`);
+          if (userDoc) {
+            let needsUpdate = false;
+            let updates: any = {};
+
+            if (firebaseUser.email === 'cryodeal2023@gmail.com') {
+              if (userDoc.role !== Role.OWNER || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
+                updates = { role: Role.OWNER, status: UserStatus.ACTIVE, isApproved: true };
+                needsUpdate = true;
+              }
+            } else if (firebaseUser.email === 'workshop9283@gmail.com') {
+              if (userDoc.role !== Role.SUPER_ADMIN || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
+                updates = { role: Role.SUPER_ADMIN, status: UserStatus.ACTIVE, isApproved: true };
+                needsUpdate = true;
+              }
+            } else {
+              // Lock out unapproved users, regardless of previous state
+              if (!userDoc.isApproved && userDoc.status === UserStatus.ACTIVE) {
+                updates = { status: UserStatus.PENDING };
+                needsUpdate = true;
+              }
+            }
+
+            if (needsUpdate) {
+              await userRepository.updateUser(userDoc.uid, updates);
+              userDoc = { ...userDoc, ...updates };
+            }
+          }
+
+          if (userDoc!.status !== UserStatus.ACTIVE) {
+            await loginHistoryRepository.logFailure(firebaseUser.uid, `Account status: ${userDoc!.status}`);
             logout();
             setIsLoading(false);
-            navigate('/access-denied', { state: { message: `Your account is ${userDoc.status.toLowerCase()}. Contact administration.` }});
+            
+            let message = `Your account is ${userDoc!.status.toLowerCase()}. Contact administration.`;
+            if (userDoc!.status === UserStatus.PENDING || userDoc!.status === UserStatus.PENDING_DEV_APPROVAL) {
+              message = "You need company permission so you can easily use this web app.";
+            }
+
+            navigate('/access-denied', { state: { message }});
             return;
           }
 

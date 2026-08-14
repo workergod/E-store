@@ -41,6 +41,7 @@ import KnowledgeBasePage from './features/settings/pages/KnowledgeBasePage';
 import NotificationsPage from './features/settings/pages/NotificationsPage';
 import MessagesPage from './features/settings/pages/MessagesPage';
 import SupervisorCornerPage from './features/supervisor/pages/SupervisorCorner';
+import { DeveloperGate } from './features/auth/components/DeveloperGate';
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
@@ -60,49 +61,51 @@ function MainApp() {
       {/* Protected App Routes */}
       <Route path="*" element={
         <ProtectedRoute>
-          <AppShell>
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/search" element={<GlobalSearchPage />} />
-              
-              {/* Master Data Routes */}
-              <Route path="/master-data/categories" element={<CategoriesPage />} />
-              <Route path="/master-data/brands" element={<BrandsPage />} />
-              <Route path="/master-data/units" element={<UnitsPage />} />
-              <Route path="/master-data/product-types" element={<ProductTypesPage />} />
-              <Route path="/master-data/manufacturers" element={<ManufacturersPage />} />
-              <Route path="/master-data/rack-locations" element={<RackLocationsPage />} />
-              <Route path="/master-data/templates" element={<ProductTemplatesPage />} />
+          <DeveloperGate>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/search" element={<GlobalSearchPage />} />
+                
+                {/* Master Data Routes */}
+                <Route path="/master-data/categories" element={<CategoriesPage />} />
+                <Route path="/master-data/brands" element={<BrandsPage />} />
+                <Route path="/master-data/units" element={<UnitsPage />} />
+                <Route path="/master-data/product-types" element={<ProductTypesPage />} />
+                <Route path="/master-data/manufacturers" element={<ManufacturersPage />} />
+                <Route path="/master-data/rack-locations" element={<RackLocationsPage />} />
+                <Route path="/master-data/templates" element={<ProductTemplatesPage />} />
 
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailsPage />} />
-              <Route path="/suppliers" element={<SuppliersPage />} />
-              <Route path="/purchases" element={<PurchaseOrdersPage />} />
-              <Route path="/purchases/new" element={<PurchaseOrderForm />} />
-              <Route path="/purchases/edit/:id" element={<PurchaseOrderForm />} />
-              <Route path="/purchases/:id" element={<PurchaseOrderDetails />} />
-              <Route path="/stock" element={<StockDashboard />} />
-              <Route path="/stock/adjustments" element={<StockAdjustmentsPage />} />
-              <Route path="/stock/adjustments/new" element={<StockAdjustmentForm />} />
-              <Route path="/stock/adjustments/:id" element={<StockAdjustmentForm />} />
-              
-              <Route path="/employees" element={<EmployeeDashboard />} />
-              <Route path="/employees/new" element={<EmployeeForm />} />
-              <Route path="/employees/edit/:id" element={<EmployeeForm />} />
-              <Route path="/employees/:id" element={<EmployeeProfile />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products/:id" element={<ProductDetailsPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/purchases" element={<PurchaseOrdersPage />} />
+                <Route path="/purchases/new" element={<PurchaseOrderForm />} />
+                <Route path="/purchases/edit/:id" element={<PurchaseOrderForm />} />
+                <Route path="/purchases/:id" element={<PurchaseOrderDetails />} />
+                <Route path="/stock" element={<StockDashboard />} />
+                <Route path="/stock/adjustments" element={<StockAdjustmentsPage />} />
+                <Route path="/stock/adjustments/new" element={<StockAdjustmentForm />} />
+                <Route path="/stock/adjustments/:id" element={<StockAdjustmentForm />} />
+                
+                <Route path="/employees" element={<EmployeeDashboard />} />
+                <Route path="/employees/new" element={<EmployeeForm />} />
+                <Route path="/employees/edit/:id" element={<EmployeeForm />} />
+                <Route path="/employees/:id" element={<EmployeeProfile />} />
 
-              <Route path="/issue" element={<IssueMaterialsPage />} />
-              <Route path="/returns" element={<ReturnMaterialsPage />} />
+                <Route path="/issue" element={<IssueMaterialsPage />} />
+                <Route path="/returns" element={<ReturnMaterialsPage />} />
 
-              <Route path="/transaction-log" element={<TransactionLogPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/supervisor" element={<SupervisorCornerPage />} />
-            </Routes>
-          </AppShell>
+                <Route path="/transaction-log" element={<TransactionLogPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/help" element={<HelpPage />} />
+                <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/messages" element={<MessagesPage />} />
+                <Route path="/supervisor" element={<SupervisorCornerPage />} />
+              </Routes>
+            </AppShell>
+          </DeveloperGate>
         </ProtectedRoute>
       } />
     </Routes>

@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { User } from '../types/User';
 
@@ -13,6 +13,12 @@ export class UserRepository {
       return userSnap.data() as User;
     }
     return null;
+  }
+
+  async getUsersByCompany(companyId: string): Promise<User[]> {
+    const q = query(collection(db, this.collectionName), where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as User));
   }
 
   async createUser(user: User): Promise<void> {
