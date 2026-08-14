@@ -54,6 +54,16 @@ service cloud.firestore {
     }
 
     // -----------------------------------------------------
+    // SYSTEM SETTINGS (Global Configuration)
+    // -----------------------------------------------------
+    match /systemSettings/{document} {
+      // Anyone can read (e.g. to check maintenance mode before logging in)
+      allow read: if true;
+      // Only SuperAdmin can modify system settings
+      allow write: if isSuperAdmin();
+    }
+
+    // -----------------------------------------------------
     // COMPANIES COLLECTION
     // -----------------------------------------------------
     match /companies/{companyId} {

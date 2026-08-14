@@ -6,16 +6,18 @@ import { AppCard } from '../../../shared/app/AppCard';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
+import { maintenanceRepository, MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { Terminal, Activity, KeyRound, Settings, Scale, Save } from 'lucide-react';
+import { Terminal, Activity, KeyRound, Settings, Scale, Save, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DeveloperConsole() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   
-  const [activeTab, setActiveTab] = useState<'AUDIT' | 'SYSTEM' | 'LEGAL' | 'SECURITY'>('AUDIT');
+  const [activeTab, setActiveTab] = useState<'AUDIT' | 'SYSTEM' | 'LEGAL' | 'SECURITY' | 'MAINTENANCE'>('MAINTENANCE');
   const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [maintenanceSettings, setMaintenanceSettings] = useState<MaintenanceSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [newDevPassword, setNewDevPassword] = useState('');
@@ -37,6 +39,9 @@ export default function DeveloperConsole() {
     try {
       const logs = await loginHistoryRepository.getAllHistory();
       setAuditLog(logs);
+      
+      const mSettings = await maintenanceRepository.getSettings();
+      setMaintenanceSettings(mSettings);
     } catch (error) {
       console.error('Failed to fetch dev data:', error);
       toast.error('Failed to load Developer Console data');
@@ -62,6 +67,18 @@ export default function DeveloperConsole() {
     }
   };
 
+  const handleSaveMaintenance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!maintenanceSettings) return;
+    
+    try {
+      await maintenanceRepository.updateSettings(maintenanceSettings);
+      toast.success('Maintenance mode settings updated successfully');
+    } catch (error) {
+      toast.error('Failed to update maintenance settings');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30">
       <PageContainer>
@@ -79,6 +96,12 @@ export default function DeveloperConsole() {
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'AUDIT' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
           >
             <Activity className="h-4 w-4 mr-2" /> Audit Log
+          </button>
+          <button 
+            onClick={() => setActiveTab('MAINTENANCE')}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'MAINTENANCE' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
+          >
+            <Wrench className="h-4 w-4 mr-2" /> Maintenance Mode
           </button>
           <button 
             onClick={() => setActiveTab('SYSTEM')}
@@ -181,6 +204,63 @@ export default function DeveloperConsole() {
                 <p>This system is intellectual property and cannot be distributed without explicit authorization from the primary developer.</p>
                 <p>All data processed within this platform is subject to the terms of service and strict privacy guidelines. Unauthorized access attempts are actively monitored and logged in the Developer Audit trail.</p>
               </div>
+            </div>
+          ) : activeTab === 'MAINTENANCE' && maintenanceSettings ? (
+            <div className="p-8 max-w-2xl">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-500 font-mono">
+                <Wrench className="h-5 w-5" /> Global Maintenance Mode
+              </h3>
+              <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+                Activating maintenance mode will immediately lock out all standard users and supervisors. Only this developer account will be able to bypass the block.
+              </p>
+              <form onSubmit={handleSaveMaintenance} className="space-y-6">
+                
+                <div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-800 rounded-lg">
+                  <div>
+                    <div className="font-bold text-white">Enable Maintenance Lockout</div>
+                    <div className="text-xs text-zinc-500 mt-1">Locks all non-developer accounts out of the system.</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={maintenanceSettings.isEnabled}
+                      onChange={e => setMaintenanceSettings({...maintenanceSettings, isEnabled: e.target.checked})}
+                    />
+                    <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1 text-zinc-300">Estimated Duration (Hours)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={maintenanceSettings.estimatedHours}
+                      onChange={e => setMaintenanceSettings({...maintenanceSettings, estimatedHours: parseFloat(e.target.value)})}
+                      className="w-full h-10 px-3 rounded-md border border-zinc-700 bg-black/40 text-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
+                    />
+                    <p className="text-xs text-zinc-500 mt-2">Set to 0 to hide the time estimate.</p>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1 text-zinc-300">Lockout Message</label>
+                    <textarea
+                      value={maintenanceSettings.message}
+                      onChange={e => setMaintenanceSettings({...maintenanceSettings, message: e.target.value})}
+                      className="w-full h-32 p-3 rounded-md border border-zinc-700 bg-black/40 text-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
+                      placeholder="Enter the message users will see..."
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-800">
+                  <button type="submit" className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-6 py-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md">
+                    <Save className="h-4 w-4 mr-2" /> Save Maintenance Settings
+                  </button>
+                </div>
+              </form>
             </div>
           ) : (
             <div className="p-8 max-w-md">

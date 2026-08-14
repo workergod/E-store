@@ -43,6 +43,7 @@ import MessagesPage from './features/settings/pages/MessagesPage';
 import SupervisorCornerPage from './features/supervisor/pages/SupervisorCorner';
 import DeveloperConsole from './features/developer/pages/DeveloperConsole';
 import { DeveloperGate } from './features/auth/components/DeveloperGate';
+import { MaintenanceGate } from './features/maintenance/components/MaintenanceGate';
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
@@ -63,6 +64,7 @@ function MainApp() {
       <Route path="*" element={
         <ProtectedRoute>
           <DeveloperGate>
+          <MaintenanceGate>
             <AppShell>
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
@@ -107,6 +109,7 @@ function MainApp() {
                 <Route path="/dev-console" element={<DeveloperConsole />} />
               </Routes>
             </AppShell>
+          </MaintenanceGate>
           </DeveloperGate>
         </ProtectedRoute>
       } />
