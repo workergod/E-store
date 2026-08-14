@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { AppCard } from '../../../shared/app/AppCard';
-import { AppButton } from '../../../shared/app/AppButton';
+import { AppCard } from '../../../shared/app/AppCard';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
@@ -20,6 +20,8 @@ export default function DeveloperConsole() {
   
   const [newDevPassword, setNewDevPassword] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
 
   useEffect(() => {
     // Strict enforcement: Only the developer can be here, and they must have passed the DeveloperGate
@@ -72,34 +74,30 @@ export default function DeveloperConsole() {
         </p>
 
         <div className="flex flex-wrap gap-4 mb-6">
-          <AppButton 
-            variant={activeTab === 'AUDIT' ? 'primary' : 'outline'} 
+          <button 
             onClick={() => setActiveTab('AUDIT')}
-            className={activeTab === 'AUDIT' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0' : 'text-zinc-400 border-zinc-800 hover:text-white'}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'AUDIT' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
           >
             <Activity className="h-4 w-4 mr-2" /> Audit Log
-          </AppButton>
-          <AppButton 
-            variant={activeTab === 'SYSTEM' ? 'primary' : 'outline'} 
+          </button>
+          <button 
             onClick={() => setActiveTab('SYSTEM')}
-            className={activeTab === 'SYSTEM' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0' : 'text-zinc-400 border-zinc-800 hover:text-white'}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'SYSTEM' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
           >
             <Settings className="h-4 w-4 mr-2" /> System Info
-          </AppButton>
-          <AppButton 
-            variant={activeTab === 'LEGAL' ? 'primary' : 'outline'} 
+          </button>
+          <button 
             onClick={() => setActiveTab('LEGAL')}
-            className={activeTab === 'LEGAL' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0' : 'text-zinc-400 border-zinc-800 hover:text-white'}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'LEGAL' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
           >
             <Scale className="h-4 w-4 mr-2" /> Legal & Licenses
-          </AppButton>
-          <AppButton 
-            variant={activeTab === 'SECURITY' ? 'primary' : 'outline'} 
+          </button>
+          <button 
             onClick={() => setActiveTab('SECURITY')}
-            className={activeTab === 'SECURITY' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0' : 'text-zinc-400 border-zinc-800 hover:text-white'}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all ${activeTab === 'SECURITY' ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md' : 'bg-transparent text-zinc-400 border border-zinc-800 hover:text-white hover:bg-zinc-900'}`}
           >
             <KeyRound className="h-4 w-4 mr-2" /> Change Dev Password
-          </AppButton>
+          </button>
         </div>
 
         <AppCard className="overflow-hidden bg-zinc-900 border-zinc-800">
@@ -122,7 +120,22 @@ export default function DeveloperConsole() {
                     </thead>
                     <tbody className="divide-y divide-zinc-800 bg-zinc-900/50 text-zinc-300">
                       {auditLog.map(log => (
-                        <tr key={log.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <tr 
+                          key={log.id} 
+                          className="hover:bg-zinc-800/80 transition-colors cursor-pointer"
+                          onClick={async () => {
+                            if (log.uid && log.uid !== 'UNKNOWN') {
+                              try {
+                                const fullUser = await userRepository.getUser(log.uid);
+                                setSelectedLog({ ...log, fullUser });
+                              } catch (e) {
+                                setSelectedLog(log);
+                              }
+                            } else {
+                              setSelectedLog(log);
+                            }
+                          }}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : 'N/A'}</td>
                           <td className="px-6 py-4 truncate max-w-[200px] text-zinc-400">{log.uid}</td>
                           <td className="px-6 py-4">{log.ipAddress}</td>
@@ -189,14 +202,100 @@ export default function DeveloperConsole() {
                     required
                   />
                 </div>
-                <AppButton type="submit" disabled={isSavingPassword || !newDevPassword.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 w-full">
-                  <Save className="h-4 w-4 mr-2" /> {isSavingPassword ? 'Saving...' : 'Save New Password'}
-                </AppButton>
-              </form>
+                  <button type="submit" disabled={isSavingPassword || !newDevPassword.trim()} className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md w-full disabled:opacity-50">
+                    <Save className="h-4 w-4 mr-2" /> {isSavingPassword ? 'Saving...' : 'Save New Password'}
+                  </button>
+                </form>
+              </div>
+            )}
+          </AppCard>
+        </PageContainer>
+        
+        {/* Log Details Modal */}
+        {selectedLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+              <div className="p-6 border-b border-zinc-800 bg-black/40 flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-white font-mono flex items-center gap-2">
+                    <Terminal className="h-5 w-5 text-emerald-500" /> System Event Details
+                  </h3>
+                  <p className="text-zinc-500 text-xs mt-1 font-mono">{selectedLog.id}</p>
+                </div>
+                <button onClick={() => setSelectedLog(null)} className="text-zinc-500 hover:text-white transition-colors">
+                  <span className="sr-only">Close</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4 text-sm font-mono">
+                  <div>
+                    <div className="text-zinc-500 uppercase tracking-widest text-[10px] mb-1">Status</div>
+                    <div className={`font-bold ${selectedLog.status === 'SUCCESS' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {selectedLog.status}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500 uppercase tracking-widest text-[10px] mb-1">Timestamp</div>
+                    <div className="text-zinc-200">
+                      {selectedLog.timestamp?.toDate ? selectedLog.timestamp.toDate().toLocaleString() : 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500 uppercase tracking-widest text-[10px] mb-1">IP Address</div>
+                    <div className="text-zinc-200">{selectedLog.ipAddress || 'Unknown'}</div>
+                  </div>
+                  {selectedLog.reason && (
+                    <div className="col-span-2">
+                      <div className="text-zinc-500 uppercase tracking-widest text-[10px] mb-1">Failure Reason</div>
+                      <div className="text-red-400 bg-red-500/10 p-2 rounded border border-red-500/20">
+                        {selectedLog.reason}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-zinc-800 pt-6">
+                  <h4 className="text-emerald-500 font-mono text-sm font-bold mb-4">User Information</h4>
+                  {selectedLog.fullUser ? (
+                    <div className="bg-black/40 rounded-lg border border-zinc-800 p-4 space-y-3 font-mono text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Name:</span>
+                        <span className="text-zinc-200">{selectedLog.fullUser.fullName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Email:</span>
+                        <span className="text-zinc-200">{selectedLog.fullUser.email}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Role:</span>
+                        <span className="text-zinc-200">{selectedLog.fullUser.role}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Current Status:</span>
+                        <span className="text-zinc-200">{selectedLog.fullUser.status}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Approved:</span>
+                        <span className="text-zinc-200">{selectedLog.fullUser.isApproved ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">User ID:</span>
+                        <span className="text-zinc-500 text-xs">{selectedLog.uid}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-black/40 rounded-lg border border-zinc-800 p-4 font-mono text-sm">
+                      <div className="text-zinc-500 mb-2">Basic Info (Full record not found)</div>
+                      <div className="text-zinc-300 break-all">{selectedLog.uid}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-        </AppCard>
-      </PageContainer>
-    </div>
-  );
-}
+          </div>
+        )}
+      </div>
+    );
+  }
