@@ -3,6 +3,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { KeyRound, MonitorCheck, Terminal } from 'lucide-react';
 import { AppButton } from '../../../shared/app/AppButton';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
+import { userRepository } from '../../../repositories/UserRepository';
 import { toast } from 'sonner';
 
 interface Props {
@@ -28,9 +29,15 @@ export function DeveloperGate({ children }: Props) {
 
     setIsChecking(true);
     try {
-      // In a real app we'd fetch this from settings, but for dev simplicity we use a secure hash check
-      // For this demo, default dev password is "dev123"
-      const expectedHash = await settingsRepository.hashPassword('dev123');
+      let expectedHash = '';
+      const userDoc = await userRepository.getUser(user!.uid);
+      
+      if (userDoc?.devPasswordHash) {
+        expectedHash = userDoc.devPasswordHash;
+      } else {
+        expectedHash = await settingsRepository.hashPassword('dev123');
+      }
+
       const inputHash = await settingsRepository.hashPassword(password);
 
       if (inputHash === expectedHash) {

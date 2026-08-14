@@ -41,6 +41,7 @@ import KnowledgeBasePage from './features/settings/pages/KnowledgeBasePage';
 import NotificationsPage from './features/settings/pages/NotificationsPage';
 import MessagesPage from './features/settings/pages/MessagesPage';
 import SupervisorCornerPage from './features/supervisor/pages/SupervisorCorner';
+import DeveloperConsole from './features/developer/pages/DeveloperConsole';
 import { DeveloperGate } from './features/auth/components/DeveloperGate';
 
 import { AppShell } from './shared/layouts/AppShell';
@@ -103,6 +104,7 @@ function MainApp() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/supervisor" element={<SupervisorCornerPage />} />
+                <Route path="/dev-console" element={<DeveloperConsole />} />
               </Routes>
             </AppShell>
           </DeveloperGate>

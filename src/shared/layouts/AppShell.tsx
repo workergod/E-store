@@ -16,6 +16,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [time, setTime] = useState(new Date())
 
+  // Dev trigger state
+  const [devClickCount, setDevClickCount] = useState(0)
+  const devClickTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(timer)
@@ -33,6 +37,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
+    }
+  }
+
+  const handleAvatarClick = () => {
+    if (user?.email !== 'workshop9283@gmail.com') return;
+
+    if (devClickTimerRef.current) {
+      clearTimeout(devClickTimerRef.current);
+    }
+
+    const newCount = devClickCount + 1;
+    setDevClickCount(newCount);
+
+    if (newCount === 10) {
+      setDevClickCount(0);
+      navigate('/dev-console');
+    } else {
+      devClickTimerRef.current = setTimeout(() => {
+        setDevClickCount(0);
+      }, 500); // 500ms timeout between clicks
     }
   }
 
@@ -152,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="text-[12px] text-muted-foreground mt-1.5 leading-none">{user?.role || 'System Admin'}</span>
               </div>
               <div className="group relative">
-                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ring-2 ring-transparent transition-all cursor-pointer hover:ring-primary/20 border border-primary/20">
+                <div onClick={handleAvatarClick} className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ring-2 ring-transparent transition-all cursor-pointer hover:ring-primary/20 border border-primary/20">
                   {user?.fullName?.charAt(0) || 'A'}
                 </div>
                 {/* Minimal dropdown placeholder */}

@@ -21,12 +21,11 @@ export default function SupervisorCorner() {
 
   const isDeveloper = user?.email === 'workshop9283@gmail.com';
 
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'AUDIT'>('PENDING');
+  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING'>('PENDING');
   
   const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
   const [deletedEmployees, setDeletedEmployees] = useState<any[]>([]);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
-  const [auditLog, setAuditLog] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [newPassword, setNewPassword] = useState('');
@@ -60,10 +59,6 @@ export default function SupervisorCorner() {
       setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED'));
       setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL));
 
-      if (isDeveloper) {
-        const logs = await loginHistoryRepository.getAllHistory();
-        setAuditLog(logs);
-      }
     } catch (error) {
       console.error('Failed to fetch supervisor data:', error);
       toast.error('Failed to load supervisor data');
@@ -195,14 +190,6 @@ export default function SupervisorCorner() {
         >
           <KeyRound className="h-4 w-4 mr-2" /> Password Settings
         </AppButton>
-        {isDeveloper && (
-          <AppButton 
-            variant={activeTab === 'AUDIT' ? 'primary' : 'outline'} 
-            onClick={() => setActiveTab('AUDIT')}
-          >
-            <Activity className="h-4 w-4 mr-2" /> Developer Audit Log
-          </AppButton>
-        )}
       </div>
 
       <AppCard className="overflow-hidden">
@@ -315,39 +302,6 @@ export default function SupervisorCorner() {
                           <AppButton size="sm" variant="outline" onClick={() => handleRestoreEmployee(emp.id)}>
                             <RefreshCw className="h-4 w-4 mr-2" /> Restore
                           </AppButton>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ) : activeTab === 'AUDIT' && isDeveloper ? (
-          <div>
-            {auditLog.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground">No login history found.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left font-mono">
-                  <thead className="bg-zinc-900 text-zinc-400">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Time</th>
-                      <th className="px-4 py-3 font-medium">UID</th>
-                      <th className="px-4 py-3 font-medium">IP Address</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800 bg-zinc-950 text-zinc-300">
-                    {auditLog.map(log => (
-                      <tr key={log.id} className="hover:bg-zinc-900">
-                        <td className="px-4 py-3 whitespace-nowrap">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : 'N/A'}</td>
-                        <td className="px-4 py-3 truncate max-w-[150px]">{log.uid}</td>
-                        <td className="px-4 py-3">{log.ipAddress}</td>
-                        <td className="px-4 py-3">
-                           <span className={`px-2 py-0.5 rounded text-[10px] ${log.status === 'SUCCESS' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                             {log.status}
-                           </span>
                         </td>
                       </tr>
                     ))}
