@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { AppCard } from '../../../shared/app/AppCard';
-import { AppCard } from '../../../shared/app/AppCard';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
