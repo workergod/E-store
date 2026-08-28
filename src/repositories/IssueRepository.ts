@@ -35,9 +35,22 @@ export const issueRepository = {
 
   issueItems: async (data: Omit<IssueTransaction, 'id' | 'createdAt' | 'updatedAt' | 'status'>, userId: string): Promise<string> => {
     const now = serverTimestamp();
+    
+    let createdByName = 'Staff';
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        createdByName = userSnap.data()?.fullName || 'Staff';
+      }
+    } catch (e) {
+      console.error("Failed to fetch user name for issue log", e);
+    }
+
     const payload = {
       ...data,
       status: 'ISSUED',
+      createdByName,
       createdAt: now,
       updatedAt: now,
       createdBy: userId,
@@ -78,6 +91,7 @@ export const issueRepository = {
 
     const updatedItems = [...issueData.items];
     let allFullyReturned = true;
+    const returnedItemsPayload: any[] = [];
 
     for (const ret of returns) {
       const itemIdx = updatedItems.findIndex(i => i.productId === ret.productId);
@@ -104,6 +118,13 @@ export const issueRepository = {
         allFullyReturned = false;
       }
 
+      returnedItemsPayload.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku || '',
+        returnedQty: ret.returnQty
+      });
+
       await stockLedgerRepository.recordTransaction({
         transactionId: `ret_${Date.now()}_${Math.floor(Math.random()*1000)}`,
         companyId,
@@ -114,6 +135,30 @@ export const issueRepository = {
         referenceType: 'ISSUE_RETURN',
         notes: `Returned by employee ${issueData.employeeId}`,
         performedBy: userId
+      });
+    }
+
+    if (returnedItemsPayload.length > 0) {
+      let createdByName = 'Staff';
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          createdByName = userSnap.data()?.fullName || 'Staff';
+        }
+      } catch (e) {
+        console.error("Failed to fetch user name for return log", e);
+      }
+
+      await addDoc(collection(db, 'returnTransactions'), {
+        companyId,
+        employeeId: issueData.employeeId,
+        issueId,
+        items: returnedItemsPayload,
+        createdAt: serverTimestamp(),
+        createdBy: userId,
+        createdByName,
+        notes: issueData.notes || ''
       });
     }
 
