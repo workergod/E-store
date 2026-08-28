@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../shared/ui/Card';
 import { LoginForm } from '../components/LoginForm';
-import { GoogleLoginButton } from '../components/GoogleLoginButton';
 import { useAuthStore } from "../../../store/authStore";
 import { Navigate } from 'react-router-dom';
 
@@ -33,20 +32,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-          
-          <GoogleLoginButton 
-            onSuccess={() => setError(null)} 
-            onError={(msg) => setError(msg)} 
-          />
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
 
           <LoginForm 
             onSuccess={() => setError(null)} 
