@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
 import { useAuthStore } from '../../../store/authStore';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
+import { stockLedgerRepository } from '../../../repositories/StockLedgerRepository';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
@@ -133,19 +134,123 @@ export default function TransactionLogPage() {
   useEffect(() => { loadLogs(); }, [companyId]);
 
   const handleDelete = async (id: string, type: string) => {
-    if (!window.confirm('Are you sure you want to delete this transaction log? This will not revert inventory balances.')) return;
+    if (!window.confirm('Are you sure you want to delete this transaction log? This will automatically revert the product stock balances.')) return;
     try {
       setIsLoading(true);
-      let colName = '';
-      if (type === 'ISSUE') colName = 'issueTransactions';
-      else if (type === 'RETURN') colName = 'returnTransactions';
-      else if (type === 'PURCHASE') colName = 'purchaseOrders';
+      const userId = useAuthStore.getState().user?.uid || 'System';
 
-      if (colName) {
-        await deleteDoc(doc(db, colName, id));
-        toast.success('Transaction deleted');
-        loadLogs();
+      if (type === 'ISSUE') {
+        const issueRef = doc(db, 'issueTransactions', id);
+        const issueSnap = await getDoc(issueRef);
+        if (issueSnap.exists()) {
+          const d = issueSnap.data();
+          const items = d.items || [];
+          for (const item of items) {
+            const netQty = item.issuedQty - (item.returnedQty || 0);
+            if (netQty > 0) {
+              await stockLedgerRepository.recordTransaction({
+                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                companyId: companyId!,
+                productId: item.productId,
+                transactionType: 'ADJUSTMENT',
+                referenceType: 'ADJUSTMENT',
+                quantity: netQty,
+                notes: `Reverted Issue deletion (ID: ${id})`,
+                performedBy: userId
+              });
+            }
+          }
+        }
+        
+        const returnSnap = await getDocs(query(
+          collection(db, 'returnTransactions'),
+          where('issueId', '==', id)
+        ));
+        for (const docObj of returnSnap.docs) {
+          await deleteDoc(docObj.ref);
+        }
+        await deleteDoc(issueRef);
+
+      } else if (type === 'RETURN') {
+        const returnRef = doc(db, 'returnTransactions', id);
+        const returnSnap = await getDoc(returnRef);
+        if (returnSnap.exists()) {
+          const d = returnSnap.data();
+          const items = d.items || [];
+          for (const item of items) {
+            const returnedQty = item.returnedQty || 0;
+            if (returnedQty > 0) {
+              await stockLedgerRepository.recordTransaction({
+                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                companyId: companyId!,
+                productId: item.productId,
+                transactionType: 'ADJUSTMENT',
+                referenceType: 'ADJUSTMENT',
+                quantity: -returnedQty,
+                notes: `Reverted Return deletion (ID: ${id})`,
+                performedBy: userId
+              });
+            }
+          }
+
+          if (d.issueId) {
+            const issueRef = doc(db, 'issueTransactions', d.issueId);
+            const issueSnap = await getDoc(issueRef);
+            if (issueSnap.exists()) {
+              const issueData = issueSnap.data();
+              const updatedItems = (issueData.items || []).map((it: any) => {
+                const retItem = items.find((ri: any) => ri.productId === it.productId);
+                if (retItem) {
+                  const newReturned = Math.max(0, it.returnedQty - retItem.returnedQty);
+                  return {
+                    ...it,
+                    returnedQty: newReturned,
+                    usedQty: it.issuedQty - newReturned
+                  };
+                }
+                return it;
+              });
+
+              const anyReturned = updatedItems.some((it: any) => it.returnedQty > 0);
+              const allFullyReturned = updatedItems.every((it: any) => it.returnedQty === it.issuedQty);
+              const newStatus = allFullyReturned ? 'CLOSED' : (anyReturned ? 'PARTIALLY_RETURNED' : 'ISSUED');
+
+              await updateDoc(issueRef, {
+                items: updatedItems,
+                status: newStatus
+              });
+            }
+          }
+        }
+        await deleteDoc(returnRef);
+
+      } else if (type === 'PURCHASE') {
+        const poRef = doc(db, 'purchaseOrders', id);
+        const poSnap = await getDoc(poRef);
+        if (poSnap.exists()) {
+          const d = poSnap.data();
+          const items = d.items || [];
+          for (const item of items) {
+            const receivedQty = item.receivedQuantity || 0;
+            if (receivedQty > 0) {
+              await stockLedgerRepository.recordTransaction({
+                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                companyId: companyId!,
+                productId: item.productId,
+                transactionType: 'ADJUSTMENT',
+                referenceType: 'ADJUSTMENT',
+                quantity: -receivedQty,
+                notes: `Reverted PO deletion (ID: ${id})`,
+                performedBy: userId
+              });
+            }
+          }
+        }
+        await deleteDoc(poRef);
       }
+
+      toast.success('Transaction deleted and stock reverted successfully');
+      loadLogs();
     } catch (e: any) {
       toast.error('Failed to delete transaction: ' + e.message);
       setIsLoading(false);
