@@ -11,12 +11,15 @@ import { db } from '../../../firebase/firestore';
 import { Role } from '../../../constants/roles';
 import { UserStatus } from '../../../types/User';
 import { app } from '../../../firebase/config';
+import { UsernameIndexRepository } from '../../../repositories/UsernameIndexRepository';
+import { normalizeUsername, generateAuthEmail, formatUsername, isValidUsername, generateUsernameSuggestions } from '../../../utils/username';
 
 export default function SetupPage() {
   const { isAuthenticated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   if (isAuthenticated) {
@@ -25,17 +28,37 @@ export default function SetupPage() {
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || password.length < 6) {
-      setError('Please provide a valid email and a password of at least 6 characters.');
+    if (!username || password.length < 6) {
+      setError('Please provide a valid username and a password of at least 6 characters.');
+      setSuggestions([]);
+      return;
+    }
+
+    if (!isValidUsername(username)) {
+      setError('Username must be 3-30 characters long and contain only lowercase letters, numbers, underscores, and hyphens.');
+      setSuggestions([]);
       return;
     }
     
     setIsLoading(true);
     setError(null);
+    setSuggestions([]);
     try {
+      const normalized = normalizeUsername(username);
+      const authEmail = generateAuthEmail(normalized);
+
+      // Check if username is available
+      const isAvailable = await UsernameIndexRepository.isUsernameAvailable(normalized);
+      if (!isAvailable) {
+         setError(`@${normalized} is already in use. Please choose another username.`);
+         setSuggestions(generateUsernameSuggestions(normalized));
+         setIsLoading(false);
+         return;
+      }
+
       const auth = getAuth(app);
-      // Create user directly using Email & Password to bypass Google Popup
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      // Create user directly using the generated Auth Email & Password
+      const result = await createUserWithEmailAndPassword(auth, authEmail, password);
       const user = result.user;
 
       // Check if user already exists
@@ -47,10 +70,15 @@ export default function SetupPage() {
         return;
       }
 
+      // Claim username atomically
+      await UsernameIndexRepository.claimUsername(user.uid, normalized);
+
       // Create the SuperAdmin document
       await setDoc(userRef, {
         uid: user.uid,
-        email: user.email,
+        email: authEmail,
+        username: formatUsername(username),
+        normalizedUsername: normalized,
         fullName: 'System Administrator',
         photoURL: '',
         role: Role.SUPER_ADMIN,
@@ -84,7 +112,29 @@ export default function SetupPage() {
           <form onSubmit={handleSetup} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900">
+                <div className="font-bold mb-1">Username already used</div>
                 {error}
+                {suggestions.length > 0 && (
+                  <div className="mt-3">
+                    <p className="font-medium text-red-600 dark:text-red-400 mb-2">Suggestions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setUsername(suggestion);
+                            setError(null);
+                            setSuggestions([]);
+                          }}
+                          className="px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <div className="text-sm text-muted-foreground mb-4">
@@ -92,13 +142,17 @@ export default function SetupPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="setup-email">Admin Email</Label>
+              <Label htmlFor="setup-username">Admin Username</Label>
               <Input 
-                id="setup-email" 
-                type="email" 
-                placeholder="admin@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="setup-username" 
+                type="text" 
+                placeholder="@admin"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setError(null);
+                  setSuggestions([]);
+                }}
                 disabled={isLoading}
                 required
               />

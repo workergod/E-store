@@ -13,6 +13,8 @@ export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 
 export interface User {
   uid: string;
+  username: string;
+  normalizedUsername: string;
   fullName: string;
   email: string;
   photoURL?: string;

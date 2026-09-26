@@ -61,7 +61,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
 
   const handleCompanyNameClick = () => {
     // SECURITY: Only OWNER and SUPER_ADMIN can trigger the Supervisor Corner password modal
-    if (company?.companyId !== 'company_default' && user?.email !== 'cryodeal2023@gmail.com' && user?.email !== 'workshop9283@gmail.com') {
+    if (company?.companyId !== 'company_default' && user?.email !== 'cryodeal2023@gmail.com' && user?.email !== 'workshop9283@gmail.com' && user?.username !== '@developeremil') {
       return;
     }
 

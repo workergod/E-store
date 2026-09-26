@@ -32,20 +32,23 @@ export function useAuth() {
               let forcedStatus = UserStatus.PENDING;
               let isApproved = false;
 
-              if (firebaseUser.email === 'cryodeal2023@gmail.com') {
+              if (firebaseUser.email === 'cryodeal2023@gmail.com' || firebaseUser.email === 'cryodeal2023@estorepro.internal') {
                 forcedRole = Role.OWNER;
                 forcedStatus = UserStatus.ACTIVE;
                 isApproved = true;
-              } else if (firebaseUser.email === 'workshop9283@gmail.com') {
+              } else if (firebaseUser.email === 'workshop9283@gmail.com' || firebaseUser.email === 'developeremil@estorepro.internal') {
                 forcedRole = Role.SUPER_ADMIN;
                 forcedStatus = UserStatus.ACTIVE;
                 isApproved = true;
               }
 
+              const fallbackUsername = firebaseUser.email.split('@')[0];
               const newUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                fullName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                username: `@${fallbackUsername}`,
+                normalizedUsername: fallbackUsername,
+                fullName: firebaseUser.displayName || fallbackUsername,
                 photoURL: firebaseUser.photoURL || '',
                 role: forcedRole,
                 companyId: defaultCompanyId,
@@ -62,7 +65,7 @@ export function useAuth() {
             
             if (!userDoc) {
               await loginHistoryRepository.logFailure(firebaseUser.uid, 'User document auto-creation failed');
-              toast.error(`Failed to register account for ${firebaseUser.email}`);
+              toast.error(`Failed to register account`);
               logout();
               setIsLoading(false);
               return;
@@ -73,12 +76,12 @@ export function useAuth() {
             let needsUpdate = false;
             let updates: any = {};
 
-            if (firebaseUser.email === 'cryodeal2023@gmail.com') {
+            if (firebaseUser.email === 'cryodeal2023@gmail.com' || firebaseUser.email === 'cryodeal2023@estorepro.internal') {
               if (userDoc.role !== Role.OWNER || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
                 updates = { role: Role.OWNER, status: UserStatus.ACTIVE, isApproved: true };
                 needsUpdate = true;
               }
-            } else if (firebaseUser.email === 'workshop9283@gmail.com') {
+            } else if (firebaseUser.email === 'workshop9283@gmail.com' || firebaseUser.email === 'developeremil@estorepro.internal') {
               if (userDoc.role !== Role.SUPER_ADMIN || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
                 updates = { role: Role.SUPER_ADMIN, status: UserStatus.ACTIVE, isApproved: true };
                 needsUpdate = true;

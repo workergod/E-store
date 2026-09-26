@@ -6,14 +6,16 @@ import { Button } from '../../../shared/ui/Button';
 import { Input } from '../../../shared/ui/Input';
 import { Label } from '../../../shared/ui/Label';
 import { signInWithEmail, resetPassword } from '../../../firebase/auth';
+import { UsernameIndexRepository } from '../../../repositories/UsernameIndexRepository';
+import { normalizeUsername } from '../../../utils/username';
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const resetSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
 });
 
 interface LoginFormProps {
@@ -37,7 +39,12 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   const onLoginSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
-      await signInWithEmail(data.email, data.password);
+      const normalized = normalizeUsername(data.username);
+      const authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      if (!authEmail) {
+        throw new Error('Invalid username or password.');
+      }
+      await signInWithEmail(authEmail, data.password);
       onSuccess();
     } catch (err: any) {
       onError(err.message || 'Failed to sign in. Please check your credentials.');
@@ -49,7 +56,12 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   const onResetSubmit = async (data: z.infer<typeof resetSchema>) => {
     setIsLoading(true);
     try {
-      await resetPassword(data.email);
+      const normalized = normalizeUsername(data.username);
+      const authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      if (!authEmail) {
+        throw new Error('Username not found.');
+      }
+      await resetPassword(authEmail);
       setResetSent(true);
       onError(''); // clear errors
     } catch (err: any) {
@@ -63,7 +75,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     return (
       <div className="space-y-4 text-center">
         <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-          Password reset email sent! Check your inbox.
+          Password reset link sent! (Check your developer console if intercepting emails).
         </p>
         <Button 
           variant="outline" 
@@ -84,16 +96,16 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     return (
       <form onSubmit={resetMethods.handleSubmit(onResetSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="reset-email">Email</Label>
+          <Label htmlFor="reset-username">Username</Label>
           <Input 
-            id="reset-email" 
-            type="email" 
-            placeholder="m@example.com" 
-            {...resetMethods.register('email')}
+            id="reset-username" 
+            type="text" 
+            placeholder="@username" 
+            {...resetMethods.register('username')}
             disabled={isLoading}
           />
-          {resetMethods.formState.errors.email && (
-            <p className="text-sm text-red-500">{resetMethods.formState.errors.email.message}</p>
+          {resetMethods.formState.errors.username && (
+            <p className="text-sm text-red-500">{resetMethods.formState.errors.username.message}</p>
           )}
         </div>
 
@@ -120,16 +132,16 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   return (
     <form onSubmit={loginMethods.handleSubmit(onLoginSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="username">Username</Label>
         <Input 
-          id="email" 
-          type="email" 
-          placeholder="m@example.com" 
-          {...loginMethods.register('email')}
+          id="username" 
+          type="text" 
+          placeholder="@username" 
+          {...loginMethods.register('username')}
           disabled={isLoading}
         />
-        {loginMethods.formState.errors.email && (
-          <p className="text-sm text-red-500">{loginMethods.formState.errors.email.message}</p>
+        {loginMethods.formState.errors.username && (
+          <p className="text-sm text-red-500">{loginMethods.formState.errors.username.message}</p>
         )}
       </div>
 
