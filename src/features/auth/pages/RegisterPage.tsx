@@ -74,14 +74,14 @@ export default function RegisterPage() {
       const user = result.user;
 
       // Get default company
-      let defaultCompanyId = 'company_default';
+      let defaultCompanyId = 'company_Zu6sHXTq'; // Fallback to actual live company ID if rules block read
       try {
         const companySnap = await getDocs(collection(db, 'companies'));
         if (!companySnap.empty) {
           defaultCompanyId = companySnap.docs[0].id;
         }
       } catch (err: any) {
-        console.warn("Could not fetch companies, falling back to company_default");
+        console.warn("Could not fetch companies, falling back to live company ID");
       }
 
       // Claim username atomically (suppress error if rules aren't deployed)

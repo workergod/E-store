@@ -26,7 +26,7 @@ export function useAuth() {
           if (!userDoc) {
             if (firebaseUser.email) {
               const companySnap = await getDocs(collection(db, 'companies'));
-              const defaultCompanyId = companySnap.empty ? `company_default` : companySnap.docs[0].id;
+              const defaultCompanyId = companySnap.empty ? `company_Zu6sHXTq` : companySnap.docs[0].id;
 
               let forcedRole = Role.STAFF;
               let forcedStatus = UserStatus.PENDING;

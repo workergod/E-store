@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,23 +15,26 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-async function fix() {
+async function check() {
   await signInWithEmailAndPassword(auth, 'developeremil@estorepro.internal', 'dev123');
   
+  const devDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+  console.log("Developer companyId:", devDoc.data()?.companyId);
+
   const compSnap = await getDocs(collection(db, 'companies'));
-  const realCompanyId = compSnap.docs[0].id;
-  console.log("Real company ID:", realCompanyId);
+  console.log("Companies count:", compSnap.size);
+  compSnap.docs.forEach(d => console.log("Company:", d.id, d.data().companyName));
 
   const userSnap = await getDocs(collection(db, 'users'));
-  for (const docSnap of userSnap.docs) {
-    const data = docSnap.data();
-    if (data.companyId === 'company_default' || !data.companyId) {
-      console.log(`Fixing: ${data.username}`);
-      await updateDoc(doc(db, 'users', docSnap.id), { companyId: realCompanyId });
+  console.log("Users count:", userSnap.size);
+  userSnap.docs.forEach(d => {
+    const data = d.data();
+    if (data.username === '@cryodeal' || data.status === 'Pending') {
+      console.log("User:", data.username, "| companyId:", data.companyId, "| status:", data.status, "| isApproved:", data.isApproved);
     }
-  }
-  console.log("Done!");
+  });
+  
   process.exit(0);
 }
 
-fix().catch(console.error);
+check().catch(console.error);
