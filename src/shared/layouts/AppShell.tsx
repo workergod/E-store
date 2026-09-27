@@ -72,22 +72,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="h-[72px] bg-background/80 backdrop-blur-md border-b border-border flex items-center px-8 justify-between sticky top-0 z-10 shrink-0 print:hidden">
           
           <div className="flex-1 flex items-center max-w-xl">
-            <div className="relative w-full flex items-center group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search products, SKU, Barcode, Site..." 
-                className="w-full h-[52px] bg-muted/50 border border-transparent focus:bg-card focus:border-border pl-[44px] pr-4 rounded-[var(--radius-input)] text-sm outline-none transition-all focus:ring-2 focus:ring-primary/20 shadow-sm"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearch}
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1">
-                <kbd className="inline-flex h-6 items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
+            {user?.role !== 'Technician' && (
+              <div className="relative w-full flex items-center group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Search products, SKU, Barcode, Site..." 
+                  className="w-full h-[52px] bg-muted/50 border border-transparent focus:bg-card focus:border-border pl-[44px] pr-4 rounded-[var(--radius-input)] text-sm outline-none transition-all focus:ring-2 focus:ring-primary/20 shadow-sm"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearch}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1">
+                  <kbd className="inline-flex h-6 items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-[var(--spacing-xl)] ml-auto shrink-0 pl-8">

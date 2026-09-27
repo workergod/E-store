@@ -33,6 +33,7 @@ import EmployeeForm from './features/employees/pages/EmployeeForm';
 import EmployeeProfile from './features/employees/pages/EmployeeProfile';
 import IssueMaterialsPage from './features/inventory/pages/IssueMaterialsPage';
 import ReturnMaterialsPage from './features/inventory/pages/ReturnMaterialsPage';
+import MyMaterialsPage from './features/inventory/pages/MyMaterialsPage';
 
 import TransactionLogPage from './features/reports/pages/TransactionLogPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
@@ -101,6 +102,7 @@ function MainApp() {
 
                 <Route path="/issue" element={<IssueMaterialsPage />} />
                 <Route path="/returns" element={<ReturnMaterialsPage />} />
+                <Route path="/my-materials" element={<MyMaterialsPage />} />
 
                 <Route path="/transaction-log" element={<TransactionLogPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

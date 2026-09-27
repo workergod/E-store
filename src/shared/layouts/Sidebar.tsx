@@ -123,14 +123,13 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
 
         {/* INVENTORY NAV */}
         <div className="px-4">
-          {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inventory</h4>}
+          {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{user?.role === Role.TECHNICIAN ? 'My Items' : 'Inventory'}</h4>}
           <div className="space-y-[var(--spacing-xs)]">
-            {INVENTORY_NAV.filter(item => {
-              if (user?.role === Role.TECHNICIAN) {
-                return item.path === '/issue';
-              }
-              return true;
-            }).map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            {user?.role === Role.TECHNICIAN ? (
+              <NavItem item={{ path: '/my-materials', label: 'My Materials', icon: PackageSearch }} collapsed={collapsed} pathname={location.pathname} />
+            ) : (
+              INVENTORY_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)
+            )}
           </div>
         </div>
 

@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user?.role === 'Technician') {
-      navigate('/issue', { replace: true })
+      navigate('/my-materials', { replace: true })
     }
   }, [user, navigate])
 
