@@ -14,9 +14,15 @@ import { productRepository } from '../../../repositories/ProductRepository'
 import { issueRepository } from '../../../repositories/IssueRepository'
 
 export default function DashboardPage() {
-  const { company } = useAuthStore()
+  const { company, user } = useAuthStore()
   const companyId = company?.companyId
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user?.role === 'Technician') {
+      navigate('/issue', { replace: true })
+    }
+  }, [user, navigate])
 
   const [isLoading, setIsLoading] = useState(true)
   const [metrics, setMetrics] = useState({

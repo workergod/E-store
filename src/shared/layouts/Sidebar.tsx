@@ -9,6 +9,7 @@ import {
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
 import { SupervisorLoginModal } from '../../features/supervisor/components/SupervisorLoginModal'
+import { Role } from '../../constants/roles'
 
 const MAIN_NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -111,41 +112,57 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 custom-scrollbar flex flex-col gap-[var(--spacing-3xl)]">
         
-        <div className="px-4">
-          <div className="space-y-[var(--spacing-xs)]">
-            {MAIN_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+        {/* MAIN NAV (Dashboard) */}
+        {user?.role !== Role.TECHNICIAN && (
+          <div className="px-4">
+            <div className="space-y-[var(--spacing-xs)]">
+              {MAIN_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            </div>
           </div>
-        </div>
+        )}
 
+        {/* INVENTORY NAV */}
         <div className="px-4">
           {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inventory</h4>}
           <div className="space-y-[var(--spacing-xs)]">
-            {INVENTORY_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            {INVENTORY_NAV.filter(item => {
+              if (user?.role === Role.TECHNICIAN) {
+                return item.path === '/issue';
+              }
+              return true;
+            }).map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
           </div>
         </div>
 
-        <div className="px-4">
-          {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Purchasing</h4>}
-          <div className="space-y-[var(--spacing-xs)]">
-            {PURCHASING_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+        {/* PURCHASING NAV */}
+        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
+          <div className="px-4">
+            {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Purchasing</h4>}
+            <div className="space-y-[var(--spacing-xs)]">
+              {PURCHASING_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            </div>
           </div>
-        </div>
+        )}
 
-
-        <div className="px-4">
-          {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operations</h4>}
-          <div className="space-y-[var(--spacing-xs)]">
-            {OPERATIONS_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+        {/* OPERATIONS NAV */}
+        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
+          <div className="px-4">
+            {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operations</h4>}
+            <div className="space-y-[var(--spacing-xs)]">
+              {OPERATIONS_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
       <div className="p-4 mt-auto border-t border-border/50">
-        <div className="space-y-[var(--spacing-xs)]">
-          <NavItem item={{ path: '/settings', label: 'Settings', icon: Settings }} collapsed={collapsed} pathname={location.pathname} />
-          <NavItem item={{ path: '/help', label: 'Help', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
-        </div>
+        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
+          <div className="space-y-[var(--spacing-xs)]">
+            <NavItem item={{ path: '/settings', label: 'Settings', icon: Settings }} collapsed={collapsed} pathname={location.pathname} />
+            <NavItem item={{ path: '/help', label: 'Help', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
+          </div>
+        )}
         {!collapsed && (
           <div className="mt-4 p-4 rounded-[var(--radius)] bg-muted/50 border border-border/50">
             <h4 className="font-semibold text-sm mb-1">E Store Pro</h4>

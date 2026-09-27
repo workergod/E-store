@@ -108,7 +108,7 @@ export default function SupervisorCorner() {
 
   const openApprovalModal = (pendingUser: any) => {
     setSelectedUserForApproval(pendingUser);
-    setSelectedRole(Role.STAFF);
+    setSelectedRole(pendingUser.role || Role.STAFF);
     setIsRoleModalOpen(true);
   };
 
@@ -207,8 +207,9 @@ export default function SupervisorCorner() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
-                      <th className="px-6 py-3 font-medium">Email</th>
+                      <th className="px-6 py-3 font-medium">Username/Email</th>
                       <th className="px-6 py-3 font-medium">Name</th>
+                      <th className="px-6 py-3 font-medium">Req. Role & Dept</th>
                       <th className="px-6 py-3 font-medium">Status</th>
                       <th className="px-6 py-3 font-medium text-right">Actions</th>
                     </tr>
@@ -216,8 +217,15 @@ export default function SupervisorCorner() {
                   <tbody className="divide-y divide-border">
                     {pendingUsers.map(u => (
                       <tr key={u.uid} className="hover:bg-muted/30">
-                        <td className="px-6 py-4 font-medium">{u.email}</td>
+                        <td className="px-6 py-4 font-medium">
+                          <div>{u.username}</div>
+                          <div className="text-xs text-muted-foreground">{u.email}</div>
+                        </td>
                         <td className="px-6 py-4">{u.fullName}</td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold">{u.role}</div>
+                          <div className="text-xs text-muted-foreground">{u.department || 'No dept'}</div>
+                        </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.status === UserStatus.PENDING_DEV_APPROVAL ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
                             {u.status}
@@ -349,19 +357,40 @@ export default function SupervisorCorner() {
               <p className="text-sm text-muted-foreground mb-4">
                 Select the appropriate access level for <span className="font-semibold text-foreground">{selectedUserForApproval?.email}</span>.
               </p>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                  <input type="radio" name="role" checked={selectedRole === Role.STAFF} onChange={() => setSelectedRole(Role.STAFF)} className="w-4 h-4 text-primary" />
+                  <input type="radio" name="role" checked={selectedRole === Role.TECHNICIAN} onChange={() => setSelectedRole(Role.TECHNICIAN)} className="w-4 h-4 text-primary" />
                   <div>
-                    <div className="font-medium">Staff</div>
-                    <div className="text-xs text-muted-foreground">Standard access to inventory and operations.</div>
+                    <div className="font-medium">Technician</div>
+                    <div className="text-xs text-muted-foreground">Can only access Issue Materials.</div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input type="radio" name="role" checked={selectedRole === Role.STORE_KEEPER} onChange={() => setSelectedRole(Role.STORE_KEEPER)} className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-medium">Store Keeper</div>
+                    <div className="text-xs text-muted-foreground">Access Dashboard, Products, Issue & Return Materials.</div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input type="radio" name="role" checked={selectedRole === Role.SUPERVISOR} onChange={() => setSelectedRole(Role.SUPERVISOR)} className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-medium">Supervisor</div>
+                    <div className="text-xs text-muted-foreground">Can oversee staff, operations, and inventory.</div>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                   <input type="radio" name="role" checked={selectedRole === Role.MANAGER} onChange={() => setSelectedRole(Role.MANAGER)} className="w-4 h-4 text-primary" />
                   <div>
                     <div className="font-medium">Manager</div>
-                    <div className="text-xs text-muted-foreground">Can oversee staff and modify select configurations.</div>
+                    <div className="text-xs text-muted-foreground">Full operational access.</div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input type="radio" name="role" checked={selectedRole === Role.STAFF} onChange={() => setSelectedRole(Role.STAFF)} className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-medium">Staff</div>
+                    <div className="text-xs text-muted-foreground">Standard access to inventory and operations.</div>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-amber-200 dark:border-amber-900/50">
