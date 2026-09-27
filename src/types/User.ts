@@ -11,6 +11,15 @@ export const UserStatus = {
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: number;
+  isBot?: boolean;
+}
+
 export interface User {
   uid: string;
   username: string;
@@ -23,6 +32,8 @@ export interface User {
   isApproved?: boolean; // Required to fully access the app, unless OWNER or SUPER_ADMIN
   companyId?: string; // Optional because SuperAdmin might not belong to a specific company
   permissions?: Permission[]; // Overrides role-based permissions
+  supportChats?: ChatMessage[];
+  isSupportOnline?: boolean;
   devPasswordHash?: string; // Stored exclusively for workshop9283@gmail.com
   lastLoginIP?: string;
   lastLogin?: Date;

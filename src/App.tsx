@@ -47,6 +47,8 @@ import { MaintenanceGate } from './features/maintenance/components/MaintenanceGa
 
 import { AppShell } from './shared/layouts/AppShell';
 import { Toaster } from 'sonner';
+import SupportChatPage from './features/support/pages/SupportChatPage';
+import DevChatPage from './features/support/pages/DevChatPage';
 
 function MainApp() {
   useAuth(); // Hook to initialize and listen to Firebase auth
@@ -103,6 +105,8 @@ function MainApp() {
                 <Route path="/transaction-log" element={<TransactionLogPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/help" element={<HelpPage />} />
+                <Route path="/support-chat" element={<SupportChatPage />} />
+                <Route path="/developer/chat" element={<DevChatPage />} />
                 <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/messages" element={<MessagesPage />} />

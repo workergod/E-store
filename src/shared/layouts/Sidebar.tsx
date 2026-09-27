@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
-  ChevronLeft, ChevronRight, HelpCircle,
+  ChevronLeft, ChevronRight, HelpCircle, MessageCircle,
   ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList
   } from 'lucide-react'
 import { cn } from "../utils/cn"
@@ -159,6 +159,9 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
       <div className="p-4 mt-auto border-t border-border/50">
         {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
           <div className="space-y-[var(--spacing-xs)]">
+            {user?.role === Role.SUPER_ADMIN && (
+              <NavItem item={{ path: '/developer/chat', label: 'Dev Support Chats', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
+            )}
             <NavItem item={{ path: '/settings', label: 'Settings', icon: Settings }} collapsed={collapsed} pathname={location.pathname} />
             <NavItem item={{ path: '/help', label: 'Help', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
           </div>

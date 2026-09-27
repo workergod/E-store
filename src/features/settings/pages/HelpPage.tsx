@@ -55,7 +55,7 @@ export default function HelpPage() {
             <a href="mailto:edgaredgefx@gmail.com" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
               <Mail className="h-4 w-4 mr-2" /> edgaredgefx@gmail.com
             </a>
-            <span className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+            <span onClick={() => navigate('/support-chat')} className="flex items-center text-sm text-primary font-medium hover:underline cursor-pointer">
               <MessageCircle className="h-4 w-4 mr-2" /> Live Chat Available
             </span>
           </div>
