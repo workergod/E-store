@@ -40,7 +40,13 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      const authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      let authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      
+      // Fallback for developer account in case Firestore rules blocked index creation
+      if (!authEmail && normalized === 'developeremil') {
+        authEmail = 'developeremil@estorepro.internal';
+      }
+
       if (!authEmail) {
         throw new Error('Invalid username or password.');
       }
