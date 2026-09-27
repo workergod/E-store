@@ -5,12 +5,14 @@ import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
 import { signOut } from "../../firebase/auth"
 import { useNavigate } from 'react-router-dom'
+import { useNotificationStore } from '../../store/notificationStore'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore()
+  const { notifications, markAllRead, markAsRead } = useNotificationStore()
   const [collapsed, setCollapsed] = useState(false)
   const [isDark, setIsDark] = useState(false)
-  const [hasNotifications, setHasNotifications] = useState(true)
+  const hasNotifications = notifications.some(n => !n.isRead)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
 
@@ -107,32 +109,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden z-50">
                   <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
                     <span className="font-semibold text-sm">Notifications</span>
-                    <button onClick={() => { setHasNotifications(false); document.activeElement?.blur(); }} className="text-xs text-primary cursor-pointer hover:underline">Mark all read</button>
+                    {hasNotifications && (
+                      <button onClick={() => { markAllRead(); document.activeElement?.blur(); }} className="text-xs text-primary cursor-pointer hover:underline">Mark all read</button>
+                    )}
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {hasNotifications ? (
-                      <>
-                        <div className="p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                      notifications.map(notif => (
+                        <div key={notif.id} onClick={() => markAsRead(notif.id)} className={`p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer ${notif.isRead ? 'opacity-60' : ''}`}>
                            <div className="flex gap-3">
-                             <div className="w-2 h-2 mt-1.5 bg-primary rounded-full shrink-0"></div>
+                             <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${notif.isRead ? 'bg-transparent' : 'bg-primary'}`}></div>
                              <div>
-                               <p className="text-sm font-medium">New Feature Live</p>
-                               <p className="text-xs text-muted-foreground mt-0.5">Material Issues now have a beautiful new receipt layout.</p>
-                               <p className="text-[10px] text-muted-foreground mt-1">Just now</p>
+                               <p className="text-sm font-medium">{notif.title}</p>
+                               <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                               <p className="text-[10px] text-muted-foreground mt-1">{notif.time}</p>
                              </div>
                            </div>
                         </div>
-                        <div className="p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer opacity-60">
-                           <div className="flex gap-3">
-                             <div className="w-2 h-2 mt-1.5 bg-transparent rounded-full shrink-0"></div>
-                             <div>
-                               <p className="text-sm font-medium">Low Stock Alert</p>
-                               <p className="text-xs text-muted-foreground mt-0.5">Capacitor 1.5 uF is running low (40 left)</p>
-                               <p className="text-[10px] text-muted-foreground mt-1">2 hours ago</p>
-                             </div>
-                           </div>
-                        </div>
-                      </>
+                      ))
                     ) : (
                       <div className="p-6 text-center text-muted-foreground text-sm">
                         You're all caught up!
