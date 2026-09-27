@@ -22,7 +22,6 @@ export interface User {
   status: UserStatus;
   isApproved?: boolean; // Required to fully access the app, unless OWNER or SUPER_ADMIN
   companyId?: string; // Optional because SuperAdmin might not belong to a specific company
-  department?: string;
   permissions?: Permission[]; // Overrides role-based permissions
   devPasswordHash?: string; // Stored exclusively for workshop9283@gmail.com
   lastLoginIP?: string;

@@ -22,7 +22,6 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
-  const [department, setDepartment] = useState('');
   const [role, setRole] = useState<Role>(Role.TECHNICIAN);
 
   if (isAuthenticated) {
@@ -75,7 +74,6 @@ export default function RegisterPage() {
         username: formatUsername(username),
         normalizedUsername: normalized,
         fullName: fullName.trim(),
-        department: department.trim(),
         photoURL: '',
         role: role,
         status: UserStatus.PENDING,
@@ -166,18 +164,6 @@ export default function RegisterPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="register-department">Department</Label>
-              <Input 
-                id="register-department" 
-                type="text" 
-                placeholder="E.g., Engineering, Maintenance"
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="register-role">Requested Role</Label>
               <select 
                 id="register-role"
@@ -186,6 +172,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
+                <option value={Role.ENGINEER}>Engineer</option>
                 <option value={Role.TECHNICIAN}>Technician</option>
                 <option value={Role.STORE_KEEPER}>Store Keeper</option>
                 <option value={Role.SUPERVISOR}>Supervisor</option>

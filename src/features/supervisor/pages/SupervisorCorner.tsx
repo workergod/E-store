@@ -209,7 +209,7 @@ export default function SupervisorCorner() {
                     <tr>
                       <th className="px-6 py-3 font-medium">Username/Email</th>
                       <th className="px-6 py-3 font-medium">Name</th>
-                      <th className="px-6 py-3 font-medium">Req. Role & Dept</th>
+                      <th className="px-6 py-3 font-medium">Req. Role</th>
                       <th className="px-6 py-3 font-medium">Status</th>
                       <th className="px-6 py-3 font-medium text-right">Actions</th>
                     </tr>
@@ -224,7 +224,6 @@ export default function SupervisorCorner() {
                         <td className="px-6 py-4">{u.fullName}</td>
                         <td className="px-6 py-4">
                           <div className="font-semibold">{u.role}</div>
-                          <div className="text-xs text-muted-foreground">{u.department || 'No dept'}</div>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.status === UserStatus.PENDING_DEV_APPROVAL ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
@@ -358,6 +357,13 @@ export default function SupervisorCorner() {
                 Select the appropriate access level for <span className="font-semibold text-foreground">{selectedUserForApproval?.email}</span>.
               </p>
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input type="radio" name="role" checked={selectedRole === Role.ENGINEER} onChange={() => setSelectedRole(Role.ENGINEER)} className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="font-medium">Engineer</div>
+                    <div className="text-xs text-muted-foreground">Standard access to inventory and operations.</div>
+                  </div>
+                </label>
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                   <input type="radio" name="role" checked={selectedRole === Role.TECHNICIAN} onChange={() => setSelectedRole(Role.TECHNICIAN)} className="w-4 h-4 text-primary" />
                   <div>
