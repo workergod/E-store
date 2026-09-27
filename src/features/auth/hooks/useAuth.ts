@@ -107,7 +107,7 @@ export function useAuth() {
             
             let message = `Your account is ${userDoc!.status.toLowerCase()}. Contact administration.`;
             if (userDoc!.status === UserStatus.PENDING || userDoc!.status === UserStatus.PENDING_DEV_APPROVAL) {
-              message = "You need company permission so you can easily use this web app.";
+              message = "Please wait. Your account is still pending and has not been approved by the officials yet.";
             } else if (userDoc!.status === UserStatus.SUSPENDED) {
               message = "Your request is denied by the Manager.";
             }
