@@ -8,7 +8,7 @@ import { Input } from '../../../shared/ui/Input';
 import { Label } from '../../../shared/ui/Label';
 import { signInWithEmail, resetPassword } from '../../../firebase/auth';
 import { UsernameIndexRepository } from '../../../repositories/UsernameIndexRepository';
-import { normalizeUsername } from '../../../utils/username';
+import { normalizeUsername, generateAuthEmail } from '../../../utils/username';
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -41,22 +41,8 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      
-      let authEmail: string | null = null;
-      try {
-        authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
-      } catch (e) {
-        console.warn('Failed to resolve username index, likely due to missing Firestore rules', e);
-      }
-      
-      // Fallback for developer account in case Firestore rules blocked index creation
-      if (!authEmail && normalized === 'developeremil') {
-        authEmail = 'developeremil@estorepro.internal';
-      }
+      const authEmail = generateAuthEmail(normalized);
 
-      if (!authEmail) {
-        throw new Error('Invalid username or password.');
-      }
       await signInWithEmail(authEmail, data.password);
       onSuccess();
     } catch (err: any) {
@@ -70,10 +56,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      const authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
-      if (!authEmail) {
-        throw new Error('Username not found.');
-      }
+      const authEmail = generateAuthEmail(normalized);
       await resetPassword(authEmail);
       setResetSent(true);
       onError(''); // clear errors
