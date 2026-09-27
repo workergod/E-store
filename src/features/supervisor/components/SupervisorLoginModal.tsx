@@ -45,7 +45,7 @@ export function SupervisorLoginModal({ onClose }: Props) {
   };
 
   const handleForgotPassword = () => {
-    window.location.href = "mailto:alexanderabraham1987@gmail.com?subject=Reset Supervisor Password&body=Hello Alexander,%0D%0A%0D%0APlease reset the supervisor password for my E Store Pro account.%0D%0A%0D%0ACompany ID: " + (company?.companyId || '');
+    toast.info("Please contact the system administrator or developer to reset the supervisor password.");
   };
 
   return (
