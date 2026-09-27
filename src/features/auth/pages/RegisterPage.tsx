@@ -6,7 +6,7 @@ import { Label } from '../../../shared/ui/Label';
 import { useAuthStore } from "../../../store/authStore";
 import { Navigate, Link } from 'react-router-dom';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
 import { Role } from '../../../constants/roles';
 import { UserStatus } from '../../../types/User';
@@ -73,6 +73,17 @@ export default function RegisterPage() {
       const result = await createUserWithEmailAndPassword(auth, authEmail, password);
       const user = result.user;
 
+      // Get default company
+      let defaultCompanyId = 'company_default';
+      try {
+        const companySnap = await getDocs(collection(db, 'companies'));
+        if (!companySnap.empty) {
+          defaultCompanyId = companySnap.docs[0].id;
+        }
+      } catch (err: any) {
+        console.warn("Could not fetch companies, falling back to company_default");
+      }
+
       // Claim username atomically (suppress error if rules aren't deployed)
       try {
         await UsernameIndexRepository.claimUsername(user.uid, normalized);
@@ -93,6 +104,7 @@ export default function RegisterPage() {
         fullName: fullName.trim(),
         photoURL: '',
         role: role,
+        companyId: defaultCompanyId,
         status: UserStatus.PENDING,
         isApproved: false,
         permissions: [],
