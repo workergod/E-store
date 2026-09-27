@@ -156,15 +156,18 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
       </div>
 
       <div className="p-4 mt-auto border-t border-border/50">
-        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
-          <div className="space-y-[var(--spacing-xs)]">
-            {user?.role === Role.SUPER_ADMIN && (
-              <NavItem item={{ path: '/developer/chat', label: 'Dev Support Chats', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
-            )}
+        <div className="space-y-[var(--spacing-xs)]">
+          {user?.role === Role.SUPER_ADMIN && (
+            <NavItem item={{ path: '/developer/chat', label: 'Dev Support Chats', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
+          )}
+          {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
             <NavItem item={{ path: '/settings', label: 'Settings', icon: Settings }} collapsed={collapsed} pathname={location.pathname} />
-            <NavItem item={{ path: '/help', label: 'Help', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
-          </div>
-        )}
+          )}
+          <NavItem item={{ path: '/help', label: 'Help & Support', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
+          {user?.role !== Role.SUPER_ADMIN && (
+            <NavItem item={{ path: '/support-chat', label: 'Contact Developer', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
+          )}
+        </div>
         {!collapsed && (
           <div className="mt-4 p-4 rounded-[var(--radius)] bg-muted/50 border border-border/50">
             <h4 className="font-semibold text-sm mb-1">Cryodeal</h4>
