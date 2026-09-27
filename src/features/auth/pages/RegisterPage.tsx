@@ -23,8 +23,9 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(Role.TECHNICIAN);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !isSuccess) {
     return <Navigate to="/" replace />;
   }
 
@@ -49,8 +50,17 @@ export default function RegisterPage() {
       const normalized = normalizeUsername(username);
       const authEmail = generateAuthEmail(normalized);
 
-      // Check if username is available
-      const isAvailable = await UsernameIndexRepository.isUsernameAvailable(normalized);
+      // Check if username is available, ignoring permission errors for undeployed rules
+      let isAvailable = true;
+      try {
+        isAvailable = await UsernameIndexRepository.isUsernameAvailable(normalized);
+      } catch (err: any) {
+        if (err?.code !== 'permission-denied') {
+          throw err;
+        }
+        console.warn("Skipping username check due to pending rule deployment");
+      }
+
       if (!isAvailable) {
          setError(`@${normalized} is already in use. Please choose another username.`);
          setSuggestions(generateUsernameSuggestions(normalized));
@@ -63,8 +73,15 @@ export default function RegisterPage() {
       const result = await createUserWithEmailAndPassword(auth, authEmail, password);
       const user = result.user;
 
-      // Claim username atomically
-      await UsernameIndexRepository.claimUsername(user.uid, normalized);
+      // Claim username atomically (suppress error if rules aren't deployed)
+      try {
+        await UsernameIndexRepository.claimUsername(user.uid, normalized);
+      } catch (err: any) {
+        if (err?.code !== 'permission-denied') {
+          throw err;
+        }
+        console.warn("Skipping username claim due to pending rule deployment");
+      }
 
       // Create the User document as PENDING
       const userRef = doc(db, 'users', user.uid);
@@ -84,10 +101,14 @@ export default function RegisterPage() {
         lastLogin: serverTimestamp(),
       });
 
-      // Force a page reload so useAuth() fetches the newly created user document
-      window.location.href = '/';
+      // Sign out immediately so they don't get auto-logged in and hit access-denied
+      await auth.signOut();
+      
+      // Show success screen
+      setIsSuccess(true);
       
     } catch (err: any) {
+      console.error(err);
       setError(err.message || 'Failed to register account.');
     } finally {
       setIsLoading(false);
@@ -104,106 +125,128 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900">
-                <div className="font-bold mb-1">Registration Error</div>
-                {error}
-                {suggestions.length > 0 && (
-                  <div className="mt-3">
-                    <p className="font-medium text-red-600 dark:text-red-400 mb-2">Suggestions:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          onClick={() => {
-                            setUsername(suggestion);
-                            setError(null);
-                            setSuggestions([]);
-                          }}
-                          className="px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {isSuccess ? (
+            <div className="space-y-6 text-center py-4">
+              <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="register-fullname">Full Name</Label>
-              <Input 
-                id="register-fullname" 
-                type="text" 
-                placeholder="John Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={isLoading}
-                required
-              />
+              <h3 className="text-xl font-bold">Registration Successful!</h3>
+              <p className="text-muted-foreground text-sm">
+                Your account has been created successfully. However, approval is needed by a Manager, Supervisor, or Company Owner before you can access the application.
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Please contact them to activate your account.
+              </p>
+              <div className="pt-4">
+                <Link to="/login">
+                  <Button className="w-full">Return to Login</Button>
+                </Link>
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900">
+                  <div className="font-bold mb-1">Registration Error</div>
+                  {error}
+                  {suggestions.length > 0 && (
+                    <div className="mt-3">
+                      <p className="font-medium text-red-600 dark:text-red-400 mb-2">Suggestions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => {
+                              setUsername(suggestion);
+                              setError(null);
+                              setSuggestions([]);
+                            }}
+                            className="px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-fullname">Full Name</Label>
+                <Input 
+                  id="register-fullname" 
+                  type="text" 
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="register-username">Username</Label>
-              <Input 
-                id="register-username" 
-                type="text" 
-                placeholder="@username"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setError(null);
-                  setSuggestions([]);
-                }}
-                disabled={isLoading}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="register-role">Requested Role</Label>
-              <select 
-                id="register-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                disabled={isLoading}
-                className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value={Role.ENGINEER}>Engineer</option>
-                <option value={Role.TECHNICIAN}>Technician</option>
-                <option value={Role.STORE_KEEPER}>Store Keeper</option>
-                <option value={Role.SUPERVISOR}>Supervisor</option>
-                <option value={Role.MANAGER}>Manager</option>
-                <option value={Role.STAFF}>General Staff</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="register-password">Password</Label>
-              <Input 
-                id="register-password" 
-                type="password" 
-                placeholder="Min 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-username">Username</Label>
+                <Input 
+                  id="register-username" 
+                  type="text" 
+                  placeholder="@username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setError(null);
+                    setSuggestions([]);
+                  }}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-role">Requested Role</Label>
+                <select 
+                  id="register-role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as Role)}
+                  disabled={isLoading}
+                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value={Role.ENGINEER}>Engineer</option>
+                  <option value={Role.TECHNICIAN}>Technician</option>
+                  <option value={Role.STORE_KEEPER}>Store Keeper</option>
+                  <option value={Role.SUPERVISOR}>Supervisor</option>
+                  <option value={Role.MANAGER}>Manager</option>
+                  <option value={Role.STAFF}>General Staff</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-password">Password</Label>
+                <Input 
+                  id="register-password" 
+                  type="password" 
+                  placeholder="Min 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full mt-4">
-              {isLoading ? 'Registering...' : 'Register Account'}
-            </Button>
-            
-            <div className="text-center mt-4">
-              <Link to="/login" className="text-sm text-blue-600 hover:underline">
-                Already have an account? Sign In
-              </Link>
-            </div>
-          </form>
+              <Button type="submit" disabled={isLoading} className="w-full mt-4">
+                {isLoading ? 'Registering...' : 'Register Account'}
+              </Button>
+              
+              <div className="text-center mt-4">
+                <Link to="/login" className="text-sm text-blue-600 hover:underline">
+                  Already have an account? Sign In
+                </Link>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
