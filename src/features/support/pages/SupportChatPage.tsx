@@ -115,7 +115,7 @@ export default function SupportChatPage() {
             <div>
               <h3 className="font-semibold text-foreground">Developer Support</h3>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`h-2 w-2 rounded-full ${isDeveloperOnline ? 'bg-[hsl(var(--success))]' : 'bg-muted-foreground'}`}></span>
+                <span className={`h-2 w-2 rounded-full ${isDeveloperOnline ? 'bg-green-600' : 'bg-muted-foreground'}`}></span>
                 <span className="text-xs text-muted-foreground">
                   {isDeveloperOnline ? 'Developer is Online' : 'Developer is Offline - Bot Active'}
                 </span>
@@ -145,7 +145,7 @@ export default function SupportChatPage() {
                   <div className={`flex gap-2 max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className="shrink-0 mt-1">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs
-                        ${isMe ? 'bg-primary text-primary-foreground' : msg.isBot ? 'bg-secondary text-secondary-foreground' : 'bg-[hsl(var(--success))] text-white'}`}
+                        ${isMe ? 'bg-primary text-primary-foreground' : msg.isBot ? 'bg-secondary text-secondary-foreground' : 'bg-green-600 text-white'}`}
                       >
                         {isMe ? <UserIcon className="h-4 w-4" /> : msg.isBot ? <Bot className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
                       </div>

@@ -121,9 +121,10 @@ export default function DevChatPage() {
             <span className="text-sm font-medium text-muted-foreground">Status:</span>
             <Button 
               variant={isOnline ? 'default' : 'outline'} 
-              className={isOnline ? 'bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/90' : ''}
+              className={isOnline ? 'bg-green-600 hover:bg-green-700 text-white font-bold border-green-600' : ''}
               onClick={toggleOnlineStatus}
             >
+              <div className={`w-2 h-2 rounded-full mr-2 ${isOnline ? 'bg-white' : 'bg-muted-foreground'}`}></div>
               {isOnline ? 'Online' : 'Offline'}
             </Button>
             <Button variant="outline" size="icon" onClick={loadUsers} disabled={isLoading}>
