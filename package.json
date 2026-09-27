@@ -13,8 +13,8 @@
     "lint": "eslint ."
   },
   "build": {
-    "appId": "com.estorepro.app",
-    "productName": "EStore Pro",
+    "appId": "com.cryodeal.app",
+    "productName": "Cryodeal",
     "directories": {
       "output": "release"
     },

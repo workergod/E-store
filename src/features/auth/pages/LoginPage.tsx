@@ -21,7 +21,7 @@ export default function LoginPage() {
               <span className="text-white font-bold text-xl">E</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">EStore Pro</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Cryodeal</CardTitle>
           <CardDescription>
             Enter your credentials to access your company dashboard.
           </CardDescription>

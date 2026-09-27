@@ -97,7 +97,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           </div>
           {!collapsed && (
             <span className="font-bold tracking-tight text-foreground truncate text-lg cursor-pointer select-none" onClick={handleCompanyNameClick}>
-              {company?.companyName || 'E Store Pro'}
+              {company?.companyName || 'Cryodeal'}
             </span>
           )}
         </div>
@@ -165,7 +165,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
         )}
         {!collapsed && (
           <div className="mt-4 p-4 rounded-[var(--radius)] bg-muted/50 border border-border/50">
-            <h4 className="font-semibold text-sm mb-1">E Store Pro</h4>
+            <h4 className="font-semibold text-sm mb-1">Cryodeal</h4>
             <p className="text-xs text-muted-foreground">Version 0.4.0 (Beta)</p>
           </div>
         )}

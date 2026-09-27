@@ -38,7 +38,7 @@ export default function AccessDeniedPage() {
             <p className="font-medium text-zinc-900 dark:text-zinc-100">{customMessage}</p>
           ) : (
             <p>
-              This account is either unauthorized, disabled, or belongs to a domain that is not registered with EStore Pro.
+              This account is either unauthorized, disabled, or belongs to a domain that is not registered with Cryodeal.
             </p>
           )}
           <p className="mt-2">
