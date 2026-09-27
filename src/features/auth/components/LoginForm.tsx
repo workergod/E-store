@@ -40,7 +40,13 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      let authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      
+      let authEmail: string | null = null;
+      try {
+        authEmail = await UsernameIndexRepository.resolveUsernameToAuthEmail(normalized);
+      } catch (e) {
+        console.warn('Failed to resolve username index, likely due to missing Firestore rules', e);
+      }
       
       // Fallback for developer account in case Firestore rules blocked index creation
       if (!authEmail && normalized === 'developeremil') {
