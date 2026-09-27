@@ -5,7 +5,7 @@ import { PublicRoute } from './shared/layouts/PublicRoute';
 import LoginPage from './features/auth/pages/LoginPage';
 import AccessDeniedPage from './features/auth/pages/AccessDeniedPage';
 import SetupPage from './features/auth/pages/SetupPage';
-// ...
+import RegisterPage from './features/auth/pages/RegisterPage';
 
 // Master Data Pages
 import DashboardPage from './features/dashboard/pages/DashboardPage';
@@ -55,6 +55,7 @@ function MainApp() {
     <Routes>
       {/* Public / Auth Routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/setup" element={<PublicRoute><SetupPage /></PublicRoute>} />
       
       {/* Semi-Public Error Route */}

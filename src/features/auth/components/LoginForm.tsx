@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -186,6 +187,12 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Processing...' : 'Sign In'}
       </Button>
+
+      <div className="text-center mt-4">
+        <Link to="/register" className="text-sm text-blue-600 hover:underline">
+          Don't have an account? Register here
+        </Link>
+      </div>
     </form>
   );
 }
