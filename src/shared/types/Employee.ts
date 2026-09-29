@@ -19,7 +19,7 @@ export interface Employee {
   photoUrl?: string;
   mobile?: string;
   whatsapp?: string;
-  email?: string;
+  username?: string;
   address?: string;
   emergencyContact?: string;
 

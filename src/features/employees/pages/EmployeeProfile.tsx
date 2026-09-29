@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Briefcase, Calendar, Shield, Info } from 'lucide-react';
+import { ArrowLeft, Edit, User as UserIcon, Phone, MapPin, Briefcase, Calendar, Shield, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuthStore } from "../../../store/authStore";
@@ -148,8 +148,8 @@ export default function EmployeeProfile() {
                 </div>
               </div>
               <div className="flex items-start gap-3 text-muted-foreground">
-                <Mail className="h-4 w-4 mt-0.5 text-foreground" />
-                <p className="font-medium text-foreground">{employee.email || '-'}</p>
+                <UserIcon className="h-4 w-4 mt-0.5 text-foreground" />
+                <p className="font-medium text-foreground">{employee.username || '-'}</p>
               </div>
               <div className="flex items-start gap-3 text-muted-foreground">
                 <MapPin className="h-4 w-4 mt-0.5 text-foreground" />

@@ -32,7 +32,7 @@ const formSchema = z.object({
   status: z.enum(['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED']),
   mobile: z.string().optional().or(z.literal('')),
   whatsapp: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  username: z.string().optional().or(z.literal('')),
   address: z.string().optional(),
   emergencyContact: z.string().optional(),
   joiningDate: z.string().min(1, 'Joining date is required'),
@@ -77,7 +77,7 @@ export default function EmployeeForm() {
             status: emp.status,
             mobile: emp.mobile || '',
             whatsapp: emp.whatsapp || '',
-            email: emp.email || '',
+            username: emp.username || '',
             address: emp.address || '',
             emergencyContact: emp.emergencyContact || '',
             joiningDate: emp.joiningDate && typeof (emp.joiningDate as any).toDate === 'function' 
@@ -110,7 +110,7 @@ export default function EmployeeForm() {
         status: data.status,
         mobile: data.mobile,
         whatsapp: data.whatsapp,
-        email: data.email,
+        username: data.username,
         address: data.address,
         emergencyContact: data.emergencyContact,
         joiningDate: Timestamp.fromDate(new Date(data.joiningDate)),
@@ -182,8 +182,8 @@ export default function EmployeeForm() {
                 </FormRow>
 
                 <FormRow>
-                  <FormField label="Email Address" error={methods.formState.errors.email?.message}>
-                    <AppInput type="email" {...methods.register('email')} placeholder="john@example.com" />
+                  <FormField label="Login Username" error={methods.formState.errors.username?.message}>
+                    <AppInput type="text" {...methods.register('username')} placeholder="e.g. john.doe" />
                   </FormField>
                   <FormField label="Emergency Contact" error={methods.formState.errors.emergencyContact?.message}>
                     <AppInput {...methods.register('emergencyContact')} placeholder="Name & Phone" />

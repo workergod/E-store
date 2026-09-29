@@ -86,7 +86,7 @@ export default function EmployeeDashboard() {
       return;
     }
 
-    const headers = ['Employee Code', 'First Name', 'Last Name', 'Role', 'Department', 'Mobile', 'Email', 'Status'];
+    const headers = ['Employee Code', 'First Name', 'Last Name', 'Role', 'Department', 'Mobile', 'Username', 'Status'];
     const csvContent = [
       headers.join(','),
       ...employees.map(e => 
@@ -97,7 +97,7 @@ export default function EmployeeDashboard() {
           `"${(e.role || '').replace(/"/g, '""')}"`,
           `"${(e.department || '').replace(/"/g, '""')}"`,
           `"${(e.mobile || '').replace(/"/g, '""')}"`,
-          `"${(e.email || '').replace(/"/g, '""')}"`,
+          `"${(e.username || '').replace(/"/g, '""')}"`,
           e.status
         ].join(',')
       )
@@ -157,7 +157,7 @@ export default function EmployeeDashboard() {
         return (
           <div>
             <div>{emp.mobile}</div>
-            <div className="text-xs text-muted-foreground">{emp.email || '-'}</div>
+            <div className="text-xs text-muted-foreground">{emp.username || '-'}</div>
           </div>
         );
       }
@@ -278,7 +278,7 @@ export default function EmployeeDashboard() {
                 </td>
                 <td>
                   {e.mobile}<br/>
-                  <span style={{color: '#666', fontSize: '10px'}}>{e.email || '-'}</span>
+                  <span style={{color: '#666', fontSize: '10px'}}>{e.username || '-'}</span>
                 </td>
                 <td>{e.status}</td>
               </tr>
