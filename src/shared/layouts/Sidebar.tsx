@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
   ChevronLeft, ChevronRight, HelpCircle, MessageCircle,
-  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList
+  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, ShieldCheck
   } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -149,6 +149,16 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
             {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operations</h4>}
             <div className="space-y-[var(--spacing-xs)]">
               {OPERATIONS_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            </div>
+          </div>
+        )}
+
+        {/* EXECUTIVE MANAGEMENT NAV (For MD, Owner, SuperAdmin) */}
+        {(user?.role === Role.MD || user?.role === Role.OWNER || user?.role === Role.SUPER_ADMIN) && (
+          <div className="px-4">
+            {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Executive Management</h4>}
+            <div className="space-y-[var(--spacing-xs)]">
+              <NavItem item={{ path: '/md-portal', label: 'MD Portal', icon: ShieldCheck }} collapsed={collapsed} pathname={location.pathname} />
             </div>
           </div>
         )}

@@ -76,7 +76,12 @@ export function useAuth() {
             let needsUpdate = false;
             let updates: any = {};
 
-            if (firebaseUser.email === 'cryodeal2023@gmail.com' || firebaseUser.email === 'cryodeal2023@estorepro.internal') {
+            if (userDoc.role === Role.MD || userDoc.role === Role.OWNER) {
+              if (userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
+                updates = { status: UserStatus.ACTIVE, isApproved: true };
+                needsUpdate = true;
+              }
+            } else if (firebaseUser.email === 'cryodeal2023@gmail.com' || firebaseUser.email === 'cryodeal2023@estorepro.internal') {
               if (userDoc.role !== Role.OWNER || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
                 updates = { role: Role.OWNER, status: UserStatus.ACTIVE, isApproved: true };
                 needsUpdate = true;

@@ -113,6 +113,7 @@ function MainApp() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/supervisor" element={<SupervisorCornerPage />} />
+                <Route path="/md-portal" element={<SupervisorCornerPage />} />
                 <Route path="/dev-console" element={<DeveloperConsole />} />
               </Routes>
             </AppShell>

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
 import { useAuthStore } from '../../../store/authStore';
+import { Role } from '../../../constants/roles';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { stockLedgerRepository } from '../../../repositories/StockLedgerRepository';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
@@ -32,7 +33,8 @@ const typeConfig = {
 };
 
 export default function TransactionLogPage() {
-  const { company } = useAuthStore();
+  const { company, user } = useAuthStore();
+  const canDelete = user?.role === Role.SUPER_ADMIN || user?.role === Role.OWNER || (user?.role as any) === Role.MD;
   const companyId = company?.companyId;
   const printRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -325,7 +327,7 @@ export default function TransactionLogPage() {
     <PageContainer>
       <PageHeader
         title="Transaction Log"
-        description="Complete record of all material issues, returns, purchases, and customer sales."
+        description="Complete record of all material issues, returns, and purchases."
         actions={
           <div className="flex gap-2">
             <AppButton variant="outline" size="sm" onClick={loadLogs} disabled={isLoading}>
@@ -376,7 +378,7 @@ export default function TransactionLogPage() {
             <tr>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Type</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Date & Time</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Technician / Customer</th>
+              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Technician</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Items</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Given By / Staff</th>
             </tr>
@@ -415,10 +417,10 @@ export default function TransactionLogPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">Type</th>
                   <th className="px-4 py-3 text-left">Date & Time</th>
-                  <th className="px-4 py-3 text-left">Technician / Customer</th>
+                  <th className="px-4 py-3 text-left">Technician</th>
                   <th className="px-4 py-3 text-left">Items</th>
                   <th className="px-4 py-3 text-left">Given By / Staff</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  {canDelete && <th className="px-4 py-3 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -460,11 +462,13 @@ export default function TransactionLogPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{log.staffName}</td>
-                      <td className="px-4 py-3 text-right">
-                        <AppButton variant="ghost" size="icon" onClick={() => handleDelete(log.id, log.type)} className="text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
-                        </AppButton>
-                      </td>
+                      {canDelete && (
+                        <td className="px-4 py-3 text-right">
+                          <AppButton variant="ghost" size="icon" onClick={() => handleDelete(log.id, log.type)} className="text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                          </AppButton>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

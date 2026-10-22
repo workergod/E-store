@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserCheck, UserMinus, PackageOpen, Eye, Plus, Trash2, Printer, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
+import { Role } from '../../../constants/roles';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import type { Employee } from '../../../shared/types/Employee';
 
@@ -17,6 +18,7 @@ import { AppCard } from '../../../shared/app/AppCard';
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const { company, user } = useAuthStore();
+  const canDelete = user?.role === Role.SUPER_ADMIN || user?.role === Role.OWNER || (user?.role as any) === Role.MD;
   const companyId = company?.companyId;
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -179,9 +181,11 @@ export default function EmployeeDashboard() {
           <AppButton variant="ghost" size="icon" onClick={() => navigate(`/employees/${row.original.id}`)}>
             <Eye className="h-4 w-4" />
           </AppButton>
-          <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original.id!)} className="text-destructive hover:bg-destructive/10">
-            <Trash2 className="h-4 w-4" />
-          </AppButton>
+          {canDelete && (
+            <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original.id!)} className="text-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4" />
+            </AppButton>
+          )}
         </div>
       )
     }

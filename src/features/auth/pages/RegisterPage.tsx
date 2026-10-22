@@ -94,7 +94,8 @@ export default function RegisterPage() {
         console.warn("Skipping username claim due to pending rule deployment");
       }
 
-      // Create the User document as PENDING
+      // Create the User document (MD / Owner auto-approved without needing developer approval)
+      const isAutoApproved = role === Role.MD || role === Role.OWNER;
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         uid: user.uid,
@@ -105,8 +106,8 @@ export default function RegisterPage() {
         photoURL: '',
         role: role,
         companyId: defaultCompanyId,
-        status: UserStatus.PENDING,
-        isApproved: false,
+        status: isAutoApproved ? UserStatus.ACTIVE : UserStatus.PENDING,
+        isApproved: isAutoApproved,
         permissions: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -145,12 +146,20 @@ export default function RegisterPage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold">Registration Successful!</h3>
-              <p className="text-muted-foreground text-sm">
-                Your account has been created successfully. However, approval is needed by a Manager, Supervisor, or Company Owner before you can access the application.
-              </p>
-              <p className="text-muted-foreground text-sm">
-                Please contact them to activate your account.
-              </p>
+              {role === Role.MD || role === Role.OWNER ? (
+                <p className="text-muted-foreground text-sm">
+                  Your executive account has been created and pre-approved with full permissions. You can log in right away!
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground text-sm">
+                    Your account has been created successfully. However, approval is needed by MD or Manager before you can access the application.
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Please contact management to activate your account.
+                  </p>
+                </>
+              )}
               <div className="pt-4">
                 <Link to="/login">
                   <Button className="w-full">Return to Login</Button>
@@ -226,11 +235,12 @@ export default function RegisterPage() {
                   disabled={isLoading}
                   className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
+                  <option value={Role.MD}>MD (Managing Director)</option>
+                  <option value={Role.MANAGER}>Manager</option>
                   <option value={Role.ENGINEER}>Engineer</option>
                   <option value={Role.TECHNICIAN}>Technician</option>
                   <option value={Role.STORE_KEEPER}>Store Keeper</option>
                   <option value={Role.SUPERVISOR}>Supervisor</option>
-                  <option value={Role.MANAGER}>Manager</option>
                   <option value={Role.STAFF}>General Staff</option>
                 </select>
               </div>

@@ -19,13 +19,15 @@ export default function SupervisorCorner() {
   const { company, user } = useAuthStore();
   const companyId = company?.companyId;
 
-  const isDeveloper = user?.email === 'workshop9283@gmail.com';
+  const isDeveloper = user?.email === 'workshop9283@gmail.com' || user?.role === Role.SUPER_ADMIN;
+  const isExecutive = user?.role === Role.MD || user?.role === Role.OWNER || user?.role === Role.SUPER_ADMIN || isDeveloper;
 
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING'>('PENDING');
+  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>('PENDING');
   
   const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
   const [deletedEmployees, setDeletedEmployees] = useState<any[]>([]);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [allUsersList, setAllUsersList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [newPassword, setNewPassword] = useState('');
@@ -37,7 +39,7 @@ export default function SupervisorCorner() {
   const [selectedRole, setSelectedRole] = useState<Role>(Role.STAFF);
 
   useEffect(() => {
-    if (sessionStorage.getItem('supervisor_auth') !== 'true' && !isDeveloper) {
+    if (!isExecutive && sessionStorage.getItem('supervisor_auth') !== 'true') {
       navigate('/');
       return;
     }
@@ -45,7 +47,7 @@ export default function SupervisorCorner() {
     if (companyId) {
       fetchData();
     }
-  }, [companyId, navigate, isDeveloper]);
+  }, [companyId, navigate, isDeveloper, isExecutive]);
 
   const fetchData = async () => {
     if (!companyId) return;
@@ -55,6 +57,7 @@ export default function SupervisorCorner() {
       const allEmployees = await employeeRepository.getAll(companyId);
       const allUsers = await userRepository.getUsersByCompany(companyId);
 
+      setAllUsersList(allUsers);
       setDeletedProducts(allProducts.filter(p => p.status === 'DELETED'));
       setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED'));
       setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL));
@@ -118,8 +121,8 @@ export default function SupervisorCorner() {
     let newStatus = UserStatus.ACTIVE;
     let isApproved = true;
 
-    // If Supervisor is approving a Boss/Admin, escalate to Developer
-    if (selectedRole === Role.ADMIN && !isDeveloper) {
+    // Only escalate to Developer if an ordinary supervisor is approving an Admin
+    if (selectedRole === Role.ADMIN && !isExecutive) {
       newStatus = UserStatus.PENDING_DEV_APPROVAL;
       isApproved = false;
       toast.info('Boss/Admin roles require Developer approval. Request escalated.');
@@ -140,6 +143,18 @@ export default function SupervisorCorner() {
     }
   };
 
+  const handleToggleUserStatus = async (targetUser: any) => {
+    const newStatus = targetUser.status === UserStatus.ACTIVE ? UserStatus.SUSPENDED : UserStatus.ACTIVE;
+    const isApproved = newStatus === UserStatus.ACTIVE;
+    try {
+      await userRepository.updateUser(targetUser.uid, { status: newStatus, isApproved });
+      toast.success(`User status changed to ${newStatus}`);
+      fetchData();
+    } catch {
+      toast.error('Failed to update user status');
+    }
+  };
+
   const declineUser = async (uid: string) => {
     try {
       await userRepository.updateUser(uid, {
@@ -155,14 +170,14 @@ export default function SupervisorCorner() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-3 mb-[var(--spacing-md)] text-destructive">
+      <div className="flex items-center gap-3 mb-[var(--spacing-md)] text-emerald-600 dark:text-emerald-400">
         <ShieldAlert className="h-6 w-6" />
         <h1 className="text-2xl font-bold tracking-tight">
-          {isDeveloper ? 'Developer Command Center' : 'Supervisor Corner'}
+          {user?.role === Role.MD || user?.role === Role.OWNER ? 'MD Executive Portal' : isDeveloper ? 'Developer Command Center' : 'Supervisor Corner'}
         </h1>
       </div>
       <p className="text-muted-foreground mb-8">
-        Secure restricted area for managing user access, deleted records, and system settings.
+        Executive control center for user approvals, staff management, deleted record archives, and security.
       </p>
 
       <div className="flex flex-wrap gap-4 mb-6">
@@ -170,7 +185,13 @@ export default function SupervisorCorner() {
           variant={activeTab === 'PENDING' ? 'primary' : 'outline'} 
           onClick={() => setActiveTab('PENDING')}
         >
-          <UserCheck className="h-4 w-4 mr-2" /> Pending Users ({pendingUsers.length})
+          <UserCheck className="h-4 w-4 mr-2" /> Pending Approvals ({pendingUsers.length})
+        </AppButton>
+        <AppButton 
+          variant={activeTab === 'USERS' ? 'primary' : 'outline'} 
+          onClick={() => setActiveTab('USERS')}
+        >
+          <Users className="h-4 w-4 mr-2" /> All Users Directory ({allUsersList.length})
         </AppButton>
         <AppButton 
           variant={activeTab === 'PRODUCTS' ? 'primary' : 'outline'} 
@@ -236,6 +257,56 @@ export default function SupervisorCorner() {
                           </AppButton>
                           <AppButton size="sm" variant="destructive" onClick={() => declineUser(u.uid)}>
                             Decline
+                          </AppButton>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'USERS' ? (
+          <div>
+            {allUsersList.length === 0 ? (
+              <div className="p-12 flex flex-col items-center text-muted-foreground">
+                <Users className="h-12 w-12 mb-4 opacity-20" />
+                <p>No users found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 text-muted-foreground">
+                    <tr>
+                      <th className="px-6 py-3 font-medium">Username / Email</th>
+                      <th className="px-6 py-3 font-medium">Full Name</th>
+                      <th className="px-6 py-3 font-medium">Role</th>
+                      <th className="px-6 py-3 font-medium">Status</th>
+                      <th className="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {allUsersList.map(u => (
+                      <tr key={u.uid} className="hover:bg-muted/30">
+                        <td className="px-6 py-4 font-medium">
+                          <div>{u.username || '-'}</div>
+                          <div className="text-xs text-muted-foreground">{u.email}</div>
+                        </td>
+                        <td className="px-6 py-4">{u.fullName}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-semibold px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">{u.role}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.status === UserStatus.ACTIVE ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <AppButton size="sm" variant="outline" onClick={() => openApprovalModal(u)}>
+                            Change Role
+                          </AppButton>
+                          <AppButton size="sm" variant={u.status === UserStatus.ACTIVE ? "destructive" : "primary"} onClick={() => handleToggleUserStatus(u)}>
+                            {u.status === UserStatus.ACTIVE ? 'Suspend' : 'Activate'}
                           </AppButton>
                         </td>
                       </tr>
@@ -357,6 +428,13 @@ export default function SupervisorCorner() {
                 Select the appropriate access level for <span className="font-semibold text-foreground">{selectedUserForApproval?.email}</span>.
               </p>
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-emerald-200 dark:border-emerald-900/50">
+                  <input type="radio" name="role" checked={selectedRole === Role.MD} onChange={() => setSelectedRole(Role.MD)} className="w-4 h-4 text-emerald-600 dark:text-emerald-500" />
+                  <div>
+                    <div className="font-medium text-emerald-700 dark:text-emerald-400">MD (Managing Director)</div>
+                    <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Top executive management. Full company control.</div>
+                  </div>
+                </label>
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                   <input type="radio" name="role" checked={selectedRole === Role.ENGINEER} onChange={() => setSelectedRole(Role.ENGINEER)} className="w-4 h-4 text-primary" />
                   <div>
