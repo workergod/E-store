@@ -18,7 +18,6 @@ interface LogEntry {
   date: any;
   staffName: string;
   customerOrTech: string;
-  phone?: string;
   items: { name: string; qty: number; unit?: string }[];
   notes?: string;
   status?: string;
@@ -148,16 +147,20 @@ export default function TransactionLogPage() {
           for (const item of items) {
             const netQty = item.issuedQty - (item.returnedQty || 0);
             if (netQty > 0) {
-              await stockLedgerRepository.recordTransaction({
-                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                companyId: companyId!,
-                productId: item.productId,
-                transactionType: 'ADJUSTMENT',
-                referenceType: 'ADJUSTMENT',
-                quantity: netQty,
-                notes: `Reverted Issue deletion (ID: ${id})`,
-                performedBy: userId
-              });
+              try {
+                await stockLedgerRepository.recordTransaction({
+                  transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                  companyId: companyId!,
+                  productId: item.productId,
+                  transactionType: 'ADJUSTMENT',
+                  referenceType: 'ADJUSTMENT',
+                  quantity: netQty,
+                  notes: `Reverted Issue deletion (ID: ${id})`,
+                  performedBy: userId
+                });
+              } catch (stockErr) {
+                console.warn('Failed to revert stock for product (it may have been deleted):', stockErr);
+              }
             }
           }
         }
@@ -180,16 +183,20 @@ export default function TransactionLogPage() {
           for (const item of items) {
             const returnedQty = item.returnedQty || 0;
             if (returnedQty > 0) {
-              await stockLedgerRepository.recordTransaction({
-                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                companyId: companyId!,
-                productId: item.productId,
-                transactionType: 'ADJUSTMENT',
-                referenceType: 'ADJUSTMENT',
-                quantity: -returnedQty,
-                notes: `Reverted Return deletion (ID: ${id})`,
-                performedBy: userId
-              });
+              try {
+                await stockLedgerRepository.recordTransaction({
+                  transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                  companyId: companyId!,
+                  productId: item.productId,
+                  transactionType: 'ADJUSTMENT',
+                  referenceType: 'ADJUSTMENT',
+                  quantity: -returnedQty,
+                  notes: `Reverted Return deletion (ID: ${id})`,
+                  performedBy: userId
+                });
+              } catch (stockErr) {
+                console.warn('Failed to revert stock for product (it may have been deleted):', stockErr);
+              }
             }
           }
 
@@ -233,16 +240,20 @@ export default function TransactionLogPage() {
           for (const item of items) {
             const receivedQty = item.receivedQuantity || 0;
             if (receivedQty > 0) {
-              await stockLedgerRepository.recordTransaction({
-                transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                companyId: companyId!,
-                productId: item.productId,
-                transactionType: 'ADJUSTMENT',
-                referenceType: 'ADJUSTMENT',
-                quantity: -receivedQty,
-                notes: `Reverted PO deletion (ID: ${id})`,
-                performedBy: userId
-              });
+              try {
+                await stockLedgerRepository.recordTransaction({
+                  transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                  companyId: companyId!,
+                  productId: item.productId,
+                  transactionType: 'ADJUSTMENT',
+                  referenceType: 'ADJUSTMENT',
+                  quantity: -receivedQty,
+                  notes: `Reverted PO deletion (ID: ${id})`,
+                  performedBy: userId
+                });
+              } catch (stockErr) {
+                console.warn('Failed to revert stock for product (it may have been deleted):', stockErr);
+              }
             }
           }
         }
@@ -366,7 +377,6 @@ export default function TransactionLogPage() {
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Type</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Date & Time</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Technician / Customer</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Phone</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Items</th>
               <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Given By / Staff</th>
             </tr>
@@ -379,7 +389,6 @@ export default function TransactionLogPage() {
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>{formatDate(log.date)}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{log.customerOrTech}</td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>{log.phone || '-'}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>
                   {log.items.map(it => `${it.name} × ${it.qty}`).join(', ')}
                 </td>
@@ -387,7 +396,7 @@ export default function TransactionLogPage() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>No transactions found</td></tr>
+              <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>No transactions found</td></tr>
             )}
           </tbody>
         </table>
@@ -407,7 +416,6 @@ export default function TransactionLogPage() {
                   <th className="px-4 py-3 text-left">Type</th>
                   <th className="px-4 py-3 text-left">Date & Time</th>
                   <th className="px-4 py-3 text-left">Technician / Customer</th>
-                  <th className="px-4 py-3 text-left">Phone</th>
                   <th className="px-4 py-3 text-left">Items</th>
                   <th className="px-4 py-3 text-left">Given By / Staff</th>
                   <th className="px-4 py-3 text-right">Actions</th>
@@ -438,7 +446,6 @@ export default function TransactionLogPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{log.phone || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="max-w-xs">
                           {log.items.slice(0, 3).map((it, _i) => (
