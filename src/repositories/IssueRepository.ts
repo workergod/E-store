@@ -172,5 +172,94 @@ export const issueRepository = {
     });
 
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'IssueTransaction', issueId, { type: 'RETURN', returns });
+  },
+
+  returnDirectItems: async (
+    params: {
+      employeeId: string;
+      items: { productId: string; productName: string; sku?: string; returnQty: number; unit?: string }[];
+      notes?: string;
+    },
+    companyId: string,
+    userId: string
+  ): Promise<string> => {
+    const { employeeId, items, notes } = params;
+    if (!items || items.length === 0) throw new Error('No items specified for return');
+
+    let createdByName = 'Staff';
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        createdByName = userSnap.data()?.fullName || 'Staff';
+      }
+    } catch (e) {
+      console.error("Failed to fetch user name for return log", e);
+    }
+
+    let employeeName = '';
+    if (employeeId && employeeId !== 'UNLINKED') {
+      try {
+        const empRef = doc(db, 'employees', employeeId);
+        const empSnap = await getDoc(empRef);
+        if (empSnap.exists()) {
+          const emp = empSnap.data();
+          employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+        }
+      } catch (e) {
+        console.error("Failed to fetch employee name for return log", e);
+      }
+    }
+
+    const returnedItemsPayload: any[] = [];
+
+    for (const item of items) {
+      const qty = Number(item.returnQty) || 0;
+      if (qty <= 0) continue;
+
+      returnedItemsPayload.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku || '',
+        returnedQty: qty,
+        unit: item.unit || ''
+      });
+
+      await stockLedgerRepository.recordTransaction({
+        transactionId: `ret_dir_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+        companyId,
+        productId: item.productId,
+        transactionType: 'RETURN',
+        quantity: qty,
+        referenceId: 'DIRECT_RETURN',
+        referenceType: 'DIRECT_RETURN',
+        notes: `Direct Return (unissued) from ${employeeName || 'Technician'}${notes ? `: ${notes}` : ''}`,
+        performedBy: userId
+      });
+    }
+
+    if (returnedItemsPayload.length === 0) {
+      throw new Error('Please enter a valid return quantity greater than 0');
+    }
+
+    const retDocRef = await addDoc(collection(db, 'returnTransactions'), {
+      companyId,
+      employeeId: employeeId || 'UNLINKED',
+      employeeName: employeeName || 'Technician',
+      issueId: 'DIRECT_RETURN',
+      isDirectReturn: true,
+      items: returnedItemsPayload,
+      createdAt: serverTimestamp(),
+      createdBy: userId,
+      createdByName,
+      notes: notes || 'Direct return without active issue'
+    });
+
+    await auditLogRepository.logAction(userId, companyId, 'CREATE', 'DirectReturnTransaction', retDocRef.id, {
+      items: returnedItemsPayload,
+      notes
+    });
+
+    return retDocRef.id;
   }
 };
