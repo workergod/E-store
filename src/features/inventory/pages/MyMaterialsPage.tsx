@@ -97,8 +97,8 @@ export default function MyMaterialsPage() {
                         <span className="text-xs text-muted-foreground">SKU: {item.sku}</span>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="font-semibold text-foreground">{item.issuedQty - item.returnedQty} {item.returnedQty > 0 ? 'remaining' : 'issued'}</span>
-                        {item.returnedQty > 0 && <span className="text-[10px] text-muted-foreground">{item.returnedQty} returned</span>}
+                        <span className="font-semibold text-foreground">{item.issuedQty - item.returnedQty} {item.unit || ''} {item.returnedQty > 0 ? 'remaining' : 'issued'}</span>
+                        {item.returnedQty > 0 && <span className="text-[10px] text-muted-foreground">{item.returnedQty} {item.unit || ''} returned</span>}
                       </div>
                     </li>
                   ))}

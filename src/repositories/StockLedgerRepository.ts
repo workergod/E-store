@@ -39,8 +39,8 @@ export const stockLedgerRepository = {
         throw new Error('Permission denied');
       }
 
-      const currentStock = productData.currentStock || 0;
-      const newStock = currentStock + transactionData.quantity;
+      const currentStock = Number(productData.currentStock) || 0;
+      const newStock = Math.round((currentStock + Number(transactionData.quantity)) * 10000) / 10000;
 
       // Prepare final transaction payload
       const txnPayload: any = {

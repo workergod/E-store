@@ -8,6 +8,7 @@ export interface PurchaseOrderItem {
   productId: string;
   productName?: string; // Denormalized for fast display
   sku?: string;
+  unit?: string;
   quantity: number;
   receivedQuantity: number;
 }

@@ -149,8 +149,8 @@ export const purchaseOrderRepository = {
         const productDoc = await transaction.get(productRef);
         if (productDoc.exists()) {
           const productData = productDoc.data();
-          const currentStock = productData.currentStock || 0;
-          const newStock = currentStock + receivedItem.qtyToReceive;
+          const currentStock = Number(productData.currentStock) || 0;
+          const newStock = Math.round((currentStock + Number(receivedItem.qtyToReceive)) * 10000) / 10000;
           
           transaction.update(productRef, {
             currentStock: newStock,

@@ -176,9 +176,10 @@ export default function ProductsPage() {
         header: 'Stock',
         cell: ({ row }) => {
           const isLow = row.original.currentStock <= row.original.minimumStock;
+          const unit = row.original.unitId || (row.original as any).unit || 'pcs';
           return (
             <span className={`font-semibold ${isLow ? 'text-destructive' : 'text-success'}`}>
-              {row.original.currentStock}
+              {row.original.currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
             </span>
           )
         }
@@ -311,7 +312,7 @@ export default function ProductsPage() {
                   <span style={{color: '#666', fontSize: '10px'}}>{p.brandId || 'No Brand'}</span>
                 </td>
                 <td style={{ fontWeight: p.currentStock <= p.minimumStock ? 'bold' : 'normal', color: p.currentStock <= p.minimumStock ? '#dc2626' : '#16a34a' }}>
-                  {p.currentStock || 0}
+                  {p.currentStock || 0} {p.unitId || (p as any).unit || 'pcs'}
                 </td>
                 <td>{p.status}</td>
               </tr>

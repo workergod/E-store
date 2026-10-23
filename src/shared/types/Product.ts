@@ -15,6 +15,7 @@ export interface Product {
   manufacturerId?: string;
   productTypeId?: string;
   unitId: string;
+  unit?: string;
   rackLocationId?: string;
   
   // Codes

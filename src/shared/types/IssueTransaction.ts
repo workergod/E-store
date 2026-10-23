@@ -4,6 +4,7 @@ export interface IssuedItem {
   productId: string;
   productName: string;
   sku: string;
+  unit?: string;
   issuedQty: number;
   returnedQty: number;
   usedQty: number; // dynamically computed as issuedQty - returnedQty

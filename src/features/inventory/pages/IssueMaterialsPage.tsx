@@ -116,13 +116,15 @@ export default function IssueMaterialsPage() {
       
       const enrichedItems = data.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
+        const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
         return {
           productId: item.productId,
           productName: prod?.name || 'Unknown',
           sku: prod?.sku || '',
-          issuedQty: item.issuedQty,
+          unit: unit,
+          issuedQty: Number(item.issuedQty),
           returnedQty: 0,
-          usedQty: item.issuedQty
+          usedQty: Number(item.issuedQty)
         };
       });
 
@@ -198,13 +200,16 @@ export default function IssueMaterialsPage() {
               <tbody>
                 {watchedItems.map((item, idx) => {
                   const prod = products.find(p => p.id === item.productId);
+                  const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
                   return (
                     <tr key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="px-5 py-4 font-medium text-foreground">
                         {prod?.name || <span className="text-destructive font-bold uppercase text-xs tracking-wider">Product not selected</span>}
                       </td>
                       <td className="px-5 py-4 text-muted-foreground font-mono text-xs">{prod?.sku || '-'}</td>
-                      <td className="px-5 py-4 text-right font-black text-primary text-lg">{item.issuedQty}</td>
+                      <td className="px-5 py-4 text-right font-black text-primary text-lg">
+                        {item.issuedQty} <span className="text-sm font-semibold text-muted-foreground">{unit}</span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -269,34 +274,67 @@ export default function IssueMaterialsPage() {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium text-left w-[45%]">Product</th>
-                        <th className="px-4 py-3 font-medium text-left w-[20%]">Current Stock</th>
-                        <th className="px-4 py-3 font-medium text-left w-[25%]">Qty to Issue</th>
-                        <th className="px-4 py-3 font-medium text-center w-[10%]"></th>
+                        <th className="px-4 py-3 font-medium text-left w-[40%]">Product</th>
+                        <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
+                        <th className="px-4 py-3 font-medium text-left w-[20%]">Qty to Issue</th>
+                        <th className="px-4 py-3 font-medium text-left w-[17%]">Remaining</th>
+                        <th className="px-4 py-3 font-medium text-center w-[5%]"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {fields.map((field, index) => {
                         const wItem = watchedItems[index];
                         const prod = products.find(p => p.id === wItem?.productId);
+                        const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
+                        const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
+                        const qtyVal = Number(wItem?.issuedQty) || 0;
+                        const remaining = prod ? Math.round((currentStock - qtyVal) * 10000) / 10000 : null;
                         const error = methods.formState.errors.items?.[index]?.productId;
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                             <td className="p-2">
                               <select {...methods.register(`items.${index}.productId` as const)} className={`w-full h-10 bg-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none border ${error ? 'border-destructive/50 ring-1 ring-destructive/30' : 'border-transparent'}`}>
                                 <option value="" disabled>Select Product...</option>
-                                {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                                {products.map(p => {
+                                  const pUnit = p.unitId || (p as any).unit || 'pcs';
+                                  return (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name} ({p.sku}) — Stock: {p.currentStock} {pUnit}
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </td>
-                            <td className="px-5 py-2 font-medium">
+                            <td className="px-4 py-2 font-medium">
                               {prod ? (
-                                <span className={prod.currentStock > 0 ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"}>
-                                  {prod.currentStock}
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold" : "text-[hsl(var(--destructive))] font-bold"}>
+                                  {currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
                                 </span>
                               ) : '-'}
                             </td>
                             <td className="p-2">
-                              <input type="number" step="0.01" {...methods.register(`items.${index}.issuedQty` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all outline-none" placeholder="Qty" />
+                              <div className="relative flex items-center">
+                                <input 
+                                  type="number" 
+                                  step="any" 
+                                  min="0.01" 
+                                  {...methods.register(`items.${index}.issuedQty` as const)} 
+                                  className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md pl-3 pr-12 text-sm transition-all outline-none" 
+                                  placeholder="Qty" 
+                                />
+                                {unit && (
+                                  <span className="absolute right-3 pointer-events-none text-xs font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                                    {unit}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              {prod ? (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded inline-block ${remaining !== null && remaining < 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
+                                  {remaining} {unit}
+                                </span>
+                              ) : '-'}
                             </td>
                             <td className="p-2 text-center">
                               <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">

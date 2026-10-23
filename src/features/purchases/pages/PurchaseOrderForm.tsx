@@ -25,7 +25,7 @@ import { AppInput } from '../../../shared/forms/AppInput';
 
 const itemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
-  quantity: z.coerce.number().min(1, "Must be > 0"),
+  quantity: z.coerce.number().min(0.01, "Must be > 0"),
 });
 
 const poSchema = z.object({
@@ -90,8 +90,11 @@ export default function PurchaseOrderForm() {
       
       const enrichedItems = data.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
+        const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
         return {
           ...item,
+          quantity: Number(item.quantity),
+          unit,
           productName: prod?.name || 'Unknown',
           sku: prod?.sku || '',
           receivedQuantity: 0
@@ -148,23 +151,66 @@ export default function PurchaseOrderForm() {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium text-left w-[65%]">Product</th>
-                        <th className="px-4 py-3 font-medium text-left w-[25%]">Qty</th>
-                        <th className="px-4 py-3 font-medium text-center w-[10%]"></th>
+                        <th className="px-4 py-3 font-medium text-left w-[40%]">Product</th>
+                        <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
+                        <th className="px-4 py-3 font-medium text-left w-[20%]">Order Qty</th>
+                        <th className="px-4 py-3 font-medium text-left w-[17%]">New Total</th>
+                        <th className="px-4 py-3 font-medium text-center w-[5%]"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {fields.map((field, index) => {
+                        const wItem = watchedItems[index];
+                        const prod = products.find(p => p.id === wItem?.productId);
+                        const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
+                        const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
+                        const orderQty = Number(wItem?.quantity) || 0;
+                        const newTotal = prod ? Math.round((currentStock + orderQty) * 10000) / 10000 : null;
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                             <td className="p-2">
                               <select {...methods.register(`items.${index}.productId` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none">
                                 <option value="" disabled>Select Product...</option>
-                                {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
+                                {products.map(p => {
+                                  const pUnit = p.unitId || (p as any).unit || 'pcs';
+                                  return (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name} ({p.sku}) — Stock: {p.currentStock} {pUnit}
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </td>
+                            <td className="px-4 py-2 font-medium">
+                              {prod ? (
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold" : "text-muted-foreground font-medium"}>
+                                  {currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+                                </span>
+                              ) : '-'}
+                            </td>
                             <td className="p-2">
-                              <input type="number" {...methods.register(`items.${index}.quantity` as const)} className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all outline-none" placeholder="Qty" />
+                              <div className="relative flex items-center">
+                                <input 
+                                  type="number" 
+                                  step="any"
+                                  min="0.01"
+                                  {...methods.register(`items.${index}.quantity` as const)} 
+                                  className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md pl-3 pr-12 text-sm transition-all outline-none" 
+                                  placeholder="Qty" 
+                                />
+                                {unit && (
+                                  <span className="absolute right-3 pointer-events-none text-xs font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                                    {unit}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              {prod ? (
+                                <span className="text-xs font-semibold px-2 py-1 rounded inline-block bg-primary/10 text-primary">
+                                  {newTotal} {unit}
+                                </span>
+                              ) : '-'}
                             </td>
                             <td className="p-2 text-center">
                               <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">

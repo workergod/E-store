@@ -77,8 +77,9 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
         categoryId: data.categoryId || 'general',
         brandId: data.brandId || 'general',
         unitId: data.unitId || 'pcs',
+        unit: data.unitId || 'pcs',
         companyId: company.companyId,
-        currentStock: data.openingStock,
+        currentStock: Number(data.openingStock) || 0,
       };
       if (product?.id) {
         await productRepository.update(product.id, payload, company.companyId, user.uid);
@@ -163,8 +164,19 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
                   <Input {...methods.register('brandId')} placeholder="e.g. Havells, Finolex" />
                 </div>
                 <div>
-                  <Label>Unit</Label>
-                  <Input {...methods.register('unitId')} placeholder="e.g. pcs, meter, roll" />
+                  <Label>Unit (e.g. meter, pcs, kg)</Label>
+                  <Input {...methods.register('unitId')} list="unit-suggestions" placeholder="e.g. mtr, pcs, nos, roll..." />
+                  <datalist id="unit-suggestions">
+                    <option value="mtr">Meter (mtr / m)</option>
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="nos">Numbers (nos)</option>
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="roll">Rolls (roll)</option>
+                    <option value="box">Boxes (box)</option>
+                    <option value="bundle">Bundles (bundle)</option>
+                    <option value="ltr">Litres (ltr)</option>
+                    <option value="ft">Feet (ft)</option>
+                  </datalist>
                 </div>
                 <div>
                   <Label>Rack / Location</Label>
@@ -179,15 +191,15 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
 
                 <div>
                   <Label>Opening Stock</Label>
-                  <Input type="number" {...methods.register('openingStock')} />
+                  <Input type="number" step="any" min="0" {...methods.register('openingStock')} />
                 </div>
                 <div>
                   <Label>Minimum Stock (Alert Level)</Label>
-                  <Input type="number" {...methods.register('minimumStock')} />
+                  <Input type="number" step="any" min="0" {...methods.register('minimumStock')} />
                 </div>
                 <div>
                   <Label>Maximum Stock</Label>
-                  <Input type="number" {...methods.register('maximumStock')} />
+                  <Input type="number" step="any" min="0" {...methods.register('maximumStock')} />
                 </div>
                 <div className="flex items-center space-x-2 mt-6">
                   <input type="checkbox" id="isSerialized" {...methods.register('isSerialized')} className="h-4 w-4" />

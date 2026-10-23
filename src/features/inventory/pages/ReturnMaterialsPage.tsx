@@ -195,18 +195,26 @@ export default function ReturnMaterialsPage() {
                           <td className="px-4 py-3 font-medium">
                             {item.productName}
                           </td>
-                          <td className="px-4 py-3 text-center">{item.issuedQty}</td>
-                          <td className="px-4 py-3 text-center text-muted-foreground">{item.returnedQty}</td>
-                          <td className="px-4 py-3 text-center font-semibold text-[hsl(var(--success))]">{maxReturnable}</td>
+                          <td className="px-4 py-3 text-center">{item.issuedQty} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
+                          <td className="px-4 py-3 text-center text-muted-foreground">{item.returnedQty} <span className="text-xs">{item.unit || ''}</span></td>
+                          <td className="px-4 py-3 text-center font-semibold text-[hsl(var(--success))]">{maxReturnable} <span className="text-xs">{item.unit || ''}</span></td>
                           <td className="px-2 py-2">
-                            <AppInput 
-                              type="number" 
-                              step="0.01" 
-                              max={maxReturnable}
-                              min={0}
-                              {...methods.register(`returns.${index}.returnQty` as const)} 
-                              disabled={maxReturnable <= 0}
-                            />
+                            <div className="relative flex items-center">
+                              <AppInput 
+                                type="number" 
+                                step="any" 
+                                max={maxReturnable}
+                                min={0}
+                                {...methods.register(`returns.${index}.returnQty` as const)} 
+                                disabled={maxReturnable <= 0}
+                                className="pr-10"
+                              />
+                              {item.unit && (
+                                <span className="absolute right-2 pointer-events-none text-xs text-muted-foreground font-semibold">
+                                  {item.unit}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

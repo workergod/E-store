@@ -147,10 +147,12 @@ export default function PurchaseOrderDetails() {
                     <div className="font-medium text-foreground">{item.productName}</div>
                     <div className="text-xs text-muted-foreground">{item.sku}</div>
                   </td>
-                  <td className="px-4 py-3 text-right text-foreground">{item.quantity}</td>
+                  <td className="px-4 py-3 text-right text-foreground font-medium">
+                    {item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-semibold ${item.receivedQuantity === item.quantity ? 'text-success' : item.receivedQuantity > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
-                      {item.receivedQuantity || 0}
+                      {item.receivedQuantity || 0} <span className="text-xs font-normal">{item.unit || ''}</span>
                     </span>
                   </td>
                 </tr>
@@ -185,21 +187,29 @@ export default function PurchaseOrderDetails() {
                 return (
                   <tr key={idx} className="border-b border-border">
                     <td className="px-4 py-3 font-medium">{item.productName}</td>
-                    <td className="px-4 py-3 text-right">{item.quantity}</td>
-                    <td className="px-4 py-3 text-right">{item.receivedQuantity || 0}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{remaining}</td>
+                    <td className="px-4 py-3 text-right">{item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
+                    <td className="px-4 py-3 text-right">{item.receivedQuantity || 0} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
+                    <td className="px-4 py-3 text-right font-semibold">{remaining} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
                     <td className="px-4 py-3">
-                      <AppInput 
-                        type="number" 
-                        min={0}
-                        max={remaining}
-                        value={receiveQuantities[item.productId] ?? 0}
-                        onChange={(e) => setReceiveQuantities(prev => ({
-                          ...prev,
-                          [item.productId]: Math.min(remaining, Math.max(0, parseInt(e.target.value) || 0))
-                        }))}
-                        className="text-right h-9"
-                      />
+                      <div className="relative flex items-center">
+                        <AppInput 
+                          type="number" 
+                          step="any"
+                          min={0}
+                          max={remaining}
+                          value={receiveQuantities[item.productId] ?? 0}
+                          onChange={(e) => setReceiveQuantities(prev => ({
+                            ...prev,
+                            [item.productId]: Math.min(remaining, Math.max(0, parseFloat(e.target.value) || 0))
+                          }))}
+                          className="text-right h-9 pr-10"
+                        />
+                        {item.unit && (
+                          <span className="absolute right-2 pointer-events-none text-xs text-muted-foreground font-semibold">
+                            {item.unit}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

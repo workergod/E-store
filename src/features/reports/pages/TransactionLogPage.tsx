@@ -69,7 +69,7 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.issuedQty })),
+          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.issuedQty, unit: it.unit || '' })),
           notes: d.notes,
           status: d.status,
           siteName: d.siteName,
@@ -90,7 +90,7 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.returnedQty })),
+          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.returnedQty, unit: it.unit || '' })),
           notes: d.notes,
         });
       });
@@ -108,7 +108,7 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdBy || 'Staff',
           customerOrTech: d.supplierName || d.supplierId || 'Supplier',
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity })),
+          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity, unit: it.unit || '' })),
           status: d.status,
           notes: d.notes,
         });
@@ -392,7 +392,7 @@ export default function TransactionLogPage() {
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>{formatDate(log.date)}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{log.customerOrTech}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>
-                  {log.items.map(it => `${it.name} × ${it.qty}`).join(', ')}
+                  {log.items.map(it => `${it.name} × ${it.qty} ${it.unit || ''}`.trim()).join(', ')}
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>{log.staffName}</td>
               </tr>
@@ -453,7 +453,7 @@ export default function TransactionLogPage() {
                           {log.items.slice(0, 3).map((it, _i) => (
                             <div key={_i} className="text-xs">
                               <span className="font-medium">{it.name}</span>
-                              <span className="text-muted-foreground ml-1">× {it.qty}</span>
+                              <span className="text-muted-foreground ml-1">× {it.qty} {it.unit || ''}</span>
                             </div>
                           ))}
                           {log.items.length > 3 && (

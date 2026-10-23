@@ -230,7 +230,7 @@ export default function GlobalSearchPage() {
                             {issue.items.map((mat: any, j: number) => (
                               <li key={j} className="flex justify-between items-center text-sm p-3 hover:bg-muted/5 transition-colors">
                                 <span className="font-medium print:text-black">{mat.productName}</span>
-                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs print:text-black print:border print:border-gray-300">Qty: {mat.issuedQty}</span>
+                                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded text-xs print:text-black print:border print:border-gray-300">Qty: {mat.issuedQty} {mat.unit || ''}</span>
                               </li>
                             ))}
                           </ul>
@@ -326,7 +326,7 @@ export default function GlobalSearchPage() {
                                 {issue.items.map((mat: any, j: number) => (
                                   <li key={j} className="mb-1">
                                     <span className="font-medium">{mat.productName}</span> 
-                                    <span className="font-bold ml-1 whitespace-nowrap text-gray-700">(Qty: {mat.issuedQty})</span>
+                                    <span className="font-bold ml-1 whitespace-nowrap text-gray-700">(Qty: {mat.issuedQty} {mat.unit || ''})</span>
                                   </li>
                                 ))}
                               </ul>

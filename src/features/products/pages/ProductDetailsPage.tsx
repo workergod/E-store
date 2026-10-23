@@ -117,8 +117,10 @@ export default function ProductDetailsPage() {
         <div className="space-y-6">
           <div className="bg-card rounded-xl shadow-sm border border-border p-6">
              <h3 className="text-lg font-semibold mb-4 border-b border-border pb-2">Stock Summary</h3>
-             <div className="text-4xl font-bold text-primary mb-2">{product.currentStock}</div>
-             <p className="text-sm text-muted-foreground mb-4">Available Units</p>
+             <div className="text-4xl font-bold text-primary mb-2">
+               {product.currentStock} <span className="text-xl font-medium text-muted-foreground">{product.unitId || (product as any).unit || 'pcs'}</span>
+             </div>
+             <p className="text-sm text-muted-foreground mb-4">Available {product.unitId || (product as any).unit || 'Units'}</p>
              
              <div className="space-y-2 text-sm">
                <div className="flex justify-between">
