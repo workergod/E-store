@@ -19,6 +19,41 @@ const resetSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
 });
 
+function getFriendlyAuthErrorMessage(err: any): string {
+  const code = (err?.code || '').toLowerCase();
+  const message = (err?.message || '').toLowerCase();
+
+  if (
+    code.includes('invalid-credential') ||
+    code.includes('wrong-password') ||
+    code.includes('user-not-found') ||
+    code.includes('invalid-email') ||
+    message.includes('invalid-credential') ||
+    message.includes('wrong-password') ||
+    message.includes('user-not-found')
+  ) {
+    return 'Invalid username or password. Please check your credentials and try again.';
+  }
+
+  if (code.includes('too-many-requests') || message.includes('too-many-requests')) {
+    return 'Too many failed login attempts. Access is temporarily locked. Please wait a moment and try again.';
+  }
+
+  if (code.includes('user-disabled') || message.includes('user-disabled')) {
+    return 'This account has been disabled. Please contact management.';
+  }
+
+  if (code.includes('network-request-failed') || message.includes('network')) {
+    return 'Network connection error. Please check your internet connection.';
+  }
+
+  if (err?.message && !err.message.startsWith('Firebase:') && !err.message.includes('(auth/')) {
+    return err.message;
+  }
+
+  return 'Invalid username or password. Please verify your details and try again.';
+}
+
 interface LoginFormProps {
   onSuccess: () => void;
   onError: (error: string) => void;
@@ -41,12 +76,39 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      const authEmail = generateAuthEmail(normalized);
+      const authEmail = data.username.includes('@') && data.username.includes('.')
+        ? data.username
+        : generateAuthEmail(normalized);
 
-      await signInWithEmail(authEmail, data.password);
+      try {
+        await signInWithEmail(authEmail, data.password);
+      } catch (firstErr: any) {
+        // Smart fallback: If user entered 'emilmd' instead of 'developeremilmd', or vice-versa
+        const errStr = (firstErr?.code || firstErr?.message || '').toLowerCase();
+        if (errStr.includes('invalid-credential') || errStr.includes('user-not-found')) {
+          if (!normalized.startsWith('developer')) {
+            try {
+              await signInWithEmail(generateAuthEmail(`developer${normalized}`), data.password);
+              onSuccess();
+              return;
+            } catch {
+              // Ignore fallback failure and throw original error
+            }
+          } else if (normalized.startsWith('developer')) {
+            try {
+              await signInWithEmail(generateAuthEmail(normalized.replace(/^developer/, '')), data.password);
+              onSuccess();
+              return;
+            } catch {
+              // Ignore fallback failure
+            }
+          }
+        }
+        throw firstErr;
+      }
       onSuccess();
     } catch (err: any) {
-      onError(err.message || 'Failed to sign in. Please check your credentials.');
+      onError(getFriendlyAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -56,12 +118,14 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     setIsLoading(true);
     try {
       const normalized = normalizeUsername(data.username);
-      const authEmail = generateAuthEmail(normalized);
+      const authEmail = data.username.includes('@') && data.username.includes('.')
+        ? data.username
+        : generateAuthEmail(normalized);
       await resetPassword(authEmail);
       setResetSent(true);
       onError(''); // clear errors
     } catch (err: any) {
-      onError(err.message || 'Failed to send reset email.');
+      onError(getFriendlyAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

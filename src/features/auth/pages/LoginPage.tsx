@@ -28,8 +28,9 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900">
-              {error}
+            <div className="p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-md border border-red-200 dark:border-red-900/60 flex items-start gap-2 animate-in fade-in">
+              <span className="font-semibold text-base leading-none">⚠️</span>
+              <div className="flex-1 font-medium">{error}</div>
             </div>
           )}
 
