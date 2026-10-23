@@ -3,8 +3,8 @@
 All colors are defined as CSS variables to support seamless Light, Dark, and System theme switching.
 
 ## Brand Colors
-- **Primary**: `var(--primary)` (Default: `#0F7B46`)
-- **Primary Dark**: `var(--primary-dark)` (Default: `#14532D`)
+- **Primary**: `var(--primary)` (Default: `#2563EB`)
+- **Primary Dark**: `var(--primary-dark)` (Default: `#1D4ED8`)
 
 ## Surface Colors
 - **Background**: `var(--background)` (Default: `#F7F8FA`)

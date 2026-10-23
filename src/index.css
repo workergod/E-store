@@ -5,8 +5,8 @@
 @layer base {
   :root {
     /* 1. Colors */
-    --primary: #0F7B46;
-    --primary-dark: #14532D;
+    --primary: #2563EB;
+    --primary-dark: #1D4ED8;
     
     --background: #F7F8FA;
     --card: #FFFFFF;
@@ -30,7 +30,7 @@
     --popover-foreground: #111827;
     --secondary: #F8FAFC;
     --secondary-foreground: #0F172A;
-    --ring: #0F7B46;
+    --ring: #2563EB;
     
     /* 2. Spacing Scale (in rems for Tailwind, base 16px) 
        Used natively by tailwind, but can define css vars if needed.

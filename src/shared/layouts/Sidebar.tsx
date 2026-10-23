@@ -66,7 +66,7 @@ const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: b
       {isActive && (
         <motion.div
           layoutId="sidebarActiveIndicator"
-          className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary z-20 shadow-[0_0_8px_rgba(15,123,70,0.4)]"
+          className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary z-20 shadow-[0_0_8px_rgba(37,99,235,0.4)]"
           transition={{ type: "spring", stiffness: 420, damping: 32 }}
         />
       )}

@@ -744,13 +744,13 @@ export default function TransactionLogPage() {
       <html><head><title>${log.type} Receipt - ${log.id}</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 13px; padding: 30px; color: #111; }
-        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #059669; padding-bottom: 12px; margin-bottom: 20px; }
-        .title { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #059669; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; }
+        .title { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #2563eb; }
         .grid { display: flex; justify-content: space-between; background: #f9fafb; padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #059669; color: white; padding: 10px; text-align: left; font-size: 12px; }
+        th { background: #2563eb; color: white; padding: 10px; text-align: left; font-size: 12px; }
         td { padding: 9px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
-        .qty { text-align: right; font-weight: bold; font-size: 14px; color: #059669; }
+        .qty { text-align: right; font-weight: bold; font-size: 14px; color: #2563eb; }
         .footer { margin-top: 40px; display: flex; justify-content: space-between; }
         .sig { width: 200px; border-top: 1px dashed #666; text-align: center; padding-top: 6px; font-size: 11px; font-weight: bold; }
       </style>
@@ -764,7 +764,7 @@ export default function TransactionLogPage() {
             <div style="font-size: 10px; color: #666; font-weight: bold;">
               ${log.isDirectReturn ? 'DIRECT RETURN NO' : (log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID')}
             </div>
-            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #059669;">
+            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #2563eb;">
               ${log.isDirectReturn ? (log.directReturnNumber || 'CRYO(W/O)-1') : (log.issueNumber || log.id)}
             </div>
           </div>
