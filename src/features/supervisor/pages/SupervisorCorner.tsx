@@ -19,8 +19,15 @@ export default function SupervisorCorner() {
   const { company, user } = useAuthStore();
   const companyId = company?.companyId;
 
-  const isDeveloper = user?.email === 'workshop9283@gmail.com' || user?.username === '@developeremil' || user?.role === Role.SUPER_ADMIN;
+  const isDeveloper = user?.email === 'workshop9283@gmail.com' || user?.username === '@developeremil' || user?.email === 'developeremil@estorepro.internal' || user?.role === Role.SUPER_ADMIN;
   const isExecutive = user?.role === Role.MD || user?.role === Role.OWNER || (user?.role as any) === 'MD' || (user?.role as any) === 'Owner' || user?.role === Role.SUPER_ADMIN || user?.username === '@developeremilmd' || isDeveloper;
+
+  const isDevAccount = (u: any) =>
+    u?.username === '@developeremil' ||
+    u?.email === 'developeremil@estorepro.internal' ||
+    u?.email === 'workshop9283@gmail.com' ||
+    u?.role === Role.SUPER_ADMIN ||
+    (u?.role as any) === 'SuperAdmin';
 
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>(
     isExecutive ? 'PENDING' : 'PRODUCTS'
@@ -83,11 +90,15 @@ export default function SupervisorCorner() {
       try {
         const allUsers = await userRepository.getUsersByCompany(companyId);
         
-        // Filter out deleted users and legacy unwanted gmail test accounts
+        // Filter out deleted users, legacy unwanted gmail test accounts, and hide dev from non-devs
         const validUsers = allUsers.filter(u => {
           if ((u.status as string) === 'DELETED' || (u.status as string) === 'Deleted') return false;
-          // Filter out legacy gmail test accounts (except main root developer)
+          // Filter out legacy gmail test accounts
           if (u.email && u.email.endsWith('@gmail.com') && u.email !== 'workshop9283@gmail.com') {
+            return false;
+          }
+          // Do not show the developer user to MD or other executives
+          if (!isDeveloper && isDevAccount(u)) {
             return false;
           }
           return true;
@@ -147,6 +158,10 @@ export default function SupervisorCorner() {
   };
 
   const openApprovalModal = (pendingUser: any) => {
+    if (isDevAccount(pendingUser)) {
+      toast.error('Developer system account cannot be modified.');
+      return;
+    }
     setSelectedUserForApproval(pendingUser);
     setSelectedRole(pendingUser.role || Role.STAFF);
     setIsRoleModalOpen(true);
@@ -154,6 +169,10 @@ export default function SupervisorCorner() {
 
   const confirmApproval = async () => {
     if (!selectedUserForApproval) return;
+    if (isDevAccount(selectedUserForApproval)) {
+      toast.error('Developer system account cannot be modified.');
+      return;
+    }
     
     let newStatus = UserStatus.ACTIVE;
     let isApproved = true;
@@ -181,6 +200,14 @@ export default function SupervisorCorner() {
   };
 
   const handleToggleUserStatus = async (targetUser: any) => {
+    if (isDevAccount(targetUser)) {
+      toast.error('Developer system accounts cannot be suspended.');
+      return;
+    }
+    if (targetUser.uid === user?.uid) {
+      toast.error('You cannot suspend your own account.');
+      return;
+    }
     const newStatus = targetUser.status === UserStatus.ACTIVE ? UserStatus.SUSPENDED : UserStatus.ACTIVE;
     const isApproved = newStatus === UserStatus.ACTIVE;
     try {
@@ -206,6 +233,14 @@ export default function SupervisorCorner() {
   };
 
   const handleDeleteUser = async (targetUser: any) => {
+    if (isDevAccount(targetUser)) {
+      toast.error('Developer system accounts cannot be deleted.');
+      return;
+    }
+    if (targetUser.uid === user?.uid) {
+      toast.error('You cannot delete your own account.');
+      return;
+    }
     const displayName = targetUser.username || targetUser.fullName || targetUser.email;
     const confirmed = window.confirm(
       `Are you sure you want to permanently delete user "${displayName}"?\n\nThis will remove their profile and immediately revoke all access.`
@@ -351,40 +386,59 @@ export default function SupervisorCorner() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {allUsersList.map(u => (
-                      <tr key={u.uid} className="hover:bg-muted/30">
-                        <td className="px-6 py-4 font-medium">
-                          <div>{u.username || '-'}</div>
-                          <div className="text-xs text-muted-foreground">{u.email}</div>
-                        </td>
-                        <td className="px-6 py-4">{u.fullName}</td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">{u.role}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.status === UserStatus.ACTIVE ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                            {u.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <AppButton size="sm" variant="outline" onClick={() => openApprovalModal(u)}>
-                            Change Role
-                          </AppButton>
-                          <AppButton size="sm" variant={u.status === UserStatus.ACTIVE ? "destructive" : "primary"} onClick={() => handleToggleUserStatus(u)}>
-                            {u.status === UserStatus.ACTIVE ? 'Suspend' : 'Activate'}
-                          </AppButton>
-                          <AppButton 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => handleDeleteUser(u)}
-                            title="Delete User"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </AppButton>
-                        </td>
-                      </tr>
-                    ))}
+                    {allUsersList.map(u => {
+                      const isTargetDev = isDevAccount(u);
+                      const isSelf = u.uid === user?.uid;
+                      return (
+                        <tr key={u.uid} className="hover:bg-muted/30">
+                          <td className="px-6 py-4 font-medium">
+                            <div className="flex items-center gap-1.5">
+                              <span>{u.username || '-'}</span>
+                              {isSelf && (
+                                <span className="text-[10px] bg-primary/10 border border-primary/20 text-primary px-1.5 py-0.5 rounded font-semibold">
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{u.email}</div>
+                          </td>
+                          <td className="px-6 py-4">{u.fullName}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-semibold px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">{u.role}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.status === UserStatus.ACTIVE ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {u.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right space-x-2">
+                            {!isTargetDev && !isSelf ? (
+                              <>
+                                <AppButton size="sm" variant="outline" onClick={() => openApprovalModal(u)}>
+                                  Change Role
+                                </AppButton>
+                                <AppButton size="sm" variant={u.status === UserStatus.ACTIVE ? "destructive" : "primary"} onClick={() => handleToggleUserStatus(u)}>
+                                  {u.status === UserStatus.ACTIVE ? 'Suspend' : 'Activate'}
+                                </AppButton>
+                                <AppButton 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleDeleteUser(u)}
+                                  title="Delete User"
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </AppButton>
+                              </>
+                            ) : isSelf ? (
+                              <span className="text-xs text-muted-foreground italic px-2">Current Active Account</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic px-2">Protected Developer</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

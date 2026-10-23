@@ -568,6 +568,7 @@ export default function TransactionLogPage() {
     if (!window.confirm('Are you sure you want to delete this transaction log? This will automatically revert the product stock balances.')) return;
     try {
       setIsLoading(true);
+      const activeCompanyId = companyId || useAuthStore.getState().company?.companyId || 'company_Zu6sHXTq';
       const userId = useAuthStore.getState().user?.uid || 'System';
 
       if (type === 'ISSUE') {
@@ -582,7 +583,7 @@ export default function TransactionLogPage() {
               try {
                 await stockLedgerRepository.recordTransaction({
                   transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                  companyId: companyId!,
+                  companyId: activeCompanyId,
                   productId: item.productId,
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
@@ -597,12 +598,17 @@ export default function TransactionLogPage() {
           }
         }
         
-        const returnSnap = await getDocs(query(
-          collection(db, 'returnTransactions'),
-          where('issueId', '==', id)
-        ));
-        for (const docObj of returnSnap.docs) {
-          await deleteDoc(docObj.ref);
+        try {
+          const returnSnap = await getDocs(query(
+            collection(db, 'returnTransactions'),
+            where('companyId', '==', activeCompanyId),
+            where('issueId', '==', id)
+          ));
+          for (const docObj of returnSnap.docs) {
+            await deleteDoc(docObj.ref);
+          }
+        } catch (retErr) {
+          console.warn('Failed to query/delete linked returns:', retErr);
         }
         await deleteDoc(issueRef);
 
@@ -618,7 +624,7 @@ export default function TransactionLogPage() {
               try {
                 await stockLedgerRepository.recordTransaction({
                   transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                  companyId: companyId!,
+                  companyId: activeCompanyId,
                   productId: item.productId,
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
@@ -675,12 +681,12 @@ export default function TransactionLogPage() {
               try {
                 await stockLedgerRepository.recordTransaction({
                   transactionId: `adj_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                  companyId: companyId!,
+                  companyId: activeCompanyId,
                   productId: item.productId,
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
                   quantity: -receivedQty,
-                  notes: `Reverted PO deletion (ID: ${id})`,
+                  notes: `Reverted Purchase deletion (ID: ${id})`,
                   performedBy: userId
                 });
               } catch (stockErr) {
