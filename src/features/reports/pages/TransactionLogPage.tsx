@@ -23,6 +23,7 @@ import {
   Trash2, ArrowUpDown, ArrowUp, ArrowDown, Eye, Pencil, Plus, Clock, History
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { escapeHtml } from '../../../shared/utils/security';
 
 interface LogItem {
   productId: string;
@@ -740,8 +741,23 @@ export default function TransactionLogPage() {
   const handlePrintSingle = (log: LogEntry) => {
     const w = window.open('', '_blank', 'width=800,height=700');
     if (!w) return;
+    const safeTitle = escapeHtml(`${log.type} Receipt - ${log.id}`);
+    const safeTypeHeading = escapeHtml(log.type === 'ISSUE' ? 'Material Issue Receipt' : log.type === 'RETURN' ? 'Material Return Receipt' : 'Purchase Order Receipt');
+    const safeRefLabel = escapeHtml(log.isDirectReturn ? 'DIRECT RETURN NO' : (log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID'));
+    const safeRefValue = escapeHtml(log.isDirectReturn ? (log.directReturnNumber || 'CRYO(W/O)-1') : (log.issueNumber || log.id));
+    const safePartyLabel = escapeHtml(log.type === 'PURCHASE' ? 'Supplier' : 'Issued To');
+    const safeCustomerOrTech = escapeHtml(log.customerOrTech);
+    const safeStaffName = escapeHtml(log.staffName);
+    const safeSiteName = log.siteName ? escapeHtml(log.siteName) : '';
+    const safeAdditionalTechs = log.additionalTechnicians && log.additionalTechnicians.length > 0 
+      ? log.additionalTechnicians.map(t => escapeHtml(t)).join(', ') 
+      : '';
+    const safeLastEditor = log.lastEditedByName ? escapeHtml(log.lastEditedByName) : '';
+    const safeLastRole = log.lastEditedByRole ? escapeHtml(log.lastEditedByRole) : 'Staff';
+    const safeNotes = log.notes ? escapeHtml(log.notes) : '';
+
     w.document.write(`
-      <html><head><title>${log.type} Receipt - ${log.id}</title>
+      <html><head><title>${safeTitle}</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 13px; padding: 30px; color: #111; }
         .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; }
@@ -757,33 +773,33 @@ export default function TransactionLogPage() {
       </head><body>
         <div class="header">
           <div>
-            <div class="title">${log.type === 'ISSUE' ? 'Material Issue Receipt' : log.type === 'RETURN' ? 'Material Return Receipt' : 'Purchase Order Receipt'}</div>
+            <div class="title">${safeTypeHeading}</div>
             <div style="font-size: 11px; color: #666; margin-top: 4px;">OFFICIAL RECORD</div>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 10px; color: #666; font-weight: bold;">
-              ${log.isDirectReturn ? 'DIRECT RETURN NO' : (log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID')}
+              ${safeRefLabel}
             </div>
             <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #2563eb;">
-              ${log.isDirectReturn ? (log.directReturnNumber || 'CRYO(W/O)-1') : (log.issueNumber || log.id)}
+              ${safeRefValue}
             </div>
           </div>
         </div>
 
         <div class="grid">
           <div>
-            <div style="font-size: 10px; color: #666; font-weight: bold; text-transform: uppercase;">${log.type === 'PURCHASE' ? 'Supplier' : 'Issued To'}</div>
-            <div style="font-size: 15px; font-weight: bold; margin-top: 2px;">${log.customerOrTech}</div>
-            ${log.additionalTechnicians && log.additionalTechnicians.length > 0 ? `<div style="font-size: 11px; margin-top: 2px;">+ ${log.additionalTechnicians.join(', ')}</div>` : ''}
-            ${log.siteName ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">Site: <b>${log.siteName}</b></div>` : ''}
+            <div style="font-size: 10px; color: #666; font-weight: bold; text-transform: uppercase;">${safePartyLabel}</div>
+            <div style="font-size: 15px; font-weight: bold; margin-top: 2px;">${safeCustomerOrTech}</div>
+            ${safeAdditionalTechs ? `<div style="font-size: 11px; margin-top: 2px;">+ ${safeAdditionalTechs}</div>` : ''}
+            ${safeSiteName ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">Site: <b>${safeSiteName}</b></div>` : ''}
           </div>
           <div style="text-align: right;">
             <div style="font-size: 10px; color: #666; font-weight: bold;">DATE & TIME</div>
             <div style="font-weight: bold; margin-top: 2px;">${formatDate(log.date)}</div>
-            <div style="font-size: 11px; color: #666; margin-top: 4px;">Staff: <b>${log.staffName}</b></div>
-            ${log.lastEditedByName ? `
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">Staff: <b>${safeStaffName}</b></div>
+            ${safeLastEditor ? `
               <div style="font-size: 10px; color: #b45309; margin-top: 2px; font-weight: bold;">
-                Edited by: ${log.lastEditedByName} (${log.lastEditedByRole || 'Staff'})
+                Edited by: ${safeLastEditor} (${safeLastRole})
               </div>
             ` : ''}
           </div>
@@ -802,22 +818,22 @@ export default function TransactionLogPage() {
             ${log.items.map((it, idx) => `
               <tr>
                 <td style="text-align: center; color: #666;">${idx + 1}</td>
-                <td style="font-weight: 500;">${it.name}</td>
-                <td style="font-family: monospace; font-size: 11px; color: #666;">${it.sku || '-'}</td>
-                <td class="qty">${it.qty} <span style="font-size: 11px; font-weight: normal; color: #666;">${it.unit || ''}</span></td>
+                <td style="font-weight: 500;">${escapeHtml(it.name)}</td>
+                <td style="font-family: monospace; font-size: 11px; color: #666;">${escapeHtml(it.sku || '-')}</td>
+                <td class="qty">${Number(it.qty) || 0} <span style="font-size: 11px; font-weight: normal; color: #666;">${escapeHtml(it.unit || '')}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
 
-        ${log.notes ? `
+        ${safeNotes ? `
           <div style="margin-top: 20px; padding: 10px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 12px;">
-            <b>Notes:</b> ${log.notes}
+            <b>Notes:</b> ${safeNotes}
           </div>
         ` : ''}
 
         <div class="footer">
-          <div class="sig">Given By (${log.staffName})</div>
+          <div class="sig">Given By (${safeStaffName})</div>
           <div class="sig">Received By (Signature)</div>
         </div>
       </body></html>

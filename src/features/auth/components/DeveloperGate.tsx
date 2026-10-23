@@ -29,18 +29,18 @@ export function DeveloperGate({ children }: Props) {
 
     setIsChecking(true);
     try {
-      let expectedHash = '';
       const userDoc = await userRepository.getUser(user!.uid);
+      const expectedHash = userDoc?.devPasswordHash;
       
-      if (userDoc?.devPasswordHash) {
-        expectedHash = userDoc.devPasswordHash;
-      } else {
-        expectedHash = await settingsRepository.hashPassword('dev123');
+      if (!expectedHash) {
+        toast.error('Developer password has not been configured in your account settings.');
+        setIsChecking(false);
+        return;
       }
 
-      const inputHash = await settingsRepository.hashPassword(password);
+      const isValid = await settingsRepository.verifyPassword(password, expectedHash);
 
-      if (inputHash === expectedHash) {
+      if (isValid) {
         toast.success('Developer access granted');
         sessionStorage.setItem('dev_unlocked', 'true');
         setIsUnlocked(true);

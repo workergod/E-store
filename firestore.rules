@@ -19,7 +19,11 @@ service cloud.firestore {
     }
 
     function isOwner() {
-      return getUserData() != null && getUserData().role == 'Owner';
+      return getUserData() != null && (
+        getUserData().role == 'Owner' || 
+        getUserData().role == 'MD' || 
+        getUserData().role == 'SuperAdmin'
+      );
     }
 
     function getUserCompanyId() {
@@ -46,7 +50,9 @@ service cloud.firestore {
         (request.auth.uid == userId && 
          request.resource.data.role != 'SuperAdmin' && 
          request.resource.data.role != 'Owner' &&
-         request.resource.data.isApproved == false)
+         request.resource.data.role != 'MD' &&
+         request.resource.data.isApproved == false &&
+         request.resource.data.status == 'Pending')
       );
 
       allow update: if isAuthenticated() && (
@@ -83,7 +89,8 @@ service cloud.firestore {
     // -----------------------------------------------------
     match /companies/{companyId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(companyId));
+      // Only SuperAdmin or Company Owner/MD can modify company profile and supervisor passwords
+      allow write: if isAuthenticated() && (isSuperAdmin() || (isOwner() && isCompanyMember(companyId)));
     }
 
     // -----------------------------------------------------

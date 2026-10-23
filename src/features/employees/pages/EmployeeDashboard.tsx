@@ -14,6 +14,7 @@ import { AppTable } from '../../../shared/tables/AppTable';
 import { AppButton } from '../../../shared/app/AppButton';
 import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 import { AppCard } from '../../../shared/app/AppCard';
+import { sanitizeCsvCell } from '../../../shared/utils/security';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -90,20 +91,20 @@ export default function EmployeeDashboard() {
 
     const headers = ['Employee Code', 'First Name', 'Last Name', 'Role', 'Department', 'Mobile', 'Username', 'Status'];
     const csvContent = [
-      headers.join(','),
+      headers.map(sanitizeCsvCell).join(','),
       ...employees.map(e => 
         [
-          `"${(e.employeeCode || '').replace(/"/g, '""')}"`,
-          `"${(e.firstName || '').replace(/"/g, '""')}"`,
-          `"${(e.lastName || '').replace(/"/g, '""')}"`,
-          `"${(e.role || '').replace(/"/g, '""')}"`,
-          `"${(e.department || '').replace(/"/g, '""')}"`,
-          `"${(e.mobile || '').replace(/"/g, '""')}"`,
-          `"${(e.username || '').replace(/"/g, '""')}"`,
-          e.status
+          sanitizeCsvCell(e.employeeCode || ''),
+          sanitizeCsvCell(e.firstName || ''),
+          sanitizeCsvCell(e.lastName || ''),
+          sanitizeCsvCell(e.role || ''),
+          sanitizeCsvCell(e.department || ''),
+          sanitizeCsvCell(e.mobile || ''),
+          sanitizeCsvCell(e.username || ''),
+          sanitizeCsvCell(e.status || '')
         ].join(',')
       )
-    ].join('\\n');
+    ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

@@ -15,6 +15,7 @@ import { AppTable } from '../../../shared/tables/AppTable';
 import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 import { ProductFormDialog } from '../components/ProductFormDialog';
 import type { ColumnDef } from '@tanstack/react-table';
+import { sanitizeCsvCell } from '../../../shared/utils/security';
 
 export default function ProductsPage() {
   const navigate = useNavigate();
@@ -130,16 +131,16 @@ export default function ProductsPage() {
 
     const headers = ['Product Name', 'Short Name', 'SKU', 'Barcode', 'Current Stock', 'Minimum Stock', 'Status'];
     const csvContent = [
-      headers.join(','),
+      headers.map(sanitizeCsvCell).join(','),
       ...displayedProducts.map(p => 
         [
-          `"${(p.name || '').replace(/"/g, '""')}"`,
-          `"${(p.shortName || '').replace(/"/g, '""')}"`,
-          `"${(p.sku || '').replace(/"/g, '""')}"`,
-          `"${(p.barcode || '').replace(/"/g, '""')}"`,
-          p.currentStock || 0,
-          p.minimumStock || 0,
-          p.status
+          sanitizeCsvCell(p.name || ''),
+          sanitizeCsvCell(p.shortName || ''),
+          sanitizeCsvCell(p.sku || ''),
+          sanitizeCsvCell(p.barcode || ''),
+          sanitizeCsvCell(p.currentStock || 0),
+          sanitizeCsvCell(p.minimumStock || 0),
+          sanitizeCsvCell(p.status || '')
         ].join(',')
       )
     ].join('\n');

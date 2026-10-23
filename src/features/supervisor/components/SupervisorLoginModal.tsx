@@ -41,12 +41,18 @@ export function SupervisorLoginModal({ onClose }: Props) {
     setIsChecking(true);
     try {
       const storedHash = await settingsRepository.getSupervisorPasswordHash(company.companyId);
-      const inputHash = await settingsRepository.hashPassword(password);
       
-      // If there's no stored hash yet, default is 'admin'
-      const defaultHash = await settingsRepository.hashPassword('admin');
+      if (!storedHash) {
+        if (isExecutive) {
+          toast.info("No supervisor password has been configured yet. Use 'Unlock with Executive Access' below, then set a password in Supervisor Corner settings.");
+        } else {
+          toast.error("Supervisor Corner has not been initialized with a password yet. Please ask the Managing Director (MD) to set it up.");
+        }
+        return;
+      }
       
-      if (inputHash === (storedHash || defaultHash)) {
+      const isValid = await settingsRepository.verifyPassword(password, storedHash);
+      if (isValid) {
         grantAccess();
       } else {
         toast.error('Incorrect password');
@@ -59,7 +65,7 @@ export function SupervisorLoginModal({ onClose }: Props) {
   };
 
   const handleForgotPassword = () => {
-    toast.info("Default supervisor password is 'admin'. You can change it inside Supervisor Corner settings.");
+    toast.info("For security, please contact the Managing Director or Company Owner to view or reset the supervisor password.");
   };
 
   return (
