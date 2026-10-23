@@ -89,6 +89,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
           if (!normalized.startsWith('developer')) {
             try {
               await signInWithEmail(generateAuthEmail(`developer${normalized}`), data.password);
+              sessionStorage.setItem('cryodeal_welcome_pending', 'true');
               onSuccess();
               return;
             } catch {
@@ -97,6 +98,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
           } else if (normalized.startsWith('developer')) {
             try {
               await signInWithEmail(generateAuthEmail(normalized.replace(/^developer/, '')), data.password);
+              sessionStorage.setItem('cryodeal_welcome_pending', 'true');
               onSuccess();
               return;
             } catch {
@@ -106,6 +108,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
         }
         throw firstErr;
       }
+      sessionStorage.setItem('cryodeal_welcome_pending', 'true');
       onSuccess();
     } catch (err: any) {
       onError(getFriendlyAuthErrorMessage(err));

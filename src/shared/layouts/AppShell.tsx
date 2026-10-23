@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Bell, Search, Sun, Moon, LogOut, MessageSquare, X } from 'lucide-react'
+import { Bell, Search, Sun, Moon, LogOut, MessageSquare, X, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
@@ -9,6 +9,7 @@ import { useNotificationStore } from '../../store/notificationStore'
 import { productRepository } from '../../repositories/ProductRepository'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
+import { WelcomeScreen } from '../overlays/WelcomeScreen'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, company, logout } = useAuthStore()
@@ -26,6 +27,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [time, setTime] = useState(new Date())
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  // Trigger welcome screen for MD and new logins
+  useEffect(() => {
+    if (!user?.uid) return
+    const welcomedKey = `cryodeal_welcomed_${user.uid}`
+    const isPending = sessionStorage.getItem('cryodeal_welcome_pending') === 'true'
+    const hasBeenWelcomed = sessionStorage.getItem(welcomedKey) === 'true'
+
+    if (isPending || !hasBeenWelcomed) {
+      setShowWelcome(true)
+    }
+  }, [user?.uid])
+
+  const handleCloseWelcome = () => {
+    setShowWelcome(false)
+    if (user?.uid) {
+      sessionStorage.setItem(`cryodeal_welcomed_${user.uid}`, 'true')
+    }
+    sessionStorage.removeItem('cryodeal_welcome_pending')
+  }
 
   useEffect(() => {
     if (mainContentRef.current) {
@@ -241,7 +263,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border mb-1 truncate">
                     {user?.email || 'admin@example.com'}
                   </div>
-                  <button onClick={async () => { await signOut(); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors">
+                  <button 
+                    onClick={() => setShowWelcome(true)} 
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-[var(--radius-btn)] transition-colors mb-1 cursor-pointer"
+                  >
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span>Welcome Screen</span>
+                  </button>
+                  <button onClick={async () => { await signOut(); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors cursor-pointer">
                     <LogOut className="h-4 w-4" />
                     Sign out
                   </button>
@@ -260,6 +289,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         isOpen={showShortcutsModal}
         onClose={closeShortcutsModal}
         navItems={navItems}
+      />
+
+      <WelcomeScreen
+        isOpen={showWelcome}
+        onClose={handleCloseWelcome}
       />
     </div>
   )
