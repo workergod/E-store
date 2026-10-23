@@ -12,6 +12,7 @@ import { Package, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react'
 import { useAuthStore } from "../../../store/authStore"
 import { productRepository } from '../../../repositories/ProductRepository'
 import { issueRepository } from '../../../repositories/IssueRepository'
+import { employeeRepository } from '../../../repositories/EmployeeRepository'
 
 export default function DashboardPage() {
   const { company, user } = useAuthStore()
@@ -39,10 +40,11 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       try {
         setIsLoading(true)
-        const [products, issues, returnSnap] = await Promise.all([
+        const [products, issues, returnSnap, employees] = await Promise.all([
           productRepository.getAll(companyId),
           issueRepository.getAll(companyId),
-          getDocs(query(collection(db, 'returnTransactions'), where('companyId', '==', companyId)))
+          getDocs(query(collection(db, 'returnTransactions'), where('companyId', '==', companyId))),
+          employeeRepository.getAll(companyId)
         ])
 
         const totalProducts = products.length
@@ -55,33 +57,65 @@ export default function DashboardPage() {
           pendingReturns
         })
 
-        // In a real app, we would query the stockLedgerRepository directly with limit(5).
-        // Since we don't have a getRecent() method yet, we'll leave the table empty for now 
-        // or just show a message. Let's populate it with issues as activity.
-        // Only show recent active issues
-        const activeIssues = issues.filter(i => i.status === 'ISSUED' || i.status === 'PARTIALLY_RETURNED');
-        const recent = activeIssues.slice(0, 5).map(i => ({
-          id: i.id,
-          action: 'Issued',
-          item: i.items.map(it => it.productName).join(', '),
-          date: new Date((i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : (i.issueDate ? new Date(i.issueDate) : new Date())).toLocaleDateString(),
-          user: i.employeeId
-        }))
+        // Build employee ID -> name map
+        const empMap: Record<string, string> = {}
+        employees.forEach(e => {
+          if (e.id) {
+            empMap[e.id] = `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.username || 'Technician'
+          }
+        })
+
+        // Recent Issues sorted newest first
+        const sortedIssues = [...issues].sort((a, b) => {
+          const ta = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate().getTime() : (a.issueDate ? new Date(a.issueDate).getTime() : 0);
+          const tb = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate().getTime() : (b.issueDate ? new Date(b.issueDate).getTime() : 0);
+          return tb - ta;
+        });
+
+        const recent = sortedIssues.slice(0, 5).map(i => {
+          const d = (i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : (i.issueDate ? new Date(i.issueDate) : new Date());
+          const dateFormatted = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          const timeFormatted = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+          const techName = i.employeeName || empMap[i.employeeId] || i.employeeId || 'Technician';
+          const itemsText = (i.items || []).map(it => `${it.productName} (${it.issuedQty} ${it.unit || ''})`).join(', ');
+
+          return {
+            id: i.id,
+            issueNumber: i.issueNumber || 'CRYO-1',
+            technician: techName,
+            item: itemsText || 'No items',
+            date: `${dateFormatted}, ${timeFormatted}`,
+            status: i.status || 'ISSUED'
+          };
+        });
         setRecentActivity(recent)
 
-        // Show recent returns from returnTransactions
+        // Recent Returns from returnTransactions
         const returnsData = returnSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
         const recentReturnsList = returnsData.sort((a, b) => {
           const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
           const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
           return tb - ta;
-        }).slice(0, 5).map(r => ({
-          id: r.id,
-          action: 'Returned',
-          item: (r.items || []).map((it:any) => it.productName).join(', '),
-          date: new Date(r.createdAt?.toDate ? r.createdAt.toDate() : new Date()).toLocaleDateString(),
-          user: r.employeeId
-        }))
+        }).slice(0, 5).map(r => {
+          const d = r.createdAt?.toDate ? r.createdAt.toDate() : new Date();
+          const dateFormatted = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          const timeFormatted = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+          const techName = r.employeeName || empMap[r.employeeId] || r.employeeId || 'Technician';
+          const itemsText = (r.items || []).map((it: any) => `${it.productName} (${it.returnedQty} ${it.unit || ''})`).join(', ');
+          const returnRef = r.isDirectReturn 
+            ? (r.directReturnNumber || 'CRYO(W/O)-1') 
+            : (r.issueNumber ? r.issueNumber : 'Return');
+
+          return {
+            id: r.id,
+            returnRef,
+            isDirectReturn: Boolean(r.isDirectReturn),
+            technician: techName,
+            item: itemsText || 'No items',
+            date: `${dateFormatted}, ${timeFormatted}`,
+            status: r.isDirectReturn ? 'DIRECT RETURN' : 'RETURN'
+          };
+        });
         setRecentReturns(recentReturnsList)
 
       } catch (error) {
@@ -93,11 +127,106 @@ export default function DashboardPage() {
     loadDashboard()
   }, [companyId])
 
+  const recentIssuesCols = [
+    { 
+      header: 'Issue ID', 
+      accessorKey: 'issueNumber',
+      cell: ({ row }: any) => (
+        <span className="font-mono font-bold text-xs px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+          {row.original.issueNumber}
+        </span>
+      )
+    },
+    { 
+      header: 'Technician', 
+      accessorKey: 'technician',
+      cell: ({ row }: any) => (
+        <span className="font-medium text-foreground">{row.original.technician}</span>
+      )
+    },
+    { 
+      header: 'Items', 
+      accessorKey: 'item', 
+      cell: ({ row }: any) => (
+        <span className="truncate max-w-[280px] block text-xs text-muted-foreground" title={row.original.item}>
+          {row.original.item}
+        </span>
+      )
+    },
+    { 
+      header: 'Date & Time', 
+      accessorKey: 'date',
+      cell: ({ row }: any) => (
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{row.original.date}</span>
+      )
+    },
+    { 
+      header: 'Status', 
+      accessorKey: 'status',
+      cell: ({ row }: any) => (
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+          row.original.status === 'CLOSED'
+            ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+            : row.original.status === 'PARTIALLY_RETURNED'
+            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+        }`}>
+          {row.original.status}
+        </span>
+      )
+    }
+  ]
 
-  const recentActivityCols = [
-    { header: 'Action', accessorKey: 'action' },
-    { header: 'Item', accessorKey: 'item', cell: ({row}: any) => <span className="truncate max-w-[120px] block">{row.original.item}</span> },
-    { header: 'Date', accessorKey: 'date' },
+  const recentReturnsCols = [
+    { 
+      header: 'Return / Issue ID', 
+      accessorKey: 'returnRef',
+      cell: ({ row }: any) => (
+        <span className={`font-mono font-bold text-xs px-2.5 py-1 rounded border ${
+          row.original.isDirectReturn
+            ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+            : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+        }`}>
+          {row.original.returnRef}
+        </span>
+      )
+    },
+    { 
+      header: 'Technician', 
+      accessorKey: 'technician',
+      cell: ({ row }: any) => (
+        <span className="font-medium text-foreground">{row.original.technician}</span>
+      )
+    },
+    { 
+      header: 'Items Returned', 
+      accessorKey: 'item', 
+      cell: ({ row }: any) => (
+        <span className="truncate max-w-[280px] block text-xs text-muted-foreground" title={row.original.item}>
+          {row.original.item}
+        </span>
+      )
+    },
+    { 
+      header: 'Date & Time', 
+      accessorKey: 'date',
+      cell: ({ row }: any) => (
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{row.original.date}</span>
+      )
+    },
+    { 
+      header: 'Type', 
+      accessorKey: 'status',
+      cell: ({ row }: any) => (
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+          row.original.isDirectReturn
+            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+        }`}>
+          {row.original.status}
+        </span>
+      )
+    }
   ]
 
   return (
@@ -144,7 +273,7 @@ export default function DashboardPage() {
             </button>
           </div>
           <AppTable 
-            columns={recentActivityCols} 
+            columns={recentIssuesCols} 
             data={recentActivity} 
             isLoading={isLoading}
             emptyTitle="No activity yet"
@@ -162,7 +291,7 @@ export default function DashboardPage() {
             </button>
           </div>
           <AppTable 
-            columns={recentActivityCols} 
+            columns={recentReturnsCols} 
             data={recentReturns} 
             isLoading={isLoading}
             emptyTitle="No returns yet"

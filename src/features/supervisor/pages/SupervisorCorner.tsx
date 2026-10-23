@@ -82,8 +82,19 @@ export default function SupervisorCorner() {
     if (isExecutive) {
       try {
         const allUsers = await userRepository.getUsersByCompany(companyId);
-        setAllUsersList([...allUsers].sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
-        setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL).sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
+        
+        // Filter out deleted users and legacy unwanted gmail test accounts
+        const validUsers = allUsers.filter(u => {
+          if ((u.status as string) === 'DELETED' || (u.status as string) === 'Deleted') return false;
+          // Filter out legacy gmail test accounts (except main root developer)
+          if (u.email && u.email.endsWith('@gmail.com') && u.email !== 'workshop9283@gmail.com') {
+            return false;
+          }
+          return true;
+        });
+
+        setAllUsersList([...validUsers].sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
+        setPendingUsers(validUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL).sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
         hasAnySuccess = true;
       } catch (e) {
         console.warn('Failed to load users in supervisor corner:', e);
@@ -191,6 +202,30 @@ export default function SupervisorCorner() {
       fetchData();
     } catch (error) {
       toast.error('Failed to decline user');
+    }
+  };
+
+  const handleDeleteUser = async (targetUser: any) => {
+    const displayName = targetUser.username || targetUser.fullName || targetUser.email;
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete user "${displayName}"?\n\nThis will remove their profile and immediately revoke all access.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await userRepository.updateUser(targetUser.uid, {
+        status: 'DELETED' as any,
+        isApproved: false
+      });
+      try {
+        await userRepository.deleteUser(targetUser.uid);
+      } catch {
+        // Fallback: Marked as DELETED
+      }
+      toast.success(`User ${displayName} removed successfully.`);
+      fetchData();
+    } catch (error: any) {
+      toast.error('Failed to delete user: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -337,6 +372,15 @@ export default function SupervisorCorner() {
                           </AppButton>
                           <AppButton size="sm" variant={u.status === UserStatus.ACTIVE ? "destructive" : "primary"} onClick={() => handleToggleUserStatus(u)}>
                             {u.status === UserStatus.ACTIVE ? 'Suspend' : 'Activate'}
+                          </AppButton>
+                          <AppButton 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleDeleteUser(u)}
+                            title="Delete User"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </AppButton>
                         </td>
                       </tr>

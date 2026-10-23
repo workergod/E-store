@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { User } from '../types/User';
 
@@ -45,6 +45,11 @@ export class UserRepository {
       ...data,
       updatedAt: serverTimestamp()
     });
+  }
+
+  async deleteUser(uid: string): Promise<void> {
+    const userRef = doc(db, this.collectionName, uid);
+    await deleteDoc(userRef);
   }
 }
 
