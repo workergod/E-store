@@ -147,7 +147,7 @@ export default function PurchaseOrderForm() {
                   </AppButton>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-visible min-h-[340px]">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
@@ -167,8 +167,8 @@ export default function PurchaseOrderForm() {
                         const orderQty = Number(wItem?.quantity) || 0;
                         const newTotal = prod ? Math.round((currentStock + orderQty) * 10000) / 10000 : null;
                         return (
-                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                            <td className="p-2">
+                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
+                            <td className="p-2 relative">
                               <ProductSearchSelect
                                 value={wItem?.productId || ''}
                                 onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}

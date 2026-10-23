@@ -503,7 +503,7 @@ export default function ReturnMaterialsPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-visible min-h-[340px]">
               <table className="w-full text-sm text-left border-collapse">
                 <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                   <tr>
@@ -516,8 +516,8 @@ export default function ReturnMaterialsPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {directItems.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-3 py-2.5">
+                    <tr key={item.id} className="hover:bg-muted/20 transition-colors relative focus-within:z-40">
+                      <td className="px-3 py-2.5 relative">
                         <ProductSearchSelect
                           products={products}
                           value={item.productId}

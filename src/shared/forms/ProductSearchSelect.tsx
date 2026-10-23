@@ -16,7 +16,7 @@ interface ProductSearchSelectProps {
 export function ProductSearchSelect({
   value,
   onChange,
-  products,
+  products = [],
   placeholder = "Type to search product...",
   error = false,
   disabled = false,
@@ -59,21 +59,43 @@ export function ProductSearchSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedProduct]);
 
-  // Filter and sort products (Alphabetical A-Z ascending by default)
+  // Filter and smart sort products (e.g. typing 'c' puts products starting with 'c' first, 'copper' matches all copper)
   const filteredProducts = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
+    const rawTerm = searchTerm.toLowerCase().trim();
     let list = [...products];
 
-    if (term && (!selectedProduct || term !== selectedProduct.name.toLowerCase())) {
-      list = list.filter(p => 
-        p.name.toLowerCase().includes(term) ||
-        (p.sku && p.sku.toLowerCase().includes(term)) ||
-        (p.shortName && p.shortName.toLowerCase().includes(term))
-      );
+    // If an item is already selected and input matches exactly, allow viewing all products on open
+    const isMatchingSelected = selectedProduct && rawTerm === selectedProduct.name.toLowerCase().trim();
+
+    if (rawTerm && !isMatchingSelected) {
+      const words = rawTerm.split(/\s+/).filter(Boolean);
+      list = list.filter(p => {
+        const name = (p.name || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        const shortName = (p.shortName || '').toLowerCase();
+        return words.every(w => name.includes(w) || sku.includes(w) || shortName.includes(w));
+      });
+
+      // Smart sorting:
+      // 1. Starts with search term (e.g. 'c' or 'copper')
+      // 2. Contains search term
+      // 3. Alphabetical order
+      list.sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const aStarts = aName.startsWith(rawTerm);
+        const bStarts = bName.startsWith(rawTerm);
+
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return aName.localeCompare(bName);
+      });
+    } else {
+      // Default: Alphabetical A-Z
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     }
 
-    // Sort Alphabetically Ascending A-Z
-    return list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
   }, [products, searchTerm, selectedProduct]);
 
   const handleSelect = (product: Product) => {
@@ -115,10 +137,16 @@ export function ProductSearchSelect({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
       <div 
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen(true);
+            inputRef.current?.focus();
+          }
+        }}
         className={cn(
-          "relative flex items-center w-full h-10 rounded-md border bg-background transition-all",
+          "relative flex items-center w-full h-10 rounded-md border bg-background transition-all cursor-text",
           error ? "border-destructive ring-1 ring-destructive/40" : "border-input hover:border-primary/50 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary",
           disabled && "opacity-50 pointer-events-none"
         )}
@@ -131,6 +159,10 @@ export function ProductSearchSelect({
           disabled={disabled}
           placeholder={placeholder}
           onFocus={() => setIsOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(true);
+          }}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setIsOpen(true);
@@ -144,7 +176,7 @@ export function ProductSearchSelect({
           <button
             type="button"
             onClick={handleClear}
-            className="p-1 mr-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+            className="p-1 mr-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors cursor-pointer"
             title="Clear product"
           >
             <X className="h-3.5 w-3.5" />
@@ -152,11 +184,12 @@ export function ProductSearchSelect({
         ) : (
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setIsOpen(!isOpen);
               inputRef.current?.focus();
             }}
-            className="p-1 mr-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 mr-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             <ChevronDown className="h-4 w-4" />
           </button>
@@ -164,7 +197,9 @@ export function ProductSearchSelect({
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 w-full min-w-[320px] max-w-lg bg-popover text-popover-foreground border border-border rounded-lg shadow-premium z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div 
+          className="absolute left-0 top-full mt-1.5 w-full min-w-[340px] max-w-lg bg-popover text-popover-foreground border-2 border-primary/30 rounded-xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+        >
           <div className="max-h-64 overflow-y-auto custom-scrollbar p-1">
             {filteredProducts.length === 0 ? (
               <div className="p-4 text-center text-xs text-muted-foreground">
@@ -181,7 +216,10 @@ export function ProductSearchSelect({
                 return (
                   <div
                     key={p.id}
-                    onClick={() => handleSelect(p)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelect(p);
+                    }}
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={cn(
                       "flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm cursor-pointer transition-colors",

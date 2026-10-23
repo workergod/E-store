@@ -77,7 +77,7 @@ export default function IssueMaterialsPage() {
         productRepository.getAll(companyId)
       ]);
       setEmployees(empData.filter(e => e.status === 'ACTIVE'));
-      setProducts(prodData.filter(p => p.status === 'Active'));
+      setProducts(prodData.filter(p => !p.status || p.status.toLowerCase() === 'active'));
     };
     loadData();
   }, [companyId]);
@@ -271,7 +271,7 @@ export default function IssueMaterialsPage() {
                   </AppButton>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-visible min-h-[340px]">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
@@ -292,8 +292,8 @@ export default function IssueMaterialsPage() {
                         const remaining = prod ? Math.round((currentStock - qtyVal) * 10000) / 10000 : null;
                         const error = methods.formState.errors.items?.[index]?.productId;
                         return (
-                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                            <td className="p-2">
+                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
+                            <td className="p-2 relative">
                               <ProductSearchSelect
                                 value={wItem?.productId || ''}
                                 onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
