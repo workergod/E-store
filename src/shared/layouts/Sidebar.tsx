@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
   HelpCircle, MessageCircle,
-  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, Keyboard,
+  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList,
   PanelLeft
 } from 'lucide-react'
 import { cn } from "../utils/cn"
@@ -60,8 +60,7 @@ const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: b
 
 export function Sidebar({ 
   collapsed, 
-  setCollapsed,
-  onOpenShortcuts 
+  setCollapsed
 }: { 
   collapsed: boolean
   setCollapsed: (val: boolean) => void
@@ -178,20 +177,6 @@ export function Sidebar({
           <NavItem item={{ path: '/help', label: 'Help & Support', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
           {user?.role !== Role.SUPER_ADMIN && (
             <NavItem item={{ path: '/support-chat', label: 'Contact Developer', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
-          )}
-          {onOpenShortcuts && (
-            <button
-              type="button"
-              onClick={onOpenShortcuts}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-btn)] text-[14px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors group",
-                collapsed && "justify-center px-0"
-              )}
-              title="Keyboard Shortcuts (Press ?)"
-            >
-              <Keyboard className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-foreground" />
-              {!collapsed && <span className="truncate text-left">Shortcuts</span>}
-            </button>
           )}
         </div>
         {!collapsed && (
