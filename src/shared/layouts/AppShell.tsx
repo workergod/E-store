@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Bell, Search, Sun, Moon, LogOut, MessageSquare, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
@@ -7,6 +7,8 @@ import { signOut } from "../../firebase/auth"
 import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
 import { productRepository } from '../../repositories/ProductRepository'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, company, logout } = useAuthStore()
@@ -16,6 +18,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hasNotifications = notifications.some(n => !n.isRead)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const { navItems, showShortcutsModal, openShortcutsModal, closeShortcutsModal } = useKeyboardShortcuts({ searchInputRef })
 
   const [time, setTime] = useState(new Date())
 
@@ -74,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-background font-sans antialiased overflow-hidden text-foreground selection:bg-primary/20">
       <div className="print:hidden h-full">
-        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} onOpenShortcuts={openShortcutsModal} />
       </div>
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -85,6 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="relative w-full flex items-center group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input 
+                  ref={searchInputRef}
                   type="text" 
                   placeholder="Search products, SKU, Barcode, Site..." 
                   className="w-full h-[52px] bg-muted/50 border border-transparent focus:bg-card focus:border-border pl-[44px] pr-4 rounded-[var(--radius-input)] text-sm outline-none transition-all focus:ring-2 focus:ring-primary/20 shadow-sm"
@@ -216,6 +222,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={closeShortcutsModal}
+        navItems={navItems}
+      />
     </div>
   )
 }

@@ -4,55 +4,88 @@ import {
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
   ChevronLeft, ChevronRight, HelpCircle, MessageCircle,
-  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList
-  } from 'lucide-react'
+  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, Keyboard
+} from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
 import { SupervisorLoginModal } from '../../features/supervisor/components/SupervisorLoginModal'
 import { Role } from '../../constants/roles'
 
-const MAIN_NAV = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+interface NavItemDef {
+  path: string
+  label: string
+  icon: any
+  shortcut?: string
+}
+
+const MAIN_NAV: NavItemDef[] = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: '1' },
 ]
 
-const INVENTORY_NAV = [
-  { path: '/products', label: 'Products', icon: PackageSearch },
-  { path: '/issue', label: 'Issue Materials', icon: ArrowUpRight },
-  { path: '/returns', label: 'Return Materials', icon: ArrowDownLeft },
+const INVENTORY_NAV: NavItemDef[] = [
+  { path: '/products', label: 'Products', icon: PackageSearch, shortcut: '2' },
+  { path: '/issue', label: 'Issue Materials', icon: ArrowUpRight, shortcut: '3' },
+  { path: '/returns', label: 'Return Materials', icon: ArrowDownLeft, shortcut: '4' },
 ]
 
-const PURCHASING_NAV = [
-  { path: '/purchases', label: 'Purchasing', icon: ShoppingCart },
+const PURCHASING_NAV: NavItemDef[] = [
+  { path: '/purchases', label: 'Purchasing', icon: ShoppingCart, shortcut: '5' },
 ]
 
-
-const OPERATIONS_NAV = [
-  { path: '/employees', label: 'Employees', icon: Users },
-  { path: '/transaction-log', label: 'Transaction Log', icon: ClipboardList },
+const OPERATIONS_NAV: NavItemDef[] = [
+  { path: '/employees', label: 'Employees', icon: Users, shortcut: '6' },
+  { path: '/transaction-log', label: 'Transaction Log', icon: ClipboardList, shortcut: '7' },
 ]
 
-const NavItem = ({ item, collapsed, pathname }: { item: { path: string, label: string, icon: any }, collapsed: boolean, pathname: string }) => {
+const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: boolean, pathname: string }) => {
   const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path))
   const Icon = item.icon
   
   return (
     <Link
       to={item.path}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? `${item.label}${item.shortcut ? ` [Shortcut: ${item.shortcut}]` : ''}` : undefined}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-btn)] text-[14px] font-medium transition-colors group",
+        "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-btn)] text-[14px] font-medium transition-colors group relative",
         isActive 
-          ? "bg-primary/10 text-primary" 
+          ? "bg-primary/10 text-primary font-semibold" 
           : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
       )}
     >
       <Icon className={cn("h-5 w-5 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && (
+        <>
+          <span className="truncate flex-1">{item.label}</span>
+          {item.shortcut && (
+            <kbd className={cn(
+              "text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border transition-colors shrink-0",
+              isActive 
+                ? "bg-primary/20 text-primary border-primary/30 font-bold" 
+                : "bg-muted/60 text-muted-foreground/80 border-border group-hover:border-muted-foreground/30 group-hover:text-foreground"
+            )}>
+              {item.shortcut}
+            </kbd>
+          )}
+        </>
+      )}
+      {collapsed && item.shortcut && (
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-muted border border-border text-[9px] font-mono text-muted-foreground font-semibold shadow-xs">
+          {item.shortcut}
+        </span>
+      )}
     </Link>
   )
 }
 
-export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
+export function Sidebar({ 
+  collapsed, 
+  setCollapsed,
+  onOpenShortcuts 
+}: { 
+  collapsed: boolean
+  setCollapsed: (val: boolean) => void
+  onOpenShortcuts?: () => void
+}) {
   const location = useLocation()
   const { company, user } = useAuthStore()
 
@@ -121,7 +154,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{user?.role === Role.TECHNICIAN ? 'My Items' : 'Inventory'}</h4>}
           <div className="space-y-[var(--spacing-xs)]">
             {user?.role === Role.TECHNICIAN ? (
-              <NavItem item={{ path: '/my-materials', label: 'My Materials', icon: PackageSearch }} collapsed={collapsed} pathname={location.pathname} />
+              <NavItem item={{ path: '/my-materials', label: 'My Materials', icon: PackageSearch, shortcut: '1' }} collapsed={collapsed} pathname={location.pathname} />
             ) : (
               INVENTORY_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)
             )}
@@ -162,6 +195,27 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           <NavItem item={{ path: '/help', label: 'Help & Support', icon: HelpCircle }} collapsed={collapsed} pathname={location.pathname} />
           {user?.role !== Role.SUPER_ADMIN && (
             <NavItem item={{ path: '/support-chat', label: 'Contact Developer', icon: MessageCircle }} collapsed={collapsed} pathname={location.pathname} />
+          )}
+          {onOpenShortcuts && (
+            <button
+              type="button"
+              onClick={onOpenShortcuts}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-btn)] text-[14px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors group",
+                collapsed && "justify-center px-0"
+              )}
+              title="Keyboard Shortcuts (Press ?)"
+            >
+              <Keyboard className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-foreground" />
+              {!collapsed && (
+                <>
+                  <span className="truncate flex-1 text-left">Shortcuts</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/60 text-muted-foreground group-hover:text-foreground">
+                    ?
+                  </kbd>
+                </>
+              )}
+            </button>
           )}
         </div>
         {!collapsed && (
