@@ -13,13 +13,22 @@ export interface PurchaseOrderItem {
   receivedQuantity: number;
 }
 
+export interface PurchaseAttachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt: string;
+}
+
 export interface PurchaseOrder {
   id?: string;
   companyId: string;
   supplierId: string;
   supplierName?: string;
   
-  poNumber: string; // PO-YYYY-XXXXXX
+  poNumber: string; // PO-YYYY-XXXXXX (Purchase ID)
   status: POStatus;
   
   purchaseDate: Timestamp | Date;
@@ -28,6 +37,7 @@ export interface PurchaseOrder {
   items: PurchaseOrderItem[];
   notes?: string;
   attachmentUrls?: string[]; // invoice, delivery challan, PO PDF
+  attachments?: PurchaseAttachment[];
   
   createdBy: string;
   approvedBy?: string;

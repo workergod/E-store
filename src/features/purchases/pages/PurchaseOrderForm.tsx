@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Paperclip, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
@@ -14,6 +14,8 @@ import { supplierRepository } from '../../../repositories/SupplierRepository';
 import { productRepository } from '../../../repositories/ProductRepository';
 import type { Supplier } from '../../../shared/types/Supplier';
 import type { Product } from '../../../shared/types/Product';
+import type { PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
+import { processAttachmentFile, formatFileSize, isImageFile } from '../../../shared/utils/attachmentUtils';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -61,6 +63,8 @@ export default function PurchaseOrderForm() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [existingPoNumber, setExistingPoNumber] = useState<string>('');
+  const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const methods = useForm<POFormData>({
     resolver: zodResolver(poSchema) as any,
@@ -95,6 +99,7 @@ export default function PurchaseOrderForm() {
           if (poSnap.exists() && poSnap.data().companyId === companyId) {
             const data = poSnap.data();
             setExistingPoNumber(data.poNumber || '');
+            setAttachments(data.attachments || []);
             let pDate = new Date().toISOString().split('T')[0];
             if (data.purchaseDate) {
               const d = data.purchaseDate.toDate ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
@@ -118,6 +123,36 @@ export default function PurchaseOrderForm() {
     };
     loadData();
   }, [companyId, id, methods]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      const newAtts: PurchaseAttachment[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`File "${file.name}" is larger than 10MB.`);
+          continue;
+        }
+        const att = await processAttachmentFile(file, companyId);
+        newAtts.push(att);
+      }
+      setAttachments(prev => [...prev, ...newAtts]);
+      toast.success(`${newAtts.length} document(s) attached!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to attach file');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (attId: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== attId));
+  };
 
   const onSubmit = async (data: POFormData) => {
     if (!companyId || !user) return;
@@ -149,6 +184,8 @@ export default function PurchaseOrderForm() {
           purchaseDate: new Date(data.purchaseDate),
           notes: data.notes || '',
           items: enrichedItems,
+          attachments,
+          attachmentUrls: attachments.map(a => a.url),
           updatedAt: serverTimestamp()
         });
         toast.success(`Purchase ${existingPoNumber || ''} updated successfully`);
@@ -161,6 +198,8 @@ export default function PurchaseOrderForm() {
           purchaseDate: new Date(data.purchaseDate),
           notes: data.notes || '',
           items: enrichedItems,
+          attachments,
+          attachmentUrls: attachments.map(a => a.url),
           createdBy: user.uid
         };
 
@@ -278,6 +317,70 @@ export default function PurchaseOrderForm() {
                 <FormField label="Notes / Remarks" error={methods.formState.errors.notes?.message}>
                   <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="Any instructions for the supplier..." rows={4}></textarea>
                 </FormField>
+              </FormSection>
+
+              <FormSection title="Bill & Document Attachments" description="Attach supplier bill, invoice, or receipt photos (Image, PDF, Document).">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept="image/*,.pdf,.doc,.docx" 
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                      id="form-doc-upload"
+                      disabled={isUploading}
+                    />
+                    <label 
+                      htmlFor="form-doc-upload" 
+                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer shadow-xs ${isUploading ? 'opacity-60 pointer-events-none' : ''}`}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" /> Processing Attachments...
+                        </>
+                      ) : (
+                        <>
+                          <Paperclip className="h-4 w-4 text-primary" /> Attach Bill / Document / Image
+                        </>
+                      )}
+                    </label>
+                    <span className="text-xs text-muted-foreground">Supports JPG, PNG, WebP, PDF, DOC (up to 10MB)</span>
+                  </div>
+
+                  {attachments.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      {attachments.map((att) => {
+                        const isImg = isImageFile(att.type, att.name);
+                        return (
+                          <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/60 hover:border-primary/40 transition-colors">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {isImg ? (
+                                <img src={att.url} alt={att.name} className="w-10 h-10 rounded object-cover border border-border flex-shrink-0" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-5 w-5" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate max-w-[180px]" title={att.name}>{att.name}</p>
+                                <p className="text-[11px] text-muted-foreground">{formatFileSize(att.size)}</p>
+                              </div>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => removeAttachment(att.id)}
+                              className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors cursor-pointer"
+                              title="Remove file"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </FormSection>
             </div>
 

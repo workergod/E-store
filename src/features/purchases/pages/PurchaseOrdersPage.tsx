@@ -78,7 +78,7 @@ export default function PurchaseOrdersPage() {
 
   const columns = [
     {
-      header: 'PO Number',
+      header: 'Purchase ID',
       accessorKey: 'poNumber',
       cell: ({ row }: any) => <span className="font-semibold text-primary font-mono">{row.original.poNumber}</span>
     },
@@ -153,7 +153,7 @@ export default function PurchaseOrdersPage() {
         columns={columns}
         isLoading={isLoading}
         searchKey="search"
-        searchPlaceholder="Search by Purchase No or Supplier..."
+        searchPlaceholder="Search by Purchase ID or Supplier..."
         emptyTitle="No purchases found"
         emptyDescription="Create your first purchase to restock inventory."
       />
