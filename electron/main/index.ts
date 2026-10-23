@@ -5,6 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
+    title: 'Cryodeal',
     width: 1024,
     height: 768,
     show: false,

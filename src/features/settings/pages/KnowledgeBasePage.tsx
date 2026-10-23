@@ -8,7 +8,7 @@ const ARTICLES = [
   {
     id: '1',
     category: 'Getting Started',
-    title: 'Introduction to E Store Pro',
+    title: 'Introduction to Cryodeal',
     description: 'Learn the basics of navigating the dashboard, setting up your profile, and understanding the core features of the platform.',
   },
   {
@@ -40,6 +40,12 @@ const ARTICLES = [
     category: 'Reporting',
     title: 'Understanding the Transaction Log',
     description: 'How to read, filter, and export the transaction log to keep a clean audit trail of all inventory movements.',
+  },
+  {
+    id: '7',
+    category: 'Shortcuts',
+    title: 'Keyboard Shortcuts & Fast Traversal',
+    description: 'Master top-row number keys (1–7), Alt traversal, and quick search to navigate without your mouse or NumLock.',
   }
 ];
 

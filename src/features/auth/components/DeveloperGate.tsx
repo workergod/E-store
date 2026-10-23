@@ -93,7 +93,7 @@ export function DeveloperGate({ children }: Props) {
         </form>
       </div>
       <div className="mt-8 flex items-center gap-2 text-zinc-600 text-xs font-mono">
-        <MonitorCheck className="h-4 w-4" /> E Store Pro Secure Kernel
+        <MonitorCheck className="h-4 w-4" /> Cryodeal Secure Kernel
       </div>
     </div>
   );

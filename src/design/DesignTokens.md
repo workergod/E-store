@@ -1,6 +1,6 @@
 # Design Tokens
 
-This file serves as the source of truth for E Store Pro's design tokens.
+This file serves as the source of truth for Cryodeal's design tokens.
 
 ## 1. Principles
 - **No Hardcoded Values**: Never use raw hex codes (e.g., `#0F7B46`) or raw pixel values (e.g., `17px`) in components.

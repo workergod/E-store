@@ -114,7 +114,7 @@ export default function ProductsPage() {
       </style></head><body>
       ${content}
       <p style="text-align:center;margin-top:20px;font-size:10px;color:#999;">
-        Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'E Store Pro'}
+        Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'Cryodeal'}
       </p>
       </body></html>
     `);

@@ -344,7 +344,7 @@ export default function TransactionLogPage() {
       </style></head><body>
       ${content}
       <p style="text-align:center;margin-top:20px;font-size:10px;color:#999;">
-        Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'E Store Pro'}
+        Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'Cryodeal'}
       </p>
       </body></html>
     `);
@@ -508,7 +508,7 @@ export default function TransactionLogPage() {
       <div ref={printRef} className="hidden">
         <h2 style={{ textAlign: 'center', margin: '0 0 4px' }}>Transaction Log Report</h2>
         <p style={{ textAlign: 'center', fontSize: '11px', color: '#666', marginBottom: '16px' }}>
-          {company?.companyName || 'E Store Pro'} • Filtered: {filter}
+          {company?.companyName || 'Cryodeal'} • Filtered: {filter}
         </p>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

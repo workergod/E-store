@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
-  ChevronLeft, ChevronRight, HelpCircle, MessageCircle,
-  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, Keyboard
+  HelpCircle, MessageCircle,
+  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, Keyboard,
+  PanelLeft
 } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -132,10 +133,12 @@ export function Sidebar({
       </div>
 
       <button 
+        type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[80px] flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card shadow-sm hover:bg-muted text-muted-foreground transition-colors z-30"
+        className="absolute -right-3.5 top-[76px] flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card shadow-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors z-30 cursor-pointer"
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        <PanelLeft className="h-4 w-4" />
       </button>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 custom-scrollbar flex flex-col gap-[var(--spacing-3xl)]">

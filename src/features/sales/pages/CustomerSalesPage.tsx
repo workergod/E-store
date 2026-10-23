@@ -156,7 +156,7 @@ export default function CustomerSalesPage() {
           {/* Receipt preview */}
           <AppCard className="p-6">
             <div ref={printRef}>
-              <h2>{company?.companyName || 'E Store Pro'}</h2>
+              <h2>{company?.companyName || 'Cryodeal'}</h2>
               <div className="center" style={{textAlign:'center',marginBottom:'8px'}}>
                 <div style={{fontSize:'11px'}}>Customer Receipt</div>
                 <div style={{fontSize:'11px'}}>Receipt No: {receipt.receiptNo}</div>

@@ -191,7 +191,7 @@ export default function DeveloperConsole() {
                 </div>
                 <div className="p-4 rounded-lg bg-black/40 border border-zinc-800">
                   <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Version</div>
-                  <div className="font-mono text-sm">E Store Pro v0.4.0 (Beta)</div>
+                  <div className="font-mono text-sm">Cryodeal v0.4.0 (Beta)</div>
                 </div>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function DeveloperConsole() {
             <div className="p-8">
               <h3 className="text-lg font-bold mb-6 text-emerald-500 font-mono">Legal & Compliance</h3>
               <div className="space-y-4 text-sm text-zinc-400 leading-relaxed">
-                <p>E Store Pro Software License.</p>
+                <p>Cryodeal Software License.</p>
                 <p>This system is intellectual property and cannot be distributed without explicit authorization from the primary developer.</p>
                 <p>All data processed within this platform is subject to the terms of service and strict privacy guidelines. Unauthorized access attempts are actively monitored and logged in the Developer Audit trail.</p>
               </div>

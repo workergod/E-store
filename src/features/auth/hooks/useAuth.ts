@@ -169,8 +169,8 @@ export function useAuth() {
                 const newCompanyId = `company_${firebaseUser.uid.slice(0, 8)}`;
                 const defaultCompany: Company = {
                   companyId: newCompanyId,
-                  companyName: 'E Store Pro',
-                  companyEmailDomain: firebaseUser.email?.split('@')[1] || 'estorepro.com',
+                  companyName: 'Cryodeal',
+                  companyEmailDomain: firebaseUser.email?.split('@')[1] || 'cryodeal.com',
                   licenseStatus: 'Active' as any,
                   subscriptionType: 'Enterprise',
                   allowNegativeStock: false,

@@ -105,7 +105,7 @@ export default function SettingsPage() {
             
             <FormRow>
               <FormField label="Support Email" error={methods.formState.errors.supportEmail?.message}>
-                <AppInput type="email" placeholder="support@estore.com" {...methods.register('supportEmail')} />
+                <AppInput type="email" placeholder="support@cryodeal.com" {...methods.register('supportEmail')} />
               </FormField>
               <FormField label="Support Phone" error={methods.formState.errors.supportPhone?.message}>
                 <AppInput placeholder="+1 234 567 890" {...methods.register('supportPhone')} />
