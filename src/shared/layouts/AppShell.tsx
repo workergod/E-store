@@ -23,6 +23,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { navItems, showShortcutsModal, openShortcutsModal, closeShortcutsModal } = useKeyboardShortcuts({ searchInputRef })
 
   const [time, setTime] = useState(new Date())
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false)
+      toast.success('Connection restored. Cryodeal is back online!')
+    }
+    const handleOffline = () => {
+      setIsOffline(true)
+      toast.error('You are currently offline. Changes will sync when reconnected.')
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Dev trigger state
   const [devClickCount, setDevClickCount] = useState(0)
@@ -83,6 +102,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {isOffline && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 px-4 py-1.5 text-xs font-medium flex items-center justify-center gap-2 shrink-0 z-30">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>You're currently offline. Cryodeal will automatically sync when connection returns.</span>
+          </div>
+        )}
         <header className="h-[72px] bg-background/80 backdrop-blur-md border-b border-border flex items-center px-8 justify-between sticky top-0 z-10 shrink-0 print:hidden">
           
           <div className="flex-1 flex items-center max-w-xl">
