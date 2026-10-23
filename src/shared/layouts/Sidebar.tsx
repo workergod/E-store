@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { 
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
@@ -46,14 +47,42 @@ const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: b
       to={item.path}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-btn)] text-[14px] font-medium transition-colors group",
+        "flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-btn)] text-[14px] font-medium transition-all duration-150 group relative select-none",
         isActive 
-          ? "bg-primary/10 text-primary font-semibold" 
-          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          ? "text-primary font-semibold" 
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
       )}
     >
-      <Icon className={cn("h-5 w-5 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {/* Animated active background that smoothly glides between items */}
+      {isActive && (
+        <motion.div
+          layoutId="sidebarActiveBackground"
+          className="absolute inset-0 rounded-[var(--radius-btn)] bg-primary/12 border border-primary/20 shadow-xs z-0"
+          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        />
+      )}
+
+      {/* Animated active vertical accent bar on the left edge */}
+      {isActive && (
+        <motion.div
+          layoutId="sidebarActiveIndicator"
+          className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary z-20 shadow-[0_0_8px_rgba(15,123,70,0.4)]"
+          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        />
+      )}
+
+      <div className={cn(
+        "flex items-center justify-center transition-colors relative z-10 shrink-0",
+        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+      )}>
+        <Icon className="h-5 w-5" />
+      </div>
+
+      {!collapsed && (
+        <span className="truncate relative z-10 tracking-tight">
+          {item.label}
+        </span>
+      )}
     </Link>
   )
 }

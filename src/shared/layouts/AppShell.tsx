@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
 import { signOut } from "../../firebase/auth"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
 import { productRepository } from '../../repositories/ProductRepository'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
@@ -18,12 +18,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hasNotifications = notifications.some(n => !n.isRead)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
 
+  const mainContentRef = useRef<HTMLElement | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const { navItems, showShortcutsModal, openShortcutsModal, closeShortcutsModal } = useKeyboardShortcuts({ searchInputRef })
 
   const [time, setTime] = useState(new Date())
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     const handleOnline = () => {
@@ -243,7 +251,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:h-auto">
+        <main ref={mainContentRef} className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:h-auto">
           {children}
         </main>
       </div>
