@@ -117,7 +117,7 @@ export default function TransactionLogPage() {
   // Edit Modal State
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [selectedNewProductId, setSelectedNewProductId] = useState<string>('');
-  const [newProductQty, setNewProductQty] = useState<number>(1);
+  const [newProductQty, setNewProductQty] = useState<string>('1');
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   const handleSort = (field: 'date' | 'type' | 'customerOrTech' | 'staffName') => {
@@ -302,7 +302,7 @@ export default function TransactionLogPage() {
       editReason: ''
     });
     setSelectedNewProductId('');
-    setNewProductQty(1);
+    setNewProductQty('1');
   };
 
   const handleSaveEdit = async () => {
@@ -1419,27 +1419,31 @@ export default function TransactionLogPage() {
                           </td>
                           <td className="px-3 py-2 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <input
-                                type="number"
-                                step="any"
-                                min="0.0001"
-                                value={item.qty}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  setEditForm(prev => {
-                                    if (!prev) return null;
-                                    const updated = [...prev.items];
-                                    updated[idx] = { ...updated[idx], qty: isNaN(val) ? 0 : val };
-                                    return { ...prev, items: updated };
-                                  });
-                                }}
-                                className="w-24 h-8 rounded border border-input bg-background px-2 text-right text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                              <span className="text-xs text-muted-foreground font-medium w-8 text-left">{item.unit || ''}</span>
+                              <div className="relative flex items-center">
+                                <input
+                                  type="number"
+                                  step="any"
+                                  min="0.0001"
+                                  value={item.qty === 0 ? '' : item.qty}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                    setEditForm(prev => {
+                                      if (!prev) return null;
+                                      const updated = [...prev.items];
+                                      updated[idx] = { ...updated[idx], qty: isNaN(val) ? 0 : val };
+                                      return { ...prev, items: updated };
+                                    });
+                                  }}
+                                  className="w-28 h-8 rounded border border-input bg-background pl-2 pr-10 text-right text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                                <span className="absolute right-2 text-xs font-semibold text-muted-foreground uppercase pointer-events-none">
+                                  {item.unit || ''}
+                                </span>
+                              </div>
                             </div>
                             {diff !== 0 && (
                               <span className={`text-[10px] font-semibold block text-right mt-0.5 ${diff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                                {diff > 0 ? `+${diff} (${editForm.type === 'ISSUE' ? 'deducts stock' : 'adds to stock'})` : `${diff} (${editForm.type === 'ISSUE' ? 'restores stock' : 'deducts stock'})`}
+                                {diff > 0 ? `+${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'deducts stock' : 'adds to stock'})` : `${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'restores stock' : 'deducts stock'})`}
                               </span>
                             )}
                           </td>
@@ -1469,68 +1473,130 @@ export default function TransactionLogPage() {
             </div>
 
             {/* Add another product row */}
-            <div className="p-3 bg-muted/20 border border-dashed border-border rounded-lg flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Add Another Product to Transaction</label>
-                <ProductSearchSelect
-                  products={products}
-                  value={selectedNewProductId}
-                  onChange={(id) => setSelectedNewProductId(id)}
-                  placeholder="Search product to add..."
-                />
-              </div>
-              <div className="w-full sm:w-24">
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Qty</label>
-                <input
-                  type="number"
-                  step="any"
-                  min="0.0001"
-                  value={newProductQty}
-                  onChange={(e) => setNewProductQty(parseFloat(e.target.value) || 1)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-2 text-center text-sm font-semibold"
-                />
-              </div>
-              <AppButton
-                type="button"
-                variant="outline"
-                className="h-10 shrink-0"
-                onClick={() => {
-                  if (!selectedNewProductId) {
-                    toast.error('Please select a product first');
-                    return;
-                  }
-                  const p = products.find(prod => prod.id === selectedNewProductId);
-                  if (!p) return;
-                  setEditForm(prev => {
-                    if (!prev) return null;
-                    const already = prev.items.findIndex(it => it.productId === p.id);
-                    if (already >= 0) {
-                      const copy = [...prev.items];
-                      copy[already].qty += newProductQty;
-                      return { ...prev, items: copy };
-                    }
-                    return {
-                      ...prev,
-                      items: [
-                        ...prev.items,
-                        {
-                          productId: p.id,
-                          name: p.name,
-                          sku: p.sku || '',
-                          unit: p.unitId || (p as any).unit || 'pcs',
-                          qty: newProductQty,
-                          originalQty: 0
+            {(() => {
+              const selectedNewProduct = products.find(p => p.id === selectedNewProductId);
+              const newProdUnit = selectedNewProduct ? (selectedNewProduct.unitId || (selectedNewProduct as any).unit || 'pcs') : '';
+              const newProdStock = selectedNewProduct ? Number(selectedNewProduct.currentStock) || 0 : null;
+
+              return (
+                <div className="p-4 bg-muted/20 border border-dashed border-border rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Plus className="h-3.5 w-3.5 text-primary" /> Add Another Product to Transaction
+                    </label>
+                    {selectedNewProduct && (
+                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                        (newProdStock ?? 0) > 0 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                          : 'bg-destructive/10 text-destructive border border-destructive/20'
+                      }`}>
+                        Current Stock: <b>{newProdStock}</b> {newProdUnit}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <div className="flex-1">
+                      <ProductSearchSelect
+                        products={products}
+                        value={selectedNewProductId}
+                        onChange={(id) => {
+                          setSelectedNewProductId(id);
+                          if (!newProductQty || newProductQty === '0') {
+                            setNewProductQty('1');
+                          }
+                        }}
+                        placeholder="Search product to add (e.g. 3core cable, copper pipe, plug)..."
+                      />
+                    </div>
+
+                    {/* Quantity Input with Dynamic Unit Badge */}
+                    <div className="w-full sm:w-40">
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="Qty"
+                          value={newProductQty}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setNewProductQty(val);
+                            }
+                          }}
+                          className="w-full h-10 rounded-md border border-input bg-background pl-3 pr-14 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                        />
+                        <span className="absolute right-2 px-1.5 py-0.5 bg-muted/80 text-muted-foreground text-xs font-bold rounded uppercase pointer-events-none">
+                          {newProdUnit || 'Unit'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <AppButton
+                      type="button"
+                      variant="default"
+                      className="h-10 px-4 shrink-0 font-semibold shadow-sm"
+                      disabled={!selectedNewProductId}
+                      onClick={() => {
+                        if (!selectedNewProductId) {
+                          toast.error('Please select a product first');
+                          return;
                         }
-                      ]
-                    };
-                  });
-                  setSelectedNewProductId('');
-                  setNewProductQty(1);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add Product
-              </AppButton>
-            </div>
+                        const qtyNum = parseFloat(newProductQty);
+                        if (isNaN(qtyNum) || qtyNum <= 0) {
+                          toast.error(`Please enter a valid quantity for ${newProdUnit || 'items'}`);
+                          return;
+                        }
+                        const p = products.find(prod => prod.id === selectedNewProductId);
+                        if (!p) return;
+                        const pUnit = p.unitId || (p as any).unit || 'pcs';
+
+                        setEditForm(prev => {
+                          if (!prev) return null;
+                          const alreadyIdx = prev.items.findIndex(it => it.productId === p.id);
+                          if (alreadyIdx >= 0) {
+                            const copy = [...prev.items];
+                            copy[alreadyIdx].qty = Math.round((copy[alreadyIdx].qty + qtyNum) * 10000) / 10000;
+                            return { ...prev, items: copy };
+                          }
+                          return {
+                            ...prev,
+                            items: [
+                              ...prev.items,
+                              {
+                                productId: p.id,
+                                name: p.name,
+                                sku: p.sku || '',
+                                unit: pUnit,
+                                qty: qtyNum,
+                                originalQty: 0
+                              }
+                            ]
+                          };
+                        });
+
+                        toast.success(`Added ${qtyNum} ${pUnit} of "${p.name}"`);
+                        setSelectedNewProductId('');
+                        setNewProductQty('1');
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Product
+                    </AppButton>
+                  </div>
+
+                  {/* Selected Product info footer */}
+                  {selectedNewProduct && (
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1.5 border-t border-border/40">
+                      <span>Unit of Measure: <b className="text-foreground uppercase">{newProdUnit}</b></span>
+                      <span>•</span>
+                      <span>SKU: <code className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded">{selectedNewProduct.sku || 'N/A'}</code></span>
+                      <span>•</span>
+                      <span>Available in Store: <b className="text-foreground">{newProdStock} {newProdUnit}</b></span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Notes & Reason for Edit */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
