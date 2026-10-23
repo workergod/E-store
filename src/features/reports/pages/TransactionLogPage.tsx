@@ -5,12 +5,14 @@ import { db } from '../../../firebase/firestore';
 import { useAuthStore } from '../../../store/authStore';
 import { Role } from '../../../constants/roles';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
+import { productRepository } from '../../../repositories/ProductRepository';
 import { stockLedgerRepository } from '../../../repositories/StockLedgerRepository';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
 import { AppCard } from '../../../shared/app/AppCard';
-import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { AppDialog } from '../../../shared/overlays/AppDialog';
+import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LogEntry {
@@ -19,7 +21,7 @@ interface LogEntry {
   date: any;
   staffName: string;
   customerOrTech: string;
-  items: { name: string; qty: number; unit?: string }[];
+  items: { name: string; qty: number; unit?: string; sku?: string }[];
   notes?: string;
   status?: string;
   siteName?: string;
@@ -56,16 +58,31 @@ export default function TransactionLogPage() {
     }
   };
 
+  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+
   const loadLogs = async () => {
     if (!companyId) { setIsLoading(false); return; }
     try {
       setIsLoading(true);
       const entries: LogEntry[] = [];
 
-      // Load employees for name lookup
-      const employees = await employeeRepository.getAll(companyId);
+      // Load employees and products for name and unit mapping
+      const [employees, products] = await Promise.all([
+        employeeRepository.getAll(companyId),
+        productRepository.getAll(companyId)
+      ]);
+
       const empMap: Record<string, string> = {};
       employees.forEach(e => { if (e.id) empMap[e.id] = `${e.firstName} ${e.lastName}`; });
+
+      const prodUnitMap: Record<string, string> = {};
+      const prodSkuMap: Record<string, string> = {};
+      products.forEach(p => {
+        if (p.id) {
+          prodUnitMap[p.id] = p.unitId || (p as any).unit || 'pcs';
+          prodSkuMap[p.id] = p.sku || '';
+        }
+      });
 
       // 1. Issues
       const issueSnap = await getDocs(query(
@@ -80,7 +97,12 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.issuedQty, unit: it.unit || '' })),
+          items: (d.items || []).map((it: any) => ({
+            name: it.productName,
+            qty: it.issuedQty,
+            unit: it.unit || prodUnitMap[it.productId] || '',
+            sku: it.sku || prodSkuMap[it.productId] || ''
+          })),
           notes: d.notes,
           status: d.status,
           siteName: d.siteName,
@@ -101,7 +123,12 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.returnedQty, unit: it.unit || '' })),
+          items: (d.items || []).map((it: any) => ({
+            name: it.productName,
+            qty: it.returnedQty,
+            unit: it.unit || prodUnitMap[it.productId] || '',
+            sku: it.sku || prodSkuMap[it.productId] || ''
+          })),
           notes: d.notes,
         });
       });
@@ -119,7 +146,12 @@ export default function TransactionLogPage() {
           date: d.createdAt,
           staffName: d.createdBy || 'Staff',
           customerOrTech: d.supplierName || d.supplierId || 'Supplier',
-          items: (d.items || []).map((it: any) => ({ name: it.productName, qty: it.quantity, unit: it.unit || '' })),
+          items: (d.items || []).map((it: any) => ({
+            name: it.productName,
+            qty: it.quantity,
+            unit: it.unit || prodUnitMap[it.productId] || '',
+            sku: it.sku || prodSkuMap[it.productId] || ''
+          })),
           status: d.status,
           notes: d.notes,
         });
@@ -320,6 +352,86 @@ export default function TransactionLogPage() {
     w.print();
   };
 
+  const handlePrintSingle = (log: LogEntry) => {
+    const w = window.open('', '_blank', 'width=800,height=700');
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>${log.type} Receipt - ${log.id}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 13px; padding: 30px; color: #111; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #059669; padding-bottom: 12px; margin-bottom: 20px; }
+        .title { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #059669; }
+        .grid { display: flex; justify-content: space-between; background: #f9fafb; padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #059669; color: white; padding: 10px; text-align: left; font-size: 12px; }
+        td { padding: 9px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+        .qty { text-align: right; font-weight: bold; font-size: 14px; color: #059669; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; }
+        .sig { width: 200px; border-top: 1px dashed #666; text-align: center; padding-top: 6px; font-size: 11px; font-weight: bold; }
+      </style>
+      </head><body>
+        <div class="header">
+          <div>
+            <div class="title">${log.type === 'ISSUE' ? 'Material Issue Receipt' : log.type === 'RETURN' ? 'Material Return Receipt' : 'Purchase Order Receipt'}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">OFFICIAL RECORD</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 10px; color: #666; font-weight: bold;">TRANSACTION ID</div>
+            <div style="font-family: monospace; font-weight: bold;">${log.id}</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <div style="font-size: 10px; color: #666; font-weight: bold; text-transform: uppercase;">${log.type === 'PURCHASE' ? 'Supplier' : 'Issued To'}</div>
+            <div style="font-size: 15px; font-weight: bold; margin-top: 2px;">${log.customerOrTech}</div>
+            ${log.additionalTechnicians && log.additionalTechnicians.length > 0 ? `<div style="font-size: 11px; margin-top: 2px;">+ ${log.additionalTechnicians.join(', ')}</div>` : ''}
+            ${log.siteName ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">Site: <b>${log.siteName}</b></div>` : ''}
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 10px; color: #666; font-weight: bold;">DATE & TIME</div>
+            <div style="font-weight: bold; margin-top: 2px;">${formatDate(log.date)}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">Staff: <b>${log.staffName}</b></div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">#</th>
+              <th>Product Description</th>
+              <th>SKU</th>
+              <th style="text-align: right; width: 120px;">Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${log.items.map((it, idx) => `
+              <tr>
+                <td style="text-align: center; color: #666;">${idx + 1}</td>
+                <td style="font-weight: 500;">${it.name}</td>
+                <td style="font-family: monospace; font-size: 11px; color: #666;">${it.sku || '-'}</td>
+                <td class="qty">${it.qty} <span style="font-size: 11px; font-weight: normal; color: #666;">${it.unit || ''}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        ${log.notes ? `
+          <div style="margin-top: 20px; padding: 10px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 12px;">
+            <b>Notes:</b> ${log.notes}
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          <div class="sig">Given By (${log.staffName})</div>
+          <div class="sig">Received By (Signature)</div>
+        </div>
+      </body></html>
+    `);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 250);
+  };
+
   const filtered = logs.filter(l => {
     if (filter !== 'ALL' && l.type !== filter) return false;
     if (search) {
@@ -493,7 +605,7 @@ export default function TransactionLogPage() {
                       )}
                     </div>
                   </th>
-                  {canDelete && <th className="px-4 py-3 text-right">Actions</th>}
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -530,18 +642,41 @@ export default function TransactionLogPage() {
                             </div>
                           ))}
                           {log.items.length > 3 && (
-                            <div className="text-xs text-muted-foreground">+{log.items.length - 3} more</div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLog(log)}
+                              className="text-xs text-primary font-semibold hover:underline mt-0.5 cursor-pointer block text-left"
+                            >
+                              +{log.items.length - 3} more (view all)
+                            </button>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{log.staffName}</td>
-                      {canDelete && (
-                        <td className="px-4 py-3 text-right">
-                          <AppButton variant="ghost" size="icon" onClick={() => handleDelete(log.id, log.type)} className="text-destructive hover:bg-destructive/10">
-                            <Trash2 className="h-4 w-4" />
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <AppButton 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setSelectedLog(log)} 
+                            className="text-primary hover:bg-primary/10 h-8 w-8"
+                            title="View Full Items & Details"
+                          >
+                            <Eye className="h-4 w-4" />
                           </AppButton>
-                        </td>
-                      )}
+                          {canDelete && (
+                            <AppButton 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDelete(log.id, log.type)} 
+                              className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                              title="Delete Transaction"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </AppButton>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -550,6 +685,105 @@ export default function TransactionLogPage() {
           </div>
         )}
       </AppCard>
+
+      {/* Transaction Details & Items Modal */}
+      {selectedLog && (
+        <AppDialog
+          isOpen={!!selectedLog}
+          onOpenChange={(open) => !open && setSelectedLog(null)}
+          title={
+            selectedLog.type === 'ISSUE' 
+              ? 'Material Issue Details' 
+              : selectedLog.type === 'RETURN' 
+              ? 'Material Return Details' 
+              : 'Purchase Order Details'
+          }
+          description={`Transaction ID: ${selectedLog.id}`}
+          className="max-w-2xl max-h-[90vh] flex flex-col"
+          footer={
+            <div className="flex justify-between w-full">
+              <AppButton variant="outline" size="sm" onClick={() => handlePrintSingle(selectedLog)}>
+                <Printer className="h-4 w-4 mr-2" /> Print Receipt
+              </AppButton>
+              <AppButton variant="default" size="sm" onClick={() => setSelectedLog(null)}>
+                Close
+              </AppButton>
+            </div>
+          }
+        >
+          <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
+            {/* Metadata Card */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/30 border border-border text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold uppercase">
+                  {selectedLog.type === 'PURCHASE' ? 'Supplier' : 'Technician'}
+                </p>
+                <p className="font-bold text-foreground text-base mt-0.5">{selectedLog.customerOrTech}</p>
+                {selectedLog.additionalTechnicians && selectedLog.additionalTechnicians.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    + {selectedLog.additionalTechnicians.join(', ')}
+                  </p>
+                )}
+                {selectedLog.siteName && (
+                  <p className="text-xs font-medium text-muted-foreground mt-1">
+                    Site: <span className="text-foreground">{selectedLog.siteName}</span>
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground font-semibold uppercase">Date & Time</p>
+                <p className="font-medium text-foreground mt-0.5">{formatDate(selectedLog.date)}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Staff: <span className="font-medium text-foreground">{selectedLog.staffName}</span>
+                </p>
+              </div>
+              {selectedLog.notes && (
+                <div className="col-span-2 p-2.5 bg-amber-500/10 border-l-2 border-amber-500 rounded-r text-xs">
+                  <span className="font-bold text-amber-700 dark:text-amber-400">Notes:</span> {selectedLog.notes}
+                </div>
+              )}
+            </div>
+
+            {/* Complete Items Table */}
+            <div>
+              <div className="flex justify-between items-center mb-2 px-1">
+                <h4 className="font-semibold text-sm">
+                  Issued Materials List ({selectedLog.items.length} {selectedLog.items.length === 1 ? 'item' : 'items'})
+                </h4>
+              </div>
+
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
+                    <tr>
+                      <th className="px-4 py-2.5 w-12 text-center">#</th>
+                      <th className="px-4 py-2.5">Product Name</th>
+                      <th className="px-4 py-2.5 text-right w-36">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {selectedLog.items.map((it, idx) => (
+                      <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-2.5 text-center text-xs text-muted-foreground font-mono">
+                          {idx + 1}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="font-medium text-foreground">{it.name}</div>
+                          {it.sku && <div className="text-xs text-muted-foreground font-mono">{it.sku}</div>}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="font-bold text-base text-primary">{it.qty}</span>{' '}
+                          <span className="text-xs font-semibold text-muted-foreground">{it.unit || ''}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </AppDialog>
+      )}
     </PageContainer>
   );
 }
