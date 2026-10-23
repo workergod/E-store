@@ -284,13 +284,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border mb-1 truncate">
                     {user?.email || 'admin@example.com'}
                   </div>
-                  <button 
-                    onClick={() => setShowWelcome(true)} 
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-[var(--radius-btn)] transition-colors mb-1 cursor-pointer"
-                  >
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span>Welcome Screen</span>
-                  </button>
                   <button onClick={async () => { await signOut(); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-[var(--radius-btn)] transition-colors cursor-pointer">
                     <LogOut className="h-4 w-4" />
                     Sign out

@@ -154,14 +154,25 @@ export function WelcomeScreen({ isOpen, onClose }: WelcomeScreenProps) {
 
             {/* Header / Logo section */}
             <div className="text-center flex flex-col items-center">
-              {/* Logo with pulsing halo */}
-              <div className="relative mb-4">
+              {/* Logo with circular pulsing halo */}
+              <div className="relative mb-5 flex items-center justify-center">
+                {/* Circular ambient glow */}
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.35, 0.55, 0.35]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -inset-3 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-500 to-amber-400 blur-md opacity-40 pointer-events-none"
+                />
+                {/* Circular rotating accent ring */}
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute -inset-2.5 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-400 opacity-40 blur-md"
+                  transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                  className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-400 opacity-60 pointer-events-none"
                 />
-                <div className="relative h-20 w-20 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-lg border border-border overflow-hidden">
+                {/* Clean round circular white logo container */}
+                <div className="relative h-20 w-20 rounded-full bg-white p-3 flex items-center justify-center shadow-xl border border-border overflow-hidden z-10">
                   <img src="/logo.jpg" alt="Cryodeal Logo" className="w-full h-full object-contain" />
                 </div>
               </div>
