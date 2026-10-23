@@ -50,7 +50,7 @@ export default function PurchaseOrdersPage() {
       });
       setSuppliers(supMap);
     } catch (error) {
-      toast.error('Failed to load purchase orders');
+      toast.error('Failed to load purchases');
     } finally {
       setIsLoading(false);
     }
@@ -69,10 +69,10 @@ export default function PurchaseOrdersPage() {
 
     try {
       await purchaseOrderRepository.delete(poToDelete.id, companyId, user.uid);
-      toast.success(`Deleted Purchase Order ${poToDelete.poNumber}`);
+      toast.success(`Deleted Purchase ${poToDelete.poNumber}`);
       loadData();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete purchase order');
+      toast.error(error.message || 'Failed to delete purchase');
     }
   };
 
@@ -112,11 +112,11 @@ export default function PurchaseOrdersPage() {
       cell: ({ row }: any) => (
         <div className="flex justify-end items-center gap-1.5">
           {row.original.status === 'Draft' && (
-            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)} title="Edit PO">
+            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)} title="Edit Purchase">
               <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </AppButton>
           )}
-          <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/${row.original.id}`)} title="View PO Details">
+          <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/${row.original.id}`)} title="View Details">
             <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
           </AppButton>
           {canDelete && (
@@ -124,7 +124,7 @@ export default function PurchaseOrdersPage() {
               variant="ghost" 
               size="icon" 
               onClick={() => handleDeletePO(row.original)} 
-              title="Delete PO"
+              title="Delete Purchase"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -138,12 +138,12 @@ export default function PurchaseOrdersPage() {
   return (
     <PageContainer>
       <PageHeader 
-        title="Purchase Orders"
-        description="Manage vendor orders and receive inventory."
+        title="Purchase"
+        description="Manage vendor purchases and receive inventory."
         actions={
           <AppButton onClick={() => navigate('/purchases/new')}>
             <Plus className="h-4 w-4 mr-2" />
-            Create PO
+            Create
           </AppButton>
         }
       />
@@ -153,9 +153,9 @@ export default function PurchaseOrdersPage() {
         columns={columns}
         isLoading={isLoading}
         searchKey="search"
-        searchPlaceholder="Search by PO Number or Supplier..."
-        emptyTitle="No purchase orders found"
-        emptyDescription="Create your first purchase order to restock inventory."
+        searchPlaceholder="Search by Purchase No or Supplier..."
+        emptyTitle="No purchases found"
+        emptyDescription="Create your first purchase to restock inventory."
       />
     </PageContainer>
   );

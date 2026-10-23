@@ -151,7 +151,7 @@ export default function PurchaseOrderForm() {
           items: enrichedItems,
           updatedAt: serverTimestamp()
         });
-        toast.success(`Purchase Order ${existingPoNumber || ''} updated successfully`);
+        toast.success(`Purchase ${existingPoNumber || ''} updated successfully`);
       } else {
         const payload = {
           companyId,
@@ -165,11 +165,11 @@ export default function PurchaseOrderForm() {
         };
 
         await purchaseOrderRepository.create(payload, user.uid);
-        toast.success("Purchase Order created successfully");
+        toast.success("Purchase created successfully");
       }
       navigate('/purchases');
     } catch (error: any) {
-      toast.error(error.message || "Failed to save PO");
+      toast.error(error.message || "Failed to save purchase");
     } finally {
       setIsSaving(false);
     }
@@ -179,13 +179,13 @@ export default function PurchaseOrderForm() {
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
         <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')} className="-ml-4 text-muted-foreground">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to POs
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchase
         </AppButton>
       </div>
       
       <PageHeader 
-        title={isEditing ? `Edit Purchase Order ${existingPoNumber}` : "Create Purchase Order"} 
-        description={isEditing ? "Update details or line items for this draft order." : "Draft a new PO to send to your supplier."} 
+        title={isEditing ? `Edit Purchase ${existingPoNumber}` : "Create Purchase"} 
+        description={isEditing ? "Update details or line items for this draft purchase." : "Draft a new purchase to send to your supplier."} 
       />
 
       <FormProvider {...methods}>
@@ -310,10 +310,10 @@ export default function PurchaseOrderForm() {
                    <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                 </div>
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
-                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Draft PO')}
+                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Draft')}
                 </AppButton>
                 <AppButton type="button" variant="ghost" onClick={() => navigate('/purchases')} disabled={isSaving} className="w-full text-muted-foreground">
-                  Cancel Order
+                  Cancel
                 </AppButton>
               </div>
             </div>

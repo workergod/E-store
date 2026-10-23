@@ -81,17 +81,17 @@ export default function PurchaseOrderDetails() {
   const handleDeletePO = async () => {
     if (!companyId || !user || !po?.id) return;
     const confirmed = window.confirm(
-      `Are you sure you want to delete Purchase Order "${po.poNumber}"?\n\nIf any goods were already received, stock will be automatically reverted.`
+      `Are you sure you want to delete Purchase "${po.poNumber}"?\n\nIf any goods were already received, stock will be automatically reverted.`
     );
     if (!confirmed) return;
 
     try {
       setIsDeleting(true);
       await purchaseOrderRepository.delete(po.id, companyId, user.uid);
-      toast.success(`Purchase Order ${po.poNumber} deleted successfully`);
+      toast.success(`Purchase ${po.poNumber} deleted successfully`);
       navigate('/purchases');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete Purchase Order');
+      toast.error(error.message || 'Failed to delete Purchase');
     } finally {
       setIsDeleting(false);
     }
@@ -101,10 +101,10 @@ export default function PurchaseOrderDetails() {
     if (!companyId || !user || !po?.id) return;
     try {
       await purchaseOrderRepository.updateStatus(po.id, companyId, 'Approved', user.uid);
-      toast.success("PO Approved");
+      toast.success("Purchase Approved");
       setPo(prev => prev ? { ...prev, status: 'Approved' } : null);
     } catch (error) {
-      toast.error("Failed to approve PO");
+      toast.error("Failed to approve purchase");
     }
   };
 
@@ -142,7 +142,7 @@ export default function PurchaseOrderDetails() {
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
         <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')} className="-ml-4 text-muted-foreground">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to POs
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchase
         </AppButton>
       </div>
 
@@ -154,10 +154,10 @@ export default function PurchaseOrderDetails() {
             {po.status === 'Draft' && (
               <>
                 <AppButton onClick={() => navigate(`/purchases/edit/${po.id}`)} variant="outline">
-                  <Edit className="h-4 w-4 mr-2" /> Edit PO
+                  <Edit className="h-4 w-4 mr-2" /> Edit Purchase
                 </AppButton>
                 <AppButton onClick={handleApprove} variant="default">
-                  <CheckCircle className="h-4 w-4 mr-2" /> Approve PO
+                  <CheckCircle className="h-4 w-4 mr-2" /> Approve Purchase
                 </AppButton>
               </>
             )}
@@ -174,10 +174,10 @@ export default function PurchaseOrderDetails() {
                 variant="destructive" 
                 onClick={handleDeletePO} 
                 disabled={isDeleting}
-                title="Delete this purchase order"
+                title="Delete this purchase"
                 className="shadow-sm"
               >
-                <Trash2 className="h-4 w-4 mr-1.5" /> {isDeleting ? 'Deleting...' : 'Delete PO'}
+                <Trash2 className="h-4 w-4 mr-1.5" /> {isDeleting ? 'Deleting...' : 'Delete Purchase'}
               </AppButton>
             )}
           </div>
