@@ -25,6 +25,29 @@ export function isPdfFile(type: string = '', name: string = ''): boolean {
   );
 }
 
+export const MAX_DOCUMENT_SIZE = 2 * 1024 * 1024; // 2 MB
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+export function validateAttachmentFile(file: File): { valid: boolean; error?: string } {
+  const isImg = isImageFile(file.type, file.name);
+  if (isImg) {
+    if (file.size > MAX_IMAGE_SIZE) {
+      return {
+        valid: false,
+        error: `Photo "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed photo size is 10 MB.`
+      };
+    }
+  } else {
+    if (file.size > MAX_DOCUMENT_SIZE) {
+      return {
+        valid: false,
+        error: `Document "${file.name}" is ${formatFileSize(file.size)}. Maximum allowed limit for PDF / Bill is 2 MB.`
+      };
+    }
+  }
+  return { valid: true };
+}
+
 /**
  * Downscales and compresses image files using HTML5 Canvas to keep file sizes
  * typically below 300KB while retaining high visual clarity for text and numbers.

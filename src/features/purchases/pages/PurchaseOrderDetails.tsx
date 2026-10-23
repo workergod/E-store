@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle, PackageOpen, Printer, Trash2, Edit, 
-  Paperclip, Upload, Eye, Download, FileText, Image as ImageIcon, Loader2 
+  Paperclip, Upload, Eye, Download, FileText, Image as ImageIcon, Loader2, Info 
 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
@@ -25,7 +25,8 @@ import {
   formatFileSize, 
   isImageFile, 
   isPdfFile, 
-  downloadAttachment 
+  downloadAttachment,
+  validateAttachmentFile 
 } from '../../../shared/utils/attachmentUtils';
 
 export default function PurchaseOrderDetails() {
@@ -165,8 +166,9 @@ export default function PurchaseOrderDetails() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`File "${file.name}" is larger than 10MB.`);
+        const validation = validateAttachmentFile(file);
+        if (!validation.valid) {
+          toast.error(validation.error);
           continue;
         }
         const att = await processAttachmentFile(file, companyId);
@@ -356,6 +358,17 @@ export default function PurchaseOrderDetails() {
                   </>
                 )}
               </label>
+            </div>
+          </div>
+
+          {/* Limitations Helper Box */}
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 mb-4">
+            <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+            <div className="space-y-0.5">
+              <span className="font-semibold text-blue-950 dark:text-blue-100">Attachment Limitations: </span>
+              <span className="text-muted-foreground text-[11px]">
+                Maximum <strong>2 MB</strong> per PDF / document bill. Camera photos are accepted up to <strong>10 MB</strong> and auto-compressed to ~200 KB. Formats: <span className="font-mono">PDF, JPG, PNG, WebP, DOC, DOCX</span>.
+              </span>
             </div>
           </div>
 

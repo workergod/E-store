@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, ArrowLeft, Paperclip, FileText, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Paperclip, FileText, Loader2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
@@ -15,7 +15,7 @@ import { productRepository } from '../../../repositories/ProductRepository';
 import type { Supplier } from '../../../shared/types/Supplier';
 import type { Product } from '../../../shared/types/Product';
 import type { PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
-import { processAttachmentFile, formatFileSize, isImageFile } from '../../../shared/utils/attachmentUtils';
+import { processAttachmentFile, formatFileSize, isImageFile, validateAttachmentFile } from '../../../shared/utils/attachmentUtils';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -133,15 +133,18 @@ export default function PurchaseOrderForm() {
       const newAtts: PurchaseAttachment[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`File "${file.name}" is larger than 10MB.`);
+        const validation = validateAttachmentFile(file);
+        if (!validation.valid) {
+          toast.error(validation.error);
           continue;
         }
         const att = await processAttachmentFile(file, companyId);
         newAtts.push(att);
       }
-      setAttachments(prev => [...prev, ...newAtts]);
-      toast.success(`${newAtts.length} document(s) attached!`);
+      if (newAtts.length > 0) {
+        setAttachments(prev => [...prev, ...newAtts]);
+        toast.success(`${newAtts.length} document(s) attached!`);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to attach file');
     } finally {
@@ -321,7 +324,22 @@ export default function PurchaseOrderForm() {
 
               <FormSection title="Bill & Document Attachments" description="Attach supplier bill, invoice, or receipt photos (Image, PDF, Document).">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
+                  {/* Limitations Helper Box */}
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div className="space-y-1">
+                      <p className="font-semibold text-blue-950 dark:text-blue-100">
+                        Attachment Limitations:
+                      </p>
+                      <ul className="list-disc list-inside space-y-0.5 text-muted-foreground text-[11px]">
+                        <li><strong className="text-foreground font-semibold">PDF & Documents</strong>: Maximum <strong>2 MB</strong> per file.</li>
+                        <li><strong className="text-foreground font-semibold">Bill Photos & Images</strong>: Up to <strong>10 MB</strong> accepted (automatically compressed down to ~200 KB).</li>
+                        <li><strong className="text-foreground font-semibold">Supported formats</strong>: JPG, PNG, WebP, PDF, DOC, DOCX.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
                     <input 
                       type="file" 
                       multiple 
@@ -333,19 +351,21 @@ export default function PurchaseOrderForm() {
                     />
                     <label 
                       htmlFor="form-doc-upload" 
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer shadow-xs ${isUploading ? 'opacity-60 pointer-events-none' : ''}`}
+                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs ${isUploading ? 'opacity-60 pointer-events-none' : ''}`}
                     >
                       {isUploading ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" /> Processing Attachments...
+                          <Loader2 className="h-4 w-4 animate-spin" /> Processing Attachments...
                         </>
                       ) : (
                         <>
-                          <Paperclip className="h-4 w-4 text-primary" /> Attach Bill / Document / Image
+                          <Paperclip className="h-4 w-4" /> Attach Bill / Document / Image
                         </>
                       )}
                     </label>
-                    <span className="text-xs text-muted-foreground">Supports JPG, PNG, WebP, PDF, DOC (up to 10MB)</span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Max 2 MB per document
+                    </span>
                   </div>
 
                   {attachments.length > 0 && (
