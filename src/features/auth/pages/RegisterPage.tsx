@@ -14,6 +14,65 @@ import { app } from '../../../firebase/config';
 import { UsernameIndexRepository } from '../../../repositories/UsernameIndexRepository';
 import { normalizeUsername, generateAuthEmail, formatUsername, isValidUsername, generateUsernameSuggestions } from '../../../utils/username';
 
+function getFriendlyRegisterErrorMessage(err: any, username: string): { message: string; suggestions: string[] } {
+  const code = (err?.code || '').toLowerCase();
+  const rawMessage = (err?.message || '').toLowerCase();
+  const normalized = normalizeUsername(username);
+
+  if (
+    code.includes('email-already-in-use') ||
+    code.includes('credential-already-in-use') ||
+    rawMessage.includes('email-already-in-use') ||
+    rawMessage.includes('email already in use')
+  ) {
+    return {
+      message: `The username or email "@${normalized}" is already registered. Please choose another username or sign in with your existing account.`,
+      suggestions: generateUsernameSuggestions(normalized)
+    };
+  }
+
+  if (code.includes('weak-password') || rawMessage.includes('weak-password') || rawMessage.includes('at least 6 characters')) {
+    return {
+      message: 'The password is too weak. Please use at least 6 characters with letters and numbers.',
+      suggestions: []
+    };
+  }
+
+  if (code.includes('invalid-email') || rawMessage.includes('invalid-email')) {
+    return {
+      message: 'Invalid username or email format. Please check your username and try again.',
+      suggestions: []
+    };
+  }
+
+  if (code.includes('too-many-requests') || rawMessage.includes('too-many-requests')) {
+    return {
+      message: 'Too many registration requests. Please wait a moment and try again.',
+      suggestions: []
+    };
+  }
+
+  if (code.includes('network-request-failed') || rawMessage.includes('network')) {
+    return {
+      message: 'Network connection failed. Please check your internet connection.',
+      suggestions: []
+    };
+  }
+
+  let cleanMsg = err?.message || 'Failed to register account.';
+  if (cleanMsg.startsWith('Firebase:') || cleanMsg.includes('(auth/')) {
+    cleanMsg = cleanMsg.replace(/^Firebase:\s*/i, '').replace(/\(auth\/[a-z0-9-]+\)\.?/gi, '').trim();
+    if (!cleanMsg || cleanMsg === 'Error .') {
+      cleanMsg = 'Failed to register account. Please verify your details and try again.';
+    }
+  }
+
+  return {
+    message: cleanMsg,
+    suggestions: []
+  };
+}
+
 export default function RegisterPage() {
   const { isAuthenticated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +121,7 @@ export default function RegisterPage() {
       }
 
       if (!isAvailable) {
-         setError(`@${normalized} is already in use. Please choose another username.`);
+         setError(`The username "@${normalized}" is already registered. Please choose another username or sign in with your existing account.`);
          setSuggestions(generateUsernameSuggestions(normalized));
          setIsLoading(false);
          return;
@@ -121,8 +180,10 @@ export default function RegisterPage() {
       setIsSuccess(true);
       
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to register account.');
+      console.error("Registration error:", err);
+      const friendly = getFriendlyRegisterErrorMessage(err, username);
+      setError(friendly.message);
+      setSuggestions(friendly.suggestions);
     } finally {
       setIsLoading(false);
     }
@@ -174,12 +235,26 @@ export default function RegisterPage() {
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               {error && (
-                <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900">
-                  <div className="font-bold mb-1">Registration Error</div>
-                  {error}
+                <div className="p-3.5 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-900/60 shadow-xs animate-in fade-in">
+                  <div className="font-bold flex items-center gap-1.5 mb-1 text-red-700 dark:text-red-300">
+                    <span>⚠️</span>
+                    <span>Registration Notice</span>
+                  </div>
+                  <div className="leading-relaxed">{error}</div>
+
+                  {error.includes('already registered') && (
+                    <div className="mt-2 text-xs">
+                      <Link to="/login" className="font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                        Already have an account? Sign In here →
+                      </Link>
+                    </div>
+                  )}
+
                   {suggestions.length > 0 && (
-                    <div className="mt-3">
-                      <p className="font-medium text-red-600 dark:text-red-400 mb-2">Suggestions:</p>
+                    <div className="mt-3 pt-2.5 border-t border-red-200/60 dark:border-red-800/60">
+                      <p className="font-semibold text-xs text-red-700 dark:text-red-300 mb-2">
+                        Available Username Suggestions (click to select):
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {suggestions.map((suggestion) => (
                           <button
@@ -190,9 +265,10 @@ export default function RegisterPage() {
                               setError(null);
                               setSuggestions([]);
                             }}
-                            className="px-2 py-1 text-xs bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                            className="px-2.5 py-1 text-xs font-mono font-bold bg-white dark:bg-zinc-900 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-md hover:bg-primary hover:text-white hover:border-primary transition-all cursor-pointer shadow-xs"
+                            title={`Click to use @${suggestion}`}
                           >
-                            {suggestion}
+                            @{suggestion}
                           </button>
                         ))}
                       </div>
