@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { Bell, Search, Sun, Moon, LogOut, MessageSquare } from 'lucide-react'
+import { Bell, Search, Sun, Moon, LogOut, MessageSquare, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from "../../store/authStore"
 import { signOut } from "../../firebase/auth"
 import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
+import { productRepository } from '../../repositories/ProductRepository'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuthStore()
-  const { notifications, markAllRead, markAsRead } = useNotificationStore()
+  const { user, company, logout } = useAuthStore()
+  const { notifications, markAllRead, markAsRead, clearAll, removeNotification, syncLowStockAlerts } = useNotificationStore()
   const [collapsed, setCollapsed] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const hasNotifications = notifications.some(n => !n.isRead)
@@ -26,6 +27,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const timer = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
+
+  // Sync real product stock alerts for current company
+  useEffect(() => {
+    if (!company?.companyId) return;
+    productRepository.getAll(company.companyId).then(products => {
+      syncLowStockAlerts(products);
+    }).catch(console.error);
+  }, [company?.companyId, syncLowStockAlerts]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -111,27 +120,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="absolute right-[-10px] top-full mt-2 w-80 rounded-[var(--radius)] bg-popover p-0 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right flex flex-col overflow-hidden z-50">
                   <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
                     <span className="font-semibold text-sm">Notifications</span>
-                    {hasNotifications && (
-                      <button onClick={() => { markAllRead(); document.activeElement?.blur(); }} className="text-xs text-primary cursor-pointer hover:underline">Mark all read</button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {hasNotifications && (
+                        <button onClick={() => { markAllRead(); }} className="text-xs text-primary cursor-pointer hover:underline">Mark read</button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button onClick={() => { clearAll(); }} className="text-xs text-muted-foreground hover:text-destructive hover:underline">Clear all</button>
+                      )}
+                    </div>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
-                    {hasNotifications ? (
+                    {notifications.length > 0 ? (
                       notifications.map(notif => (
-                        <div key={notif.id} onClick={() => markAsRead(notif.id)} className={`p-3 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer ${notif.isRead ? 'opacity-60' : ''}`}>
-                           <div className="flex gap-3">
-                             <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${notif.isRead ? 'bg-transparent' : 'bg-primary'}`}></div>
-                             <div>
-                               <p className="text-sm font-medium">{notif.title}</p>
-                               <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
-                               <p className="text-[10px] text-muted-foreground mt-1">{notif.time}</p>
-                             </div>
-                           </div>
+                        <div key={notif.id} className={`p-3 border-b border-border hover:bg-muted/50 transition-colors group/item flex items-start justify-between gap-2 ${notif.isRead ? 'opacity-60' : ''}`}>
+                          <div onClick={() => markAsRead(notif.id)} className="flex gap-3 flex-1 cursor-pointer">
+                            <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${notif.isRead ? 'bg-transparent' : notif.type === 'WARNING' ? 'bg-amber-500' : 'bg-primary'}`}></div>
+                            <div>
+                              <p className="text-sm font-medium">{notif.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">{notif.time}</p>
+                            </div>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={(e) => { e.stopPropagation(); removeNotification(notif.id); }}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-muted opacity-0 group-hover/item:opacity-100 transition-opacity"
+                            title="Dismiss notification"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
                       ))
                     ) : (
                       <div className="p-6 text-center text-muted-foreground text-sm">
-                        You're all caught up!
+                        No active alerts. You're all caught up!
                       </div>
                     )}
                   </div>

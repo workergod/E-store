@@ -98,7 +98,8 @@ export default function ReturnMaterialsPage() {
   useEffect(() => {
     const issue = issues.find(i => i.id === selectedIssueId);
     if (issue) {
-      replace(issue.items.map(item => ({
+      const sortedItems = [...issue.items].sort((a, b) => (a.productName || '').localeCompare(b.productName || ''));
+      replace(sortedItems.map(item => ({
         productId: item.productId,
         returnQty: 0
       })));

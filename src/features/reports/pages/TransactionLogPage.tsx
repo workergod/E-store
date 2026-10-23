@@ -10,7 +10,7 @@ import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
 import { AppCard } from '../../../shared/app/AppCard';
-import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag, Trash2 } from 'lucide-react';
+import { Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, ShoppingBag, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LogEntry {
@@ -44,6 +44,17 @@ export default function TransactionLogPage() {
     (location.state as any)?.filter || 'ALL'
   );
   const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState<'date' | 'type' | 'customerOrTech' | 'staffName'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: 'date' | 'type' | 'customerOrTech' | 'staffName') => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   const loadLogs = async () => {
     if (!companyId) { setIsLoading(false); return; }
@@ -321,6 +332,20 @@ export default function TransactionLogPage() {
         || l.items.some(it => it.name.toLowerCase().includes(s));
     }
     return true;
+  }).sort((a, b) => {
+    let cmp = 0;
+    if (sortField === 'date') {
+      const timeA = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date || 0).getTime();
+      const timeB = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date || 0).getTime();
+      cmp = timeA - timeB;
+    } else if (sortField === 'type') {
+      cmp = a.type.localeCompare(b.type);
+    } else if (sortField === 'customerOrTech') {
+      cmp = (a.customerOrTech || '').localeCompare(b.customerOrTech || '');
+    } else if (sortField === 'staffName') {
+      cmp = (a.staffName || '').localeCompare(b.staffName || '');
+    }
+    return sortOrder === 'asc' ? cmp : -cmp;
   });
 
   return (
@@ -415,11 +440,59 @@ export default function TransactionLogPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-4 py-3 text-left">Type</th>
-                  <th className="px-4 py-3 text-left">Date & Time</th>
-                  <th className="px-4 py-3 text-left">Technician</th>
+                  <th 
+                    onClick={() => handleSort('type')}
+                    className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Type</span>
+                      {sortField === 'type' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('date')}
+                    className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Date & Time</span>
+                      {sortField === 'date' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('customerOrTech')}
+                    className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Technician</span>
+                      {sortField === 'customerOrTech' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-left">Items</th>
-                  <th className="px-4 py-3 text-left">Given By / Staff</th>
+                  <th 
+                    onClick={() => handleSort('staffName')}
+                    className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Given By / Staff</span>
+                      {sortField === 'staffName' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                    </div>
+                  </th>
                   {canDelete && <th className="px-4 py-3 text-right">Actions</th>}
                 </tr>
               </thead>

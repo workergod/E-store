@@ -63,7 +63,7 @@ export default function SupervisorCorner() {
     // 1. Fetch Products
     try {
       const allProducts = await productRepository.getAll(companyId);
-      setDeletedProducts(allProducts.filter(p => p.status === 'DELETED'));
+      setDeletedProducts(allProducts.filter(p => p.status === 'DELETED').sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       hasAnySuccess = true;
     } catch (e) {
       console.warn('Failed to load products in supervisor corner:', e);
@@ -72,7 +72,7 @@ export default function SupervisorCorner() {
     // 2. Fetch Employees
     try {
       const allEmployees = await employeeRepository.getAll(companyId);
-      setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED'));
+      setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED').sort((a, b) => (`${a.firstName} ${a.lastName}`).localeCompare(`${b.firstName} ${b.lastName}`)));
       hasAnySuccess = true;
     } catch (e) {
       console.warn('Failed to load employees in supervisor corner:', e);
@@ -82,8 +82,8 @@ export default function SupervisorCorner() {
     if (isExecutive) {
       try {
         const allUsers = await userRepository.getUsersByCompany(companyId);
-        setAllUsersList(allUsers);
-        setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL));
+        setAllUsersList([...allUsers].sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
+        setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL).sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || '')));
         hasAnySuccess = true;
       } catch (e) {
         console.warn('Failed to load users in supervisor corner:', e);

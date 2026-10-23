@@ -18,6 +18,7 @@ import { FormSection } from '../../../shared/forms/FormSection';
 import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
+import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
 
 const itemSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
@@ -293,17 +294,13 @@ export default function IssueMaterialsPage() {
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                             <td className="p-2">
-                              <select {...methods.register(`items.${index}.productId` as const)} className={`w-full h-10 bg-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md px-3 py-2 text-sm transition-all cursor-pointer outline-none border ${error ? 'border-destructive/50 ring-1 ring-destructive/30' : 'border-transparent'}`}>
-                                <option value="" disabled>Select Product...</option>
-                                {products.map(p => {
-                                  const pUnit = p.unitId || (p as any).unit || 'pcs';
-                                  return (
-                                    <option key={p.id} value={p.id}>
-                                      {p.name} ({p.sku}) — Stock: {p.currentStock} {pUnit}
-                                    </option>
-                                  );
-                                })}
-                              </select>
+                              <ProductSearchSelect
+                                value={wItem?.productId || ''}
+                                onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
+                                products={products}
+                                error={!!error}
+                                placeholder="Type to search product or SKU..."
+                              />
                             </td>
                             <td className="px-4 py-2 font-medium">
                               {prod ? (

@@ -23,7 +23,8 @@ import { SearchBar } from "../forms/SearchBar"
 import { EmptyState } from "../feedback/EmptyState"
 import { AppErrorState } from "../feedback/AppErrorState"
 import { TableSkeleton } from "../skeletons/AppSkeleton"
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { cn } from "../utils/cn"
 
 interface AppTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -99,13 +100,35 @@ export function AppTable<TData, TValue>({
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-border/50">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="h-11 font-semibold text-muted-foreground">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                    <TableHead 
+                      key={header.id} 
+                      className={cn(
+                        "h-11 font-semibold text-muted-foreground",
+                        header.column.getCanSort() && "cursor-pointer select-none hover:text-foreground hover:bg-muted/40 transition-colors"
+                      )}
+                      onClick={header.column.getToggleSortingHandler()}
+                      title={header.column.getCanSort() ? "Click to toggle Ascending / Descending" : undefined}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </span>
+                        {header.column.getCanSort() && (
+                          <span className="shrink-0 text-muted-foreground inline-flex">
+                            {{
+                              asc: <ArrowUp className="h-3.5 w-3.5 text-primary" />,
+                              desc: <ArrowDown className="h-3.5 w-3.5 text-primary" />,
+                            }[header.column.getIsSorted() as string] ?? (
+                              <ArrowUpDown className="h-3.5 w-3.5 opacity-30 hover:opacity-100" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </TableHead>
                   )
                 })}
