@@ -90,8 +90,13 @@ const typeConfig = {
 
 export default function TransactionLogPage() {
   const { company, user } = useAuthStore();
-  const canDelete = user?.role === Role.SUPER_ADMIN || user?.role === Role.OWNER || (user?.role as any) === Role.MD;
-  const canEdit = user?.role !== Role.VIEWER;
+  const roleLower = (user?.role || '').toString().toLowerCase();
+  const isSuperOrOwner = roleLower === 'superadmin' || roleLower === 'owner' || roleLower === 'md' || roleLower === 'admin';
+  const isStoreKeeper = roleLower === 'store keeper' || roleLower === 'storekeeper' || roleLower === 'store_keeper';
+  
+  // Both SuperAdmin/Owner/Admin AND Store Keeper can edit & delete transactions
+  const canDelete = isSuperOrOwner || isStoreKeeper;
+  const canEdit = true;
   const companyId = company?.companyId;
   const printRef = useRef<HTMLDivElement>(null);
   
@@ -315,8 +320,8 @@ export default function TransactionLogPage() {
 
     setIsSavingEdit(true);
     try {
-      const editorName = user?.fullName || user?.username || 'Staff';
-      const editorRole = (user?.role as string) || 'Staff';
+      const editorName = user?.fullName || user?.username || (isStoreKeeper ? 'Store Keeper' : 'Staff');
+      const editorRole = (user?.role as string) || (isStoreKeeper ? 'Store Keeper' : 'Staff');
       const editorId = user?.uid || 'System';
       const nowTimestamp = serverTimestamp();
       const newTxDate = Timestamp.fromDate(new Date(editForm.dateStr || Date.now()));

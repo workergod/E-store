@@ -183,11 +183,15 @@ export function Sidebar({
         )}
 
         {/* OPERATIONS NAV */}
-        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
+        {user?.role !== Role.TECHNICIAN && (
           <div className="px-4">
             {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operations</h4>}
             <div className="space-y-[var(--spacing-xs)]">
-              {OPERATIONS_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+              {OPERATIONS_NAV.filter(item => {
+                // Store Keeper has access to Transaction Log, but not Employee roster management
+                if (user?.role === Role.STORE_KEEPER && item.path === '/employees') return false;
+                return true;
+              }).map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
             </div>
           </div>
         )}

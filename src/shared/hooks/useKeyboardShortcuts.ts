@@ -34,6 +34,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         { key: '2', label: 'Products', path: '/products', description: 'Product catalog and stock' },
         { key: '3', label: 'Issue Materials', path: '/issue', description: 'Issue items to technicians' },
         { key: '4', label: 'Return Materials', path: '/returns', description: 'Process returned materials' },
+        { key: '5', label: 'Transaction Log', path: '/transaction-log', description: 'Full history of material movements' },
       ]
     }
 
