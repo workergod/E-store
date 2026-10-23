@@ -17,8 +17,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-lg border-zinc-200 dark:border-zinc-800">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-xl">E</span>
+            <div className="h-16 w-16 rounded-2xl bg-white p-2 flex items-center justify-center shadow-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <img src="/logo.jpg" alt="Cryodeal Logo" className="w-full h-full object-contain" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Cryodeal</CardTitle>

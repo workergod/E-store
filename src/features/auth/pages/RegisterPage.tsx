@@ -132,6 +132,11 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-3">
+            <div className="h-14 w-14 rounded-2xl bg-white p-2 flex items-center justify-center shadow-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <img src="/logo.jpg" alt="Cryodeal Logo" className="w-full h-full object-contain" />
+            </div>
+          </div>
           <CardTitle className="text-2xl font-bold">Register Account</CardTitle>
           <CardDescription className="text-base mt-2">
             Create a new account. Approval is required before access is granted.
