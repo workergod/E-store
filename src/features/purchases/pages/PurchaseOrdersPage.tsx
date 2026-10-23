@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuthStore } from "../../../store/authStore";
+import { Role } from '../../../constants/roles';
 import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepository';
 import { supplierRepository } from '../../../repositories/SupplierRepository';
 import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
@@ -17,8 +18,17 @@ import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 
 export default function PurchaseOrdersPage() {
   const navigate = useNavigate();
-  const { company } = useAuthStore();
+  const { company, user } = useAuthStore();
   const companyId = company?.companyId;
+
+  const canDelete = 
+    user?.role === Role.SUPER_ADMIN || 
+    user?.role === Role.OWNER || 
+    (user?.role as any) === Role.MD || 
+    (user?.role as any) === 'MD' ||
+    user?.email === 'workshop9283@gmail.com' || 
+    user?.username === '@developeremil' ||
+    user?.username === '@developeremilmd';
 
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Record<string, Supplier>>({});
@@ -50,25 +60,43 @@ export default function PurchaseOrdersPage() {
     loadData();
   }, [loadData]);
 
+  const handleDeletePO = async (poToDelete: PurchaseOrder) => {
+    if (!companyId || !user || !poToDelete.id) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${poToDelete.poNumber}"?\n\nIf any goods were already received, stock balances will be reverted.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await purchaseOrderRepository.delete(poToDelete.id, companyId, user.uid);
+      toast.success(`Deleted Purchase Order ${poToDelete.poNumber}`);
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete purchase order');
+    }
+  };
+
   const columns = [
     {
       header: 'PO Number',
       accessorKey: 'poNumber',
-      cell: ({ row }: any) => <span className="font-medium">{row.original.poNumber}</span>
+      cell: ({ row }: any) => <span className="font-semibold text-primary font-mono">{row.original.poNumber}</span>
     },
     {
       header: 'Date',
       accessorKey: 'purchaseDate',
       cell: ({ row }: any) => {
         return row.original.purchaseDate && typeof (row.original.purchaseDate as any).toDate === 'function'
-          ? (row.original.purchaseDate as any).toDate().toLocaleDateString()
+          ? (row.original.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
           : 'Pending';
       }
     },
     {
       header: 'Supplier',
       accessorKey: 'supplierId',
-      cell: ({ row }: any) => suppliers[row.original.supplierId]?.companyName || 'Unknown'
+      cell: ({ row }: any) => {
+        return row.original.supplierName || suppliers[row.original.supplierId]?.companyName || 'Not specified';
+      }
     },
     {
       header: 'Status',
@@ -82,15 +110,26 @@ export default function PurchaseOrdersPage() {
       header: 'Actions',
       enableSorting: false,
       cell: ({ row }: any) => (
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex justify-end items-center gap-1.5">
           {row.original.status === 'Draft' && (
-            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)}>
-              <Edit className="h-4 w-4 text-muted-foreground" />
+            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)} title="Edit PO">
+              <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </AppButton>
           )}
-          <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/${row.original.id}`)}>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+          <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/${row.original.id}`)} title="View PO Details">
+            <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
           </AppButton>
+          {canDelete && (
+            <AppButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => handleDeletePO(row.original)} 
+              title="Delete PO"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </AppButton>
+          )}
         </div>
       )
     }

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, PackageOpen, Printer } from 'lucide-react';
+import { ArrowLeft, CheckCircle, PackageOpen, Printer, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuthStore } from "../../../store/authStore";
+import { Role } from '../../../constants/roles';
 import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepository';
+import { supplierRepository } from '../../../repositories/SupplierRepository';
 import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
@@ -23,11 +25,17 @@ export default function PurchaseOrderDetails() {
 
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Receive Goods Modal State
-  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
-  const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
-  const [isReceiving, setIsReceiving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [displaySupplier, setDisplaySupplier] = useState<string>('');
+
+  const canDelete = 
+    user?.role === Role.SUPER_ADMIN || 
+    user?.role === Role.OWNER || 
+    (user?.role as any) === Role.MD || 
+    (user?.role as any) === 'MD' ||
+    user?.email === 'workshop9283@gmail.com' || 
+    user?.username === '@developeremil' ||
+    user?.username === '@developeremilmd';
 
   useEffect(() => {
     const fetchPO = async () => {
@@ -41,6 +49,18 @@ export default function PurchaseOrderDetails() {
           return;
         }
         setPo(data);
+
+        // Resolve supplier name
+        if (data.supplierName) {
+          setDisplaySupplier(data.supplierName);
+        } else if (data.supplierId) {
+          try {
+            const s = await supplierRepository.getById(data.supplierId, companyId);
+            if (s) setDisplaySupplier(s.companyName);
+          } catch {
+            // ignore
+          }
+        }
         
         const initialQties: Record<string, number> = {};
         data.items.forEach(item => {
@@ -57,6 +77,25 @@ export default function PurchaseOrderDetails() {
     };
     fetchPO();
   }, [id, companyId, navigate]);
+
+  const handleDeletePO = async () => {
+    if (!companyId || !user || !po?.id) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete Purchase Order "${po.poNumber}"?\n\nIf any goods were already received, stock will be automatically reverted.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      await purchaseOrderRepository.delete(po.id, companyId, user.uid);
+      toast.success(`Purchase Order ${po.poNumber} deleted successfully`);
+      navigate('/purchases');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete Purchase Order');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleApprove = async () => {
     if (!companyId || !user || !po?.id) return;
@@ -109,20 +148,38 @@ export default function PurchaseOrderDetails() {
 
       <PageHeader 
         title={po.poNumber}
-        description={`Created on ${po.purchaseDate && typeof (po.purchaseDate as any).toDate === 'function' ? (po.purchaseDate as any).toDate().toLocaleDateString() : 'N/A'}`}
+        description={`Created on ${po.purchaseDate && typeof (po.purchaseDate as any).toDate === 'function' ? (po.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}${displaySupplier ? ` • Supplier: ${displaySupplier}` : ''}`}
         actions={
-          <div className="flex gap-3">
+          <div className="flex gap-2.5 items-center flex-wrap">
             {po.status === 'Draft' && (
-              <AppButton onClick={handleApprove} variant="default">
-                <CheckCircle className="h-4 w-4 mr-2" /> Approve PO
-              </AppButton>
+              <>
+                <AppButton onClick={() => navigate(`/purchases/edit/${po.id}`)} variant="outline">
+                  <Edit className="h-4 w-4 mr-2" /> Edit PO
+                </AppButton>
+                <AppButton onClick={handleApprove} variant="default">
+                  <CheckCircle className="h-4 w-4 mr-2" /> Approve PO
+                </AppButton>
+              </>
             )}
             {(po.status === 'Approved' || po.status === 'Partially Received') && (
               <AppButton onClick={() => setIsReceiveModalOpen(true)} variant="success">
                 <PackageOpen className="h-4 w-4 mr-2" /> Receive Goods
               </AppButton>
             )}
-            <AppButton variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4 mr-2" /> Print Receipt</AppButton>
+            <AppButton variant="outline" onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-2" /> Print Receipt
+            </AppButton>
+            {canDelete && (
+              <AppButton 
+                variant="destructive" 
+                onClick={handleDeletePO} 
+                disabled={isDeleting}
+                title="Delete this purchase order"
+                className="shadow-sm"
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" /> {isDeleting ? 'Deleting...' : 'Delete PO'}
+              </AppButton>
+            )}
           </div>
         }
       >

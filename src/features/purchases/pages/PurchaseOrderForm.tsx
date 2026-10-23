@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../firebase/firestore';
 
 import { useAuthStore } from "../../../store/authStore";
 import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepository';
@@ -22,6 +24,7 @@ import { FormRow } from '../../../shared/forms/FormLayout';
 import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
+import { SupplierSearchSelect } from '../../../shared/forms/SupplierSearchSelect';
 
 const itemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
@@ -30,6 +33,7 @@ const itemSchema = z.object({
 
 const poSchema = z.object({
   supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
   purchaseDate: z.string().min(1, "Date is required"),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1, "Add at least one item")
@@ -37,6 +41,7 @@ const poSchema = z.object({
 
 type POFormData = {
   supplierId?: string;
+  supplierName?: string;
   purchaseDate: string;
   notes?: string;
   items: {
@@ -46,6 +51,8 @@ type POFormData = {
 };
 
 export default function PurchaseOrderForm() {
+  const { id } = useParams<{ id?: string }>();
+  const isEditing = Boolean(id);
   const navigate = useNavigate();
   const { user, company } = useAuthStore();
   const companyId = company?.companyId;
@@ -53,11 +60,13 @@ export default function PurchaseOrderForm() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [existingPoNumber, setExistingPoNumber] = useState<string>('');
 
   const methods = useForm<POFormData>({
     resolver: zodResolver(poSchema) as any,
     defaultValues: {
       supplierId: '',
+      supplierName: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       items: [{ productId: '', quantity: 1 }]
     }
@@ -79,9 +88,36 @@ export default function PurchaseOrderForm() {
       ]);
       setSuppliers(supData.filter(s => s.status === 'Active'));
       setProducts(prodData.filter(p => p.status === 'Active'));
+
+      if (id) {
+        try {
+          const poSnap = await getDoc(doc(db, 'purchaseOrders', id));
+          if (poSnap.exists() && poSnap.data().companyId === companyId) {
+            const data = poSnap.data();
+            setExistingPoNumber(data.poNumber || '');
+            let pDate = new Date().toISOString().split('T')[0];
+            if (data.purchaseDate) {
+              const d = data.purchaseDate.toDate ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
+              pDate = d.toISOString().split('T')[0];
+            }
+            methods.reset({
+              supplierId: data.supplierId || '',
+              supplierName: data.supplierName || '',
+              purchaseDate: pDate,
+              notes: data.notes || '',
+              items: (data.items || []).map((it: any) => ({
+                productId: it.productId,
+                quantity: it.quantity
+              }))
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load existing PO:", err);
+        }
+      }
     };
     loadData();
-  }, [companyId]);
+  }, [companyId, id, methods]);
 
   const onSubmit = async (data: POFormData) => {
     if (!companyId || !user) return;
@@ -101,18 +137,36 @@ export default function PurchaseOrderForm() {
         };
       });
 
-      const payload = {
-        companyId,
-        supplierId: data.supplierId || '',
-        status: 'Draft' as const,
-        purchaseDate: new Date(data.purchaseDate),
-        notes: data.notes,
-        items: enrichedItems,
-        createdBy: user.uid
-      };
+      const effectiveSupplierName = data.supplierName || 
+        (data.supplierId ? suppliers.find(s => s.id === data.supplierId)?.companyName : '') || 
+        '';
 
-      await purchaseOrderRepository.create(payload, user.uid);
-      toast.success("Purchase Order created successfully");
+      if (isEditing && id) {
+        const poRef = doc(db, 'purchaseOrders', id);
+        await updateDoc(poRef, {
+          supplierId: data.supplierId || '',
+          supplierName: effectiveSupplierName,
+          purchaseDate: new Date(data.purchaseDate),
+          notes: data.notes || '',
+          items: enrichedItems,
+          updatedAt: serverTimestamp()
+        });
+        toast.success(`Purchase Order ${existingPoNumber || ''} updated successfully`);
+      } else {
+        const payload = {
+          companyId,
+          supplierId: data.supplierId || '',
+          supplierName: effectiveSupplierName,
+          status: 'Draft' as const,
+          purchaseDate: new Date(data.purchaseDate),
+          notes: data.notes || '',
+          items: enrichedItems,
+          createdBy: user.uid
+        };
+
+        await purchaseOrderRepository.create(payload, user.uid);
+        toast.success("Purchase Order created successfully");
+      }
       navigate('/purchases');
     } catch (error: any) {
       toast.error(error.message || "Failed to save PO");
@@ -130,8 +184,8 @@ export default function PurchaseOrderForm() {
       </div>
       
       <PageHeader 
-        title="Create Purchase Order" 
-        description="Draft a new PO to send to your supplier." 
+        title={isEditing ? `Edit Purchase Order ${existingPoNumber}` : "Create Purchase Order"} 
+        description={isEditing ? "Update details or line items for this draft order." : "Draft a new PO to send to your supplier."} 
       />
 
       <FormProvider {...methods}>
@@ -232,12 +286,16 @@ export default function PurchaseOrderForm() {
               <FormSection title="Supplier & Dates" description="Select the vendor and purchase timeline.">
                 <div className="space-y-4">
                   <FormField label="Supplier" error={methods.formState.errors.supplierId?.message}>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                      {...methods.register('supplierId')} 
-                    >
-                      <option value="">Select Supplier</option>
-                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.companyName}</option>)}
-                    </select>
+                    <SupplierSearchSelect
+                      supplierId={methods.watch('supplierId')}
+                      supplierName={methods.watch('supplierName')}
+                      onChange={(supId, supName) => {
+                        methods.setValue('supplierId', supId);
+                        methods.setValue('supplierName', supName);
+                      }}
+                      suppliers={suppliers}
+                      placeholder="Type supplier name or search..."
+                    />
                   </FormField>
                   <FormField label="Purchase Date" required error={methods.formState.errors.purchaseDate?.message}>
                     <AppInput type="date" {...methods.register('purchaseDate')} />
@@ -252,7 +310,7 @@ export default function PurchaseOrderForm() {
                    <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                 </div>
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
-                  {isSaving ? 'Saving...' : 'Save Draft PO'}
+                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Draft PO')}
                 </AppButton>
                 <AppButton type="button" variant="ghost" onClick={() => navigate('/purchases')} disabled={isSaving} className="w-full text-muted-foreground">
                   Cancel Order

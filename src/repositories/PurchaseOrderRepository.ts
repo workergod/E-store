@@ -1,7 +1,8 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, serverTimestamp, runTransaction, limit, orderBy } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp, runTransaction, limit, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { PurchaseOrder } from '../shared/types/PurchaseOrder';
 import { auditLogRepository } from './AuditLogRepository';
+import { stockLedgerRepository } from './StockLedgerRepository';
 
 const COLLECTION_NAME = 'purchaseOrders';
 const PRICE_HISTORY_COL = 'productPriceHistory';
@@ -10,28 +11,35 @@ export const purchaseOrderRepository = {
   getCollection: () => collection(db, COLLECTION_NAME),
 
   generatePONumber: async (companyId: string): Promise<string> => {
-    // Simple sequence generator: find last PO and increment
+    // Sequence generator for PO-YYYY-CRYOXX (e.g. PO-2026-CRYO01, PO-2026-CRYO02)
     const q = query(
       collection(db, COLLECTION_NAME),
       where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
     const year = new Date().getFullYear();
+    const prefix = `PO-${year}-CRYO`;
+    
     if (snapshot.empty) {
-      return `PO-${year}-000001`;
+      return `${prefix}01`;
     }
     
-    // Sort in memory to find the highest PO number
-    const pos = snapshot.docs.map(doc => doc.data().poNumber as string).filter(Boolean);
-    pos.sort((a, b) => b.localeCompare(a));
-    const lastPO = pos[0];
-    const parts = lastPO.split('-');
-    if (parts.length === 3) {
-      const lastNum = parseInt(parts[2], 10);
-      const nextNum = (lastNum + 1).toString().padStart(6, '0');
-      return `PO-${year}-${nextNum}`;
-    }
-    return `PO-${year}-000001`;
+    let maxNum = 0;
+    snapshot.docs.forEach(docSnap => {
+      const numStr = docSnap.data().poNumber as string;
+      if (!numStr) return;
+      // Match PO-YYYY-CRYO(\d+) or legacy PO-YYYY-(\d+)
+      const match = numStr.match(/PO-\d{4}-CRYO-?(\d+)/i) || numStr.match(/PO-\d{4}-(\d+)/i);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxNum) {
+          maxNum = val;
+        }
+      }
+    });
+
+    const nextNum = (maxNum + 1).toString().padStart(2, '0');
+    return `${prefix}${nextNum}`;
   },
 
   getAll: async (companyId: string): Promise<PurchaseOrder[]> => {
@@ -85,6 +93,45 @@ export const purchaseOrderRepository = {
 
     await updateDoc(docRef, updates);
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'PurchaseOrder', id, { status });
+  },
+
+  delete: async (id: string, companyId: string, userId: string): Promise<void> => {
+    const poRef = doc(db, COLLECTION_NAME, id);
+    const poSnap = await getDoc(poRef);
+    if (!poSnap.exists() || poSnap.data().companyId !== companyId) {
+      throw new Error('Purchase Order not found or permission denied');
+    }
+
+    const poData = poSnap.data() as PurchaseOrder;
+
+    // If items were already received, revert the stock
+    const items = poData.items || [];
+    for (const item of items) {
+      const receivedQty = item.receivedQuantity || 0;
+      if (receivedQty > 0) {
+        try {
+          await stockLedgerRepository.recordTransaction({
+            transactionId: `revert_po_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            companyId,
+            productId: item.productId,
+            transactionType: 'ADJUSTMENT',
+            referenceType: 'ADJUSTMENT',
+            quantity: -receivedQty,
+            notes: `Reverted PO deletion (${poData.poNumber})`,
+            performedBy: userId
+          });
+        } catch (stockErr) {
+          console.warn('Failed to revert stock for product in PO deletion:', stockErr);
+        }
+      }
+    }
+
+    await deleteDoc(poRef);
+    try {
+      await auditLogRepository.logAction(userId, companyId, 'DELETE', 'PurchaseOrder', id, { poNumber: poData.poNumber });
+    } catch (e) {
+      // ignore audit log failure if rules block it
+    }
   },
 
   receiveGoods: async (poId: string, companyId: string, receivedItems: { productId: string; qtyToReceive: number }[], userId: string): Promise<void> => {

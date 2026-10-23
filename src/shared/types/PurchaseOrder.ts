@@ -17,6 +17,7 @@ export interface PurchaseOrder {
   id?: string;
   companyId: string;
   supplierId: string;
+  supplierName?: string;
   
   poNumber: string; // PO-YYYY-XXXXXX
   status: POStatus;
