@@ -44,6 +44,7 @@ interface EditHistoryRecord {
 interface LogEntry {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
+  issueNumber?: string;
   date: any;
   staffName: string;
   customerOrTech: string;
@@ -64,6 +65,7 @@ interface LogEntry {
 interface EditFormState {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
+  issueNumber?: string;
   dateStr: string;
   staffName: string;
   employeeId: string;
@@ -166,6 +168,7 @@ export default function TransactionLogPage() {
         entries.push({
           id: docSnap.id,
           type: 'ISSUE',
+          issueNumber: d.issueNumber || null,
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
@@ -201,6 +204,7 @@ export default function TransactionLogPage() {
         entries.push({
           id: docSnap.id,
           type: 'RETURN',
+          issueNumber: d.issueNumber || null,
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
           customerOrTech: empMap[d.employeeId] || d.employeeId,
@@ -232,6 +236,7 @@ export default function TransactionLogPage() {
         entries.push({
           id: docSnap.id,
           type: 'PURCHASE',
+          issueNumber: d.poNumber || null,
           date: d.createdAt,
           staffName: d.createdBy || 'Staff',
           customerOrTech: d.supplierName || d.supplierId || 'Supplier',
@@ -284,6 +289,7 @@ export default function TransactionLogPage() {
     setEditForm({
       id: log.id,
       type: log.type,
+      issueNumber: log.issueNumber,
       dateStr,
       staffName: log.staffName,
       employeeId: log.employeeId || '',
@@ -743,8 +749,8 @@ export default function TransactionLogPage() {
             <div style="font-size: 11px; color: #666; margin-top: 4px;">OFFICIAL RECORD</div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 10px; color: #666; font-weight: bold;">TRANSACTION ID</div>
-            <div style="font-family: monospace; font-weight: bold;">${log.id}</div>
+            <div style="font-size: 10px; color: #666; font-weight: bold;">${log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID'}</div>
+            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #059669;">${log.issueNumber || log.id}</div>
           </div>
         </div>
 
@@ -807,9 +813,12 @@ export default function TransactionLogPage() {
   const filtered = logs.filter(l => {
     if (filter !== 'ALL' && l.type !== filter) return false;
     if (search) {
-      const s = search.toLowerCase();
+      const s = search.toLowerCase().trim();
+      const sClean = s.replace(/[^a-z0-9]/g, '');
       return l.customerOrTech.toLowerCase().includes(s)
         || l.staffName.toLowerCase().includes(s)
+        || (l.issueNumber && l.issueNumber.toLowerCase().includes(s))
+        || (l.issueNumber && l.issueNumber.toLowerCase().replace(/[^a-z0-9]/g, '').includes(sClean))
         || (l.lastEditedByName && l.lastEditedByName.toLowerCase().includes(s))
         || (l.lastEditedByRole && l.lastEditedByRole.toLowerCase().includes(s))
         || (l.notes && l.notes.toLowerCase().includes(s))
@@ -899,6 +908,7 @@ export default function TransactionLogPage() {
               <tr key={log.id}>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>
                   <span className={`badge ${log.type}`}>{log.type}</span>
+                  {log.issueNumber && <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px' }}>{log.issueNumber}</div>}
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>{formatDate(log.date)}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{log.customerOrTech}</td>
@@ -996,9 +1006,20 @@ export default function TransactionLogPage() {
                   return (
                     <tr key={log.id} className="border-b border-border hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${cfg.color}`}>
-                          <Icon className="h-3 w-3" /> {cfg.label}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${cfg.color}`}>
+                            <Icon className="h-3 w-3" /> {cfg.label}
+                          </span>
+                          {log.issueNumber ? (
+                            <span className="font-mono text-[11px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 whitespace-nowrap">
+                              {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              #{log.id.slice(-6)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDate(log.date)}</td>
                       <td className="px-4 py-3 font-medium">
@@ -1102,12 +1123,12 @@ export default function TransactionLogPage() {
           onOpenChange={(open) => !open && setSelectedLog(null)}
           title={
             selectedLog.type === 'ISSUE' 
-              ? 'Material Issue Details' 
+              ? `Material Issue Details ${selectedLog.issueNumber ? `(${selectedLog.issueNumber})` : ''}` 
               : selectedLog.type === 'RETURN' 
-              ? 'Material Return Details' 
-              : 'Purchase Order Details'
+              ? `Material Return Details ${selectedLog.issueNumber ? `(from ${selectedLog.issueNumber})` : ''}` 
+              : `Purchase Order Details ${selectedLog.issueNumber ? `(${selectedLog.issueNumber})` : ''}`
           }
-          description={`Transaction ID: ${selectedLog.id}`}
+          description={`Reference: ${selectedLog.issueNumber || selectedLog.id} • Transaction ID: ${selectedLog.id}`}
           className="max-w-2xl max-h-[90vh] flex flex-col"
           footer={
             <div className="flex justify-between w-full">
@@ -1256,8 +1277,8 @@ export default function TransactionLogPage() {
         <AppDialog
           isOpen={!!editForm}
           onOpenChange={(open) => !open && !isSavingEdit && setEditForm(null)}
-          title={`Edit ${editForm.type === 'ISSUE' ? 'Material Issue' : editForm.type === 'RETURN' ? 'Material Return' : 'Purchase Order'}`}
-          description={`Transaction ID: ${editForm.id} • Originally created by ${editForm.staffName}`}
+          title={`Edit ${editForm.type === 'ISSUE' ? `Material Issue (${editForm.issueNumber || editForm.id})` : editForm.type === 'RETURN' ? 'Material Return' : 'Purchase Order'}`}
+          description={`Reference: ${editForm.issueNumber || editForm.id} • Originally created by ${editForm.staffName}`}
           className="max-w-3xl max-h-[92vh] flex flex-col"
           footer={
             <div className="flex justify-end gap-2 w-full">

@@ -342,9 +342,10 @@ export default function ReturnMaterialsPage() {
                 <option value="">{issues.length > 0 ? 'Choose an issue...' : 'No active issues found'}</option>
                 {issues.map(i => {
                   const dateObj = new Date((i.createdAt as any)?.toDate ? (i.createdAt as any).toDate() : (i.createdAt || i.issueDate));
+                  const issueLabel = i.issueNumber ? `Issue ${i.issueNumber}` : `Issue CRYO-${i.id?.slice(-4)}`;
                   return (
                     <option key={i.id} value={i.id!}>
-                      Issue {i.id?.slice(-6)} - {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      {issueLabel} - {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </option>
                   );
                 })}
@@ -380,7 +381,7 @@ export default function ReturnMaterialsPage() {
           {selectedIssue && (
             <FormProvider {...methods}>
               <AppForm onSubmit={methods.handleSubmit(onSubmitLinked)}>
-                <FormSection title="Items to Return" description="Enter the quantity the technician is returning. The remaining quantity will be marked as Used.">
+                <FormSection title={selectedIssue.issueNumber ? `Items to Return (Issue ${selectedIssue.issueNumber})` : "Items to Return"} description="Enter the quantity the technician is returning. The remaining quantity will be marked as Used.">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
                       <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">

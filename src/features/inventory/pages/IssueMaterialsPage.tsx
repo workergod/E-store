@@ -45,6 +45,7 @@ export default function IssueMaterialsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [issuedId, setIssuedId] = useState<string | null>(null);
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
 
   const methods = useForm<IssueFormData>({
     resolver: zodResolver(issueSchema) as any,
@@ -140,8 +141,10 @@ export default function IssueMaterialsPage() {
       };
 
       const newId = await issueRepository.issueItems(payload, user.uid);
-      toast.success("Materials issued successfully");
+      const generatedCode = (payload as any).issueNumber || null;
       setIssuedId(newId);
+      setIssuedCode(generatedCode);
+      toast.success(generatedCode ? `Materials issued successfully (${generatedCode})` : "Materials issued successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to issue materials");
     } finally {
@@ -166,8 +169,9 @@ export default function IssueMaterialsPage() {
               <p className="text-sm font-medium text-muted-foreground mt-1 tracking-widest">OFFICIAL RECEIPT</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Transaction ID</p>
-              <p className="font-mono text-sm font-semibold">{issuedId}</p>
+              <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Issue Number</p>
+              <p className="font-mono text-xl font-bold text-primary">{issuedCode || issuedId}</p>
+              {issuedCode && <p className="font-mono text-[10px] text-muted-foreground">ID: {issuedId}</p>}
             </div>
           </div>
           

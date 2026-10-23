@@ -12,6 +12,7 @@ export interface IssuedItem {
 
 export interface IssueTransaction {
   id?: string;
+  issueNumber?: string;
   companyId: string;
   employeeId: string;
   issueDate: Date | Timestamp;

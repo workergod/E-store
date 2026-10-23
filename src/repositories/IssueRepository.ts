@@ -33,8 +33,36 @@ export const issueRepository = {
     return null;
   },
 
+  generateIssueNumber: async (companyId: string): Promise<string> => {
+    const q = query(
+      issueRepository.getCollection(),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      return 'CRYO-1';
+    }
+
+    let maxNum = 0;
+    snapshot.forEach(docSnap => {
+      const numStr = docSnap.data().issueNumber as string;
+      if (numStr) {
+        const match = numStr.match(/(\d+)$/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      }
+    });
+
+    const nextNum = Math.max(maxNum + 1, snapshot.size + 1);
+    return `CRYO-${nextNum}`;
+  },
+
   issueItems: async (data: Omit<IssueTransaction, 'id' | 'createdAt' | 'updatedAt' | 'status'>, userId: string): Promise<string> => {
     const now = serverTimestamp();
+    const issueNumber = data.issueNumber || await issueRepository.generateIssueNumber(data.companyId);
+    data.issueNumber = issueNumber;
     
     let createdByName = 'Staff';
     try {
@@ -49,6 +77,7 @@ export const issueRepository = {
 
     const payload = {
       ...data,
+      issueNumber,
       status: 'ISSUED',
       createdByName,
       createdAt: now,
@@ -69,7 +98,7 @@ export const issueRepository = {
           quantity: -item.issuedQty,
           referenceId: docRef.id,
           referenceType: 'ISSUE',
-          notes: `Issued to employee ${data.employeeId}`,
+          notes: `Issued (${issueNumber}) to employee ${data.employeeId}`,
           performedBy: userId
         });
       }
@@ -154,6 +183,7 @@ export const issueRepository = {
         companyId,
         employeeId: issueData.employeeId,
         issueId,
+        issueNumber: issueData.issueNumber || null,
         items: returnedItemsPayload,
         createdAt: serverTimestamp(),
         createdBy: userId,

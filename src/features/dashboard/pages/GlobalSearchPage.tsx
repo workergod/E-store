@@ -61,6 +61,7 @@ export default function GlobalSearchPage() {
             
             const issuesWithItems = empIssues.filter(i => i.items.some(it => it.issuedQty > 0)).map(issue => ({
               id: issue.id,
+              issueNumber: issue.issueNumber,
               date: issue.createdAt?.toDate ? issue.createdAt.toDate() : new Date(issue.issueDate as any),
               siteName: issue.siteName,
               notes: issue.notes,
@@ -69,6 +70,7 @@ export default function GlobalSearchPage() {
 
             const returnsWithItems = empIssues.filter(i => i.items.some(it => it.returnedQty > 0)).map(issue => ({
               id: issue.id,
+              issueNumber: issue.issueNumber,
               date: issue.updatedAt?.toDate ? issue.updatedAt.toDate() : new Date(),
               siteName: issue.siteName,
               notes: issue.notes,
@@ -103,6 +105,7 @@ export default function GlobalSearchPage() {
               const e = allEmployees.find(emp => emp.id === issue.employeeId);
               return {
                 id: issue.id,
+                issueNumber: issue.issueNumber,
                 date: issue.createdAt?.toDate ? issue.createdAt.toDate() : new Date(issue.issueDate as any),
                 employeeName: e ? `${e.firstName} ${e.lastName}` : 'Unknown',
                 notes: issue.notes,
@@ -114,6 +117,7 @@ export default function GlobalSearchPage() {
               const e = allEmployees.find(emp => emp.id === issue.employeeId);
               return {
                 id: issue.id,
+                issueNumber: issue.issueNumber,
                 date: issue.updatedAt?.toDate ? issue.updatedAt.toDate() : new Date(),
                 employeeName: e ? `${e.firstName} ${e.lastName}` : 'Unknown',
                 notes: issue.notes,
@@ -224,7 +228,7 @@ export default function GlobalSearchPage() {
                               {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700">Site: {issue.siteName}</span>}
                               {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700"> • Tech: {issue.employeeName}</span>}
                             </div>
-                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">ID: {issue.id?.slice(-6)}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">{issue.issueNumber ? `Ref: ${issue.issueNumber}` : `ID: ${issue.id?.slice(-6)}`}</span>
                           </div>
                           <ul className="divide-y divide-border">
                             {issue.items.map((mat: any, j: number) => (
@@ -264,7 +268,7 @@ export default function GlobalSearchPage() {
                               {issue.siteName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700">Site: {issue.siteName}</span>}
                               {issue.employeeName && <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold print:text-gray-700"> • Tech: {issue.employeeName}</span>}
                             </div>
-                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">ID: {issue.id?.slice(-6)}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono print:text-gray-500">{issue.issueNumber ? `Ref: ${issue.issueNumber}` : `ID: ${issue.id?.slice(-6)}`}</span>
                           </div>
                           <ul className="divide-y divide-border">
                             {issue.items.map((mat: any, j: number) => (
@@ -316,7 +320,7 @@ export default function GlobalSearchPage() {
                               <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
                             </td>
                             <td className="py-3 px-3 w-48">
-                              <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
+                              <div className="text-xs text-gray-500">{issue.issueNumber ? `Ref: ${issue.issueNumber}` : `ID: ${issue.id?.slice(-6) || 'N/A'}`}</div>
                               {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
                               {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
                               {issue.notes && <div className="text-xs italic mt-1 text-gray-600">Note: {issue.notes}</div>}
@@ -357,7 +361,7 @@ export default function GlobalSearchPage() {
                               <div className="text-gray-500">{issue.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
                             </td>
                             <td className="py-3 px-3 w-48">
-                              <div className="text-xs text-gray-500">ID: {issue.id?.slice(-6) || 'N/A'}</div>
+                              <div className="text-xs text-gray-500">{issue.issueNumber ? `Ref: ${issue.issueNumber}` : `ID: ${issue.id?.slice(-6) || 'N/A'}`}</div>
                               {issue.siteName && <div className="font-medium mt-1 text-xs">Site: {issue.siteName}</div>}
                               {issue.employeeName && <div className="font-medium mt-1 text-xs">Tech: {issue.employeeName}</div>}
                             </td>
