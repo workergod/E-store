@@ -19,10 +19,12 @@ export default function SupervisorCorner() {
   const { company, user } = useAuthStore();
   const companyId = company?.companyId;
 
-  const isDeveloper = user?.email === 'workshop9283@gmail.com' || user?.role === Role.SUPER_ADMIN;
-  const isExecutive = user?.role === Role.MD || user?.role === Role.OWNER || user?.role === Role.SUPER_ADMIN || isDeveloper;
+  const isDeveloper = user?.email === 'workshop9283@gmail.com' || user?.username === '@developeremil' || user?.role === Role.SUPER_ADMIN;
+  const isExecutive = user?.role === Role.MD || user?.role === Role.OWNER || (user?.role as any) === 'MD' || (user?.role as any) === 'Owner' || user?.role === Role.SUPER_ADMIN || user?.username === '@developeremilmd' || isDeveloper;
 
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>('PENDING');
+  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>(
+    isExecutive ? 'PENDING' : 'PRODUCTS'
+  );
   
   const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
   const [deletedEmployees, setDeletedEmployees] = useState<any[]>([]);
@@ -43,6 +45,10 @@ export default function SupervisorCorner() {
       navigate('/');
       return;
     }
+
+    if (!isExecutive && (activeTab === 'PENDING' || activeTab === 'USERS')) {
+      setActiveTab('PRODUCTS');
+    }
     
     if (companyId) {
       fetchData();
@@ -52,22 +58,42 @@ export default function SupervisorCorner() {
   const fetchData = async () => {
     if (!companyId) return;
     setIsLoading(true);
+    let hasAnySuccess = false;
+
+    // 1. Fetch Products
     try {
       const allProducts = await productRepository.getAll(companyId);
-      const allEmployees = await employeeRepository.getAll(companyId);
-      const allUsers = await userRepository.getUsersByCompany(companyId);
-
-      setAllUsersList(allUsers);
       setDeletedProducts(allProducts.filter(p => p.status === 'DELETED'));
-      setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED'));
-      setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL));
-
-    } catch (error) {
-      console.error('Failed to fetch supervisor data:', error);
-      toast.error('Failed to load supervisor data');
-    } finally {
-      setIsLoading(false);
+      hasAnySuccess = true;
+    } catch (e) {
+      console.warn('Failed to load products in supervisor corner:', e);
     }
+
+    // 2. Fetch Employees
+    try {
+      const allEmployees = await employeeRepository.getAll(companyId);
+      setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED'));
+      hasAnySuccess = true;
+    } catch (e) {
+      console.warn('Failed to load employees in supervisor corner:', e);
+    }
+
+    // 3. Fetch Users (Only for executives/owners who have permission)
+    if (isExecutive) {
+      try {
+        const allUsers = await userRepository.getUsersByCompany(companyId);
+        setAllUsersList(allUsers);
+        setPendingUsers(allUsers.filter(u => u.status === UserStatus.PENDING || u.status === UserStatus.PENDING_DEV_APPROVAL));
+        hasAnySuccess = true;
+      } catch (e) {
+        console.warn('Failed to load users in supervisor corner:', e);
+      }
+    }
+
+    if (!hasAnySuccess) {
+      toast.error('Failed to load supervisor data');
+    }
+    setIsLoading(false);
   };
 
   const handleRestoreProduct = async (id: string) => {
@@ -173,7 +199,7 @@ export default function SupervisorCorner() {
       <div className="flex items-center gap-3 mb-[var(--spacing-md)] text-emerald-600 dark:text-emerald-400">
         <ShieldAlert className="h-6 w-6" />
         <h1 className="text-2xl font-bold tracking-tight">
-          {user?.role === Role.MD || user?.role === Role.OWNER ? 'MD Executive Portal' : isDeveloper ? 'Developer Command Center' : 'Supervisor Corner'}
+          {user?.username === '@developeremilmd' || user?.role === Role.MD || user?.role === Role.OWNER || (user?.role as any) === 'MD' ? 'MD Executive Portal' : isDeveloper ? 'Developer Command Center' : 'Supervisor Corner'}
         </h1>
       </div>
       <p className="text-muted-foreground mb-8">
@@ -181,18 +207,22 @@ export default function SupervisorCorner() {
       </p>
 
       <div className="flex flex-wrap gap-4 mb-6">
-        <AppButton 
-          variant={activeTab === 'PENDING' ? 'primary' : 'outline'} 
-          onClick={() => setActiveTab('PENDING')}
-        >
-          <UserCheck className="h-4 w-4 mr-2" /> Pending Approvals ({pendingUsers.length})
-        </AppButton>
-        <AppButton 
-          variant={activeTab === 'USERS' ? 'primary' : 'outline'} 
-          onClick={() => setActiveTab('USERS')}
-        >
-          <Users className="h-4 w-4 mr-2" /> All Users Directory ({allUsersList.length})
-        </AppButton>
+        {isExecutive && (
+          <>
+            <AppButton 
+              variant={activeTab === 'PENDING' ? 'primary' : 'outline'} 
+              onClick={() => setActiveTab('PENDING')}
+            >
+              <UserCheck className="h-4 w-4 mr-2" /> Pending Approvals ({pendingUsers.length})
+            </AppButton>
+            <AppButton 
+              variant={activeTab === 'USERS' ? 'primary' : 'outline'} 
+              onClick={() => setActiveTab('USERS')}
+            >
+              <Users className="h-4 w-4 mr-2" /> All Users Directory ({allUsersList.length})
+            </AppButton>
+          </>
+        )}
         <AppButton 
           variant={activeTab === 'PRODUCTS' ? 'primary' : 'outline'} 
           onClick={() => setActiveTab('PRODUCTS')}

@@ -1,7 +1,7 @@
 export const Role = {
   SUPER_ADMIN: 'SuperAdmin',
   OWNER: 'Owner',
-  MD: 'MD',
+  MD: 'Owner',
   ADMIN: 'Admin',
   MANAGER: 'Manager',
   SUPERVISOR: 'Supervisor',

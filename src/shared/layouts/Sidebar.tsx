@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PackageSearch, ShoppingCart, Settings, Users, 
   BarChart, 
   ChevronLeft, ChevronRight, HelpCircle, MessageCircle,
-  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList, ShieldCheck
+  ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList
   } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -61,11 +61,6 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
   const [showSupervisorModal, setShowSupervisorModal] = useState(false)
 
   const handleCompanyNameClick = () => {
-    // SECURITY: Only OWNER and SUPER_ADMIN can trigger the Supervisor Corner password modal
-    if (company?.companyId !== 'company_default' && user?.email !== 'cryodeal2023@gmail.com' && user?.email !== 'workshop9283@gmail.com' && user?.username !== '@developeremil') {
-      return;
-    }
-
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current)
     }
@@ -79,7 +74,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
     } else {
       clickTimerRef.current = setTimeout(() => {
         setClickCount(0)
-      }, 1000) // Reset if 1 second passes without a click
+      }, 1500) // Reset if 1.5 seconds pass without a click
     }
   }
 
@@ -153,15 +148,6 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCo
           </div>
         )}
 
-        {/* EXECUTIVE MANAGEMENT NAV (For MD, Owner, SuperAdmin) */}
-        {(user?.role === Role.MD || user?.role === Role.OWNER || user?.role === Role.SUPER_ADMIN) && (
-          <div className="px-4">
-            {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Executive Management</h4>}
-            <div className="space-y-[var(--spacing-xs)]">
-              <NavItem item={{ path: '/md-portal', label: 'MD Portal', icon: ShieldCheck }} collapsed={collapsed} pathname={location.pathname} />
-            </div>
-          </div>
-        )}
 
       </div>
 

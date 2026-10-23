@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { X, Lock, KeyRound } from 'lucide-react';
+import { X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AppButton } from '../../../shared/app/AppButton';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { useAuthStore } from '../../../store/authStore';
+import { Role } from '../../../constants/roles';
 
 interface Props {
   onClose: () => void;
@@ -14,7 +15,24 @@ export function SupervisorLoginModal({ onClose }: Props) {
   const [password, setPassword] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const navigate = useNavigate();
-  const { company } = useAuthStore();
+  const { company, user } = useAuthStore();
+
+  const isExecutive = 
+    user?.role === Role.MD || 
+    user?.role === Role.OWNER || 
+    (user?.role as any) === 'MD' ||
+    user?.role === Role.SUPER_ADMIN || 
+    user?.email === 'workshop9283@gmail.com' ||
+    user?.email === 'cryodeal2023@gmail.com' ||
+    user?.username === '@developeremil' ||
+    user?.username === '@developeremilmd';
+
+  const grantAccess = () => {
+    toast.success('Supervisor Access Granted');
+    sessionStorage.setItem('supervisor_auth', 'true');
+    onClose();
+    navigate('/supervisor');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +47,7 @@ export function SupervisorLoginModal({ onClose }: Props) {
       const defaultHash = await settingsRepository.hashPassword('admin');
       
       if (inputHash === (storedHash || defaultHash)) {
-        toast.success('Supervisor Access Granted');
-        // Store temporary session flag in sessionStorage
-        sessionStorage.setItem('supervisor_auth', 'true');
-        onClose();
-        navigate('/supervisor');
+        grantAccess();
       } else {
         toast.error('Incorrect password');
       }
@@ -45,7 +59,7 @@ export function SupervisorLoginModal({ onClose }: Props) {
   };
 
   const handleForgotPassword = () => {
-    toast.info("Please contact the system administrator or developer to reset the supervisor password.");
+    toast.info("Default supervisor password is 'admin'. You can change it inside Supervisor Corner settings.");
   };
 
   return (
@@ -89,6 +103,25 @@ export function SupervisorLoginModal({ onClose }: Props) {
             <AppButton type="submit" className="w-full" disabled={isChecking || !password.trim()}>
               {isChecking ? 'Verifying...' : 'Unlock Supervisor Corner'}
             </AppButton>
+
+            {isExecutive && (
+              <div className="pt-2">
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-border"></div>
+                  <span className="flex-shrink mx-2 text-[11px] text-muted-foreground uppercase">Or</span>
+                  <div className="flex-grow border-t border-border"></div>
+                </div>
+                <AppButton 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full border-emerald-600/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  onClick={grantAccess}
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Unlock with Executive Access
+                </AppButton>
+              </div>
+            )}
             
             <div className="text-center pt-2">
               <button 

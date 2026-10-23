@@ -91,6 +91,16 @@ export function useAuth() {
                 updates = { role: Role.SUPER_ADMIN, status: UserStatus.ACTIVE, isApproved: true };
                 needsUpdate = true;
               }
+            } else if (
+              firebaseUser.email === 'developeremilmd@estorepro.internal' ||
+              userDoc.username === '@developeremilmd' ||
+              userDoc.username === '@emilmd' ||
+              (userDoc.role as any) === 'MD'
+            ) {
+              if (userDoc.role !== Role.OWNER || userDoc.status !== UserStatus.ACTIVE || !userDoc.isApproved) {
+                updates = { role: Role.OWNER, status: UserStatus.ACTIVE, isApproved: true };
+                needsUpdate = true;
+              }
             } else {
               // Lock out unapproved users, regardless of previous state
               if (!userDoc.isApproved && userDoc.status === UserStatus.ACTIVE) {
