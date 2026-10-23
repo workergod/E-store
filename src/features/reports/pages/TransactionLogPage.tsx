@@ -45,6 +45,8 @@ interface LogEntry {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
   issueNumber?: string;
+  isDirectReturn?: boolean;
+  directReturnNumber?: string;
   date: any;
   staffName: string;
   customerOrTech: string;
@@ -66,6 +68,8 @@ interface EditFormState {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
   issueNumber?: string;
+  isDirectReturn?: boolean;
+  directReturnNumber?: string;
   dateStr: string;
   staffName: string;
   employeeId: string;
@@ -201,13 +205,19 @@ export default function TransactionLogPage() {
       ));
       returnSnap.forEach(docSnap => {
         const d = docSnap.data();
+        const isDirect = Boolean(d.isDirectReturn || d.issueId === 'DIRECT_RETURN');
+        const directReturnNumber = d.directReturnNumber || (isDirect ? 'CRYO(W/O)-1' : null);
+        const resolvedTechName = empMap[d.employeeId] || (d.employeeName && d.employeeName !== 'UNLINKED' ? d.employeeName : (isDirect ? 'Direct Return' : d.employeeId));
+
         entries.push({
           id: docSnap.id,
           type: 'RETURN',
           issueNumber: d.issueNumber || null,
+          isDirectReturn: isDirect,
+          directReturnNumber: directReturnNumber || undefined,
           date: d.createdAt,
           staffName: d.createdByName || 'Staff',
-          customerOrTech: empMap[d.employeeId] || d.employeeId,
+          customerOrTech: resolvedTechName,
           employeeId: d.employeeId,
           items: (d.items || []).map((it: any) => ({
             productId: it.productId,
@@ -290,6 +300,8 @@ export default function TransactionLogPage() {
       id: log.id,
       type: log.type,
       issueNumber: log.issueNumber,
+      isDirectReturn: log.isDirectReturn,
+      directReturnNumber: log.directReturnNumber,
       dateStr,
       staffName: log.staffName,
       employeeId: log.employeeId || '',
@@ -454,8 +466,8 @@ export default function TransactionLogPage() {
           }
         }
 
-        // If linked to issueId, sync return quantities
-        if (origData.issueId) {
+        // If linked to issueId (and not direct return), sync return quantities
+        if (origData.issueId && origData.issueId !== 'DIRECT_RETURN') {
           const issueRef = doc(db, 'issueTransactions', origData.issueId);
           const issueSnap = await getDoc(issueRef);
           if (issueSnap.exists()) {
@@ -619,7 +631,7 @@ export default function TransactionLogPage() {
             }
           }
 
-          if (d.issueId) {
+          if (d.issueId && d.issueId !== 'DIRECT_RETURN') {
             const issueRef = doc(db, 'issueTransactions', d.issueId);
             const issueSnap = await getDoc(issueRef);
             if (issueSnap.exists()) {
@@ -749,8 +761,12 @@ export default function TransactionLogPage() {
             <div style="font-size: 11px; color: #666; margin-top: 4px;">OFFICIAL RECORD</div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 10px; color: #666; font-weight: bold;">${log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID'}</div>
-            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #059669;">${log.issueNumber || log.id}</div>
+            <div style="font-size: 10px; color: #666; font-weight: bold;">
+              ${log.isDirectReturn ? 'DIRECT RETURN NO' : (log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID')}
+            </div>
+            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #059669;">
+              ${log.isDirectReturn ? (log.directReturnNumber || 'CRYO(W/O)-1') : (log.issueNumber || log.id)}
+            </div>
           </div>
         </div>
 
@@ -819,6 +835,9 @@ export default function TransactionLogPage() {
         || l.staffName.toLowerCase().includes(s)
         || (l.issueNumber && l.issueNumber.toLowerCase().includes(s))
         || (l.issueNumber && l.issueNumber.toLowerCase().replace(/[^a-z0-9]/g, '').includes(sClean))
+        || (l.directReturnNumber && l.directReturnNumber.toLowerCase().includes(s))
+        || (l.directReturnNumber && l.directReturnNumber.toLowerCase().replace(/[^a-z0-9]/g, '').includes(sClean))
+        || (l.isDirectReturn && (s.includes('direct') || s.includes('w/o') || s.includes('without')))
         || (l.lastEditedByName && l.lastEditedByName.toLowerCase().includes(s))
         || (l.lastEditedByRole && l.lastEditedByRole.toLowerCase().includes(s))
         || (l.notes && l.notes.toLowerCase().includes(s))
@@ -908,7 +927,20 @@ export default function TransactionLogPage() {
               <tr key={log.id}>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>
                   <span className={`badge ${log.type}`}>{log.type}</span>
-                  {log.issueNumber && <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px' }}>{log.issueNumber}</div>}
+                  {log.isDirectReturn ? (
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#15803d' }}>
+                      {log.directReturnNumber || 'CRYO(W/O)-1'}
+                      <span style={{ fontSize: '9px', fontWeight: 'normal', color: '#666', display: 'block' }}>(Direct / W/O)</span>
+                    </div>
+                  ) : log.issueNumber ? (
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px' }}>
+                      {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', color: '#999', marginTop: '2px' }}>
+                      #{log.id.slice(-6)}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>{formatDate(log.date)}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{log.customerOrTech}</td>
@@ -1010,7 +1042,16 @@ export default function TransactionLogPage() {
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${cfg.color}`}>
                             <Icon className="h-3 w-3" /> {cfg.label}
                           </span>
-                          {log.issueNumber ? (
+                          {log.isDirectReturn ? (
+                            <div className="flex flex-col items-start">
+                              <span className="font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">
+                                {log.directReturnNumber || 'CRYO(W/O)-1'}
+                              </span>
+                              <span className="text-[9px] text-muted-foreground font-medium mt-0.5">
+                                (Without Issue)
+                              </span>
+                            </div>
+                          ) : log.issueNumber ? (
                             <span className="font-mono text-[11px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 whitespace-nowrap">
                               {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
                             </span>
@@ -1125,10 +1166,12 @@ export default function TransactionLogPage() {
             selectedLog.type === 'ISSUE' 
               ? `Material Issue Details ${selectedLog.issueNumber ? `(${selectedLog.issueNumber})` : ''}` 
               : selectedLog.type === 'RETURN' 
-              ? `Material Return Details ${selectedLog.issueNumber ? `(from ${selectedLog.issueNumber})` : ''}` 
+              ? (selectedLog.isDirectReturn
+                  ? `Direct Material Return Details (${selectedLog.directReturnNumber || 'CRYO(W/O)-1'})`
+                  : `Material Return Details ${selectedLog.issueNumber ? `(from ${selectedLog.issueNumber})` : ''}`)
               : `Purchase Order Details ${selectedLog.issueNumber ? `(${selectedLog.issueNumber})` : ''}`
           }
-          description={`Reference: ${selectedLog.issueNumber || selectedLog.id} • Transaction ID: ${selectedLog.id}`}
+          description={`Reference: ${selectedLog.isDirectReturn ? `${selectedLog.directReturnNumber || 'CRYO(W/O)-1'} (Direct Return - Without Issue)` : (selectedLog.issueNumber || selectedLog.id)} • Transaction ID: ${selectedLog.id}`}
           className="max-w-2xl max-h-[90vh] flex flex-col"
           footer={
             <div className="flex justify-between w-full">
@@ -1277,8 +1320,14 @@ export default function TransactionLogPage() {
         <AppDialog
           isOpen={!!editForm}
           onOpenChange={(open) => !open && !isSavingEdit && setEditForm(null)}
-          title={`Edit ${editForm.type === 'ISSUE' ? `Material Issue (${editForm.issueNumber || editForm.id})` : editForm.type === 'RETURN' ? 'Material Return' : 'Purchase Order'}`}
-          description={`Reference: ${editForm.issueNumber || editForm.id} • Originally created by ${editForm.staffName}`}
+          title={`Edit ${
+            editForm.type === 'ISSUE' 
+              ? `Material Issue (${editForm.issueNumber || editForm.id})` 
+              : editForm.type === 'RETURN' 
+              ? (editForm.isDirectReturn ? `Direct Material Return (${editForm.directReturnNumber || 'CRYO(W/O)-1'})` : `Material Return ${editForm.issueNumber ? `(from ${editForm.issueNumber})` : ''}`) 
+              : 'Purchase Order'
+          }`}
+          description={`Reference: ${editForm.isDirectReturn ? `${editForm.directReturnNumber || 'CRYO(W/O)-1'} (Direct Return - Without Issue)` : (editForm.issueNumber || editForm.id)} • Originally created by ${editForm.staffName}`}
           className="max-w-3xl max-h-[92vh] flex flex-col"
           footer={
             <div className="flex justify-end gap-2 w-full">

@@ -250,7 +250,7 @@ export default function ReturnMaterialsPage() {
 
     try {
       setIsSaving(true);
-      await issueRepository.returnDirectItems({
+      const res = await issueRepository.returnDirectItems({
         employeeId: directEmpId || 'UNLINKED',
         items: validRows.map(r => ({
           productId: r.productId,
@@ -262,7 +262,7 @@ export default function ReturnMaterialsPage() {
         notes: directNotes.trim()
       }, companyId, user.uid);
 
-      toast.success("Direct return processed successfully and inventory restocked!");
+      toast.success(`Direct return ${res.directReturnNumber} processed successfully and inventory restocked!`);
       navigate('/products');
     } catch (error: any) {
       toast.error(error.message || "Failed to process direct return");

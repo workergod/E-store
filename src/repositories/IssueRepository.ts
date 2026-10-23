@@ -59,6 +59,37 @@ export const issueRepository = {
     return `CRYO-${nextNum}`;
   },
 
+  generateDirectReturnNumber: async (companyId: string): Promise<string> => {
+    const q = query(
+      collection(db, 'returnTransactions'),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      return 'CRYO(W/O)-1';
+    }
+
+    let maxNum = 0;
+    let directCount = 0;
+    snapshot.forEach(docSnap => {
+      const d = docSnap.data();
+      if (d.isDirectReturn || d.issueId === 'DIRECT_RETURN' || d.directReturnNumber) {
+        directCount++;
+        const numStr = (d.directReturnNumber || '') as string;
+        if (numStr) {
+          const match = numStr.match(/(\d+)$/);
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        }
+      }
+    });
+
+    const nextNum = Math.max(maxNum + 1, directCount + 1);
+    return `CRYO(W/O)-${nextNum}`;
+  },
+
   issueItems: async (data: Omit<IssueTransaction, 'id' | 'createdAt' | 'updatedAt' | 'status'>, userId: string): Promise<string> => {
     const now = serverTimestamp();
     const issueNumber = data.issueNumber || await issueRepository.generateIssueNumber(data.companyId);
@@ -212,9 +243,11 @@ export const issueRepository = {
     },
     companyId: string,
     userId: string
-  ): Promise<string> => {
+  ): Promise<{ id: string; directReturnNumber: string }> => {
     const { employeeId, items, notes } = params;
     if (!items || items.length === 0) throw new Error('No items specified for return');
+
+    const directReturnNumber = await issueRepository.generateDirectReturnNumber(companyId);
 
     let createdByName = 'Staff';
     try {
@@ -261,9 +294,9 @@ export const issueRepository = {
         productId: item.productId,
         transactionType: 'RETURN',
         quantity: qty,
-        referenceId: 'DIRECT_RETURN',
+        referenceId: directReturnNumber,
         referenceType: 'DIRECT_RETURN',
-        notes: `Direct Return (unissued) from ${employeeName || 'Technician'}${notes ? `: ${notes}` : ''}`,
+        notes: `Direct Return (${directReturnNumber}) from ${employeeName || 'Technician'}${notes ? `: ${notes}` : ''}`,
         performedBy: userId
       });
     }
@@ -278,6 +311,7 @@ export const issueRepository = {
       employeeName: employeeName || 'Technician',
       issueId: 'DIRECT_RETURN',
       isDirectReturn: true,
+      directReturnNumber,
       items: returnedItemsPayload,
       createdAt: serverTimestamp(),
       createdBy: userId,
@@ -286,10 +320,11 @@ export const issueRepository = {
     });
 
     await auditLogRepository.logAction(userId, companyId, 'CREATE', 'DirectReturnTransaction', retDocRef.id, {
+      directReturnNumber,
       items: returnedItemsPayload,
       notes
     });
 
-    return retDocRef.id;
+    return { id: retDocRef.id, directReturnNumber };
   }
 };
