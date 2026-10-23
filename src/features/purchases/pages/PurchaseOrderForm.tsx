@@ -147,7 +147,7 @@ export default function PurchaseOrderForm() {
                   </AppButton>
                 </div>
 
-                <div className="overflow-visible min-h-[340px]">
+                <div className="overflow-visible">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
