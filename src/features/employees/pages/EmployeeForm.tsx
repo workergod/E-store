@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import type { EmployeeRole, EmployeeStatus } from '../../../shared/types/Employee';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../firebase/firestore';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -122,11 +123,34 @@ export default function EmployeeForm() {
       if (isEditMode) {
         await employeeRepository.update(id, payload, companyId, user.uid);
         toast.success("Employee updated successfully");
-        navigate('/employees');
       } else {
         const newId = await employeeRepository.create(payload as any, user.uid);
         toast.success("Employee created successfully");
-        navigate(`/employees/${newId}`); // Redirect to profile to upload docs
+      }
+
+      // Automatically sync photo to User document if employee is linked to a username
+      if (data.username && data.photoUrl) {
+        try {
+          const userSnap = await getDocs(query(collection(db, 'users'), where('username', '==', data.username)));
+          for (const uDoc of userSnap.docs) {
+            await updateDoc(doc(db, 'users', uDoc.id), { photoURL: data.photoUrl });
+          }
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && currentUser.username === data.username) {
+            useAuthStore.getState().setUser({
+              ...currentUser,
+              photoURL: data.photoUrl
+            });
+          }
+        } catch (syncErr) {
+          console.warn("Failed to sync employee photo to user account:", syncErr);
+        }
+      }
+
+      if (isEditMode) {
+        navigate('/employees');
+      } else {
+        navigate(`/employees`);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to save employee");

@@ -7,7 +7,7 @@ import { signOut } from "../../firebase/auth"
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
 import { productRepository } from '../../repositories/ProductRepository'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/firestore'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
@@ -30,6 +30,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showWelcome, setShowWelcome] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.photoURL || null)
+  const [avatarError, setAvatarError] = useState(false)
+
+  // Sync / resolve user profile picture from auth user or linked employee record
+  useEffect(() => {
+    if (user?.photoURL) {
+      setAvatarUrl(user.photoURL)
+      setAvatarError(false)
+      return
+    }
+
+    if (user && company?.companyId) {
+      let isMounted = true
+      const fetchEmpPhoto = async () => {
+        try {
+          const empSnap = await getDocs(query(
+            collection(db, 'employees'),
+            where('companyId', '==', company.companyId),
+            where('username', '==', user.username)
+          ))
+          if (!empSnap.empty && isMounted) {
+            const data = empSnap.docs[0].data()
+            if (data.photoUrl) {
+              setAvatarUrl(data.photoUrl)
+              setAvatarError(false)
+              updateDoc(doc(db, 'users', user.uid), { photoURL: data.photoUrl }).catch(() => {})
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      fetchEmpPhoto()
+      return () => { isMounted = false }
+    }
+  }, [user?.uid, user?.username, user?.photoURL, company?.companyId])
 
   // Trigger welcome screen ONLY for new users (e.g. new technicians, newly created accounts) on their first visit
   // It will NOT auto-open every time for existing users
@@ -276,8 +312,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="text-[12px] text-muted-foreground mt-1.5 leading-none">{user?.role || 'System Admin'}</span>
               </div>
               <div className="group relative">
-                <div onClick={handleAvatarClick} className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ring-2 ring-transparent transition-all cursor-pointer hover:ring-primary/20 border border-primary/20">
-                  {user?.fullName?.charAt(0) || 'A'}
+                <div 
+                  onClick={handleAvatarClick} 
+                  className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-transparent transition-all cursor-pointer hover:ring-primary/20 border border-primary/20 overflow-hidden bg-primary/10 select-none shrink-0"
+                  title={user?.fullName || 'User Profile'}
+                >
+                  {avatarUrl && !avatarError ? (
+                    <img 
+                      src={avatarUrl} 
+                      alt={user?.fullName || 'Profile'} 
+                      className="h-full w-full object-cover rounded-full" 
+                      onError={() => setAvatarError(true)} 
+                    />
+                  ) : (
+                    <span className="text-primary font-bold text-sm">
+                      {user?.fullName?.charAt(0) || user?.username?.replace('@', '').charAt(0).toUpperCase() || 'A'}
+                    </span>
+                  )}
                 </div>
                 {/* Minimal dropdown placeholder */}
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-[var(--radius)] bg-popover p-2 shadow-premium border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right">

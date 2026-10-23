@@ -194,6 +194,26 @@ export function useAuth() {
           await userRepository.updateLastLogin(userDoc.uid);
           await loginHistoryRepository.logSignIn(userDoc.uid);
           
+          // Auto-sync employee photo if user doesn't have photoURL
+          if (!userDoc.photoURL && userDoc.companyId && userDoc.username) {
+            try {
+              const empSnap = await getDocs(query(
+                collection(db, 'employees'),
+                where('companyId', '==', userDoc.companyId),
+                where('username', '==', userDoc.username)
+              ));
+              if (!empSnap.empty) {
+                const empData = empSnap.docs[0].data();
+                if (empData.photoUrl) {
+                  userDoc = { ...userDoc, photoURL: empData.photoUrl };
+                  await userRepository.updateUser(userDoc.uid, { photoURL: empData.photoUrl });
+                }
+              }
+            } catch (syncErr) {
+              console.warn("Auto-sync employee photo error:", syncErr);
+            }
+          }
+
           setUser(userDoc);
         } catch (error: any) {
           console.error("Auth sync error:", error);
