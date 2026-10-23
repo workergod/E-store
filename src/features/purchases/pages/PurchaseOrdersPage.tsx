@@ -78,10 +78,11 @@ export default function PurchaseOrdersPage() {
       )
     },
     {
+      id: 'actions',
       header: 'Actions',
-      accessorKey: 'id',
+      enableSorting: false,
       cell: ({ row }: any) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end items-center gap-2">
           {row.original.status === 'Draft' && (
             <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)}>
               <Edit className="h-4 w-4 text-muted-foreground" />

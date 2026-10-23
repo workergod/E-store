@@ -99,17 +99,28 @@ export function AppTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-border/50">
                 {headerGroup.headers.map((header) => {
+                  const meta = header.column.columnDef.meta as { align?: 'left' | 'center' | 'right'; className?: string } | undefined;
+                  const isActionCol = header.id === 'actions' || (header.id === 'id' && typeof header.column.columnDef.header === 'string' && header.column.columnDef.header.toLowerCase().includes('action'));
+                  const align = meta?.align || (isActionCol ? 'right' : 'left');
+
                   return (
                     <TableHead 
                       key={header.id} 
                       className={cn(
                         "h-11 font-semibold text-muted-foreground",
-                        header.column.getCanSort() && "cursor-pointer select-none hover:text-foreground hover:bg-muted/40 transition-colors"
+                        align === 'right' && "text-right",
+                        align === 'center' && "text-center",
+                        header.column.getCanSort() && "cursor-pointer select-none hover:text-foreground hover:bg-muted/40 transition-colors",
+                        meta?.className
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                       title={header.column.getCanSort() ? "Click to toggle Ascending / Descending" : undefined}
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className={cn(
+                        "flex items-center gap-1.5",
+                        align === 'right' && "justify-end",
+                        align === 'center' && "justify-center"
+                      )}>
                         <span>
                           {header.isPlaceholder
                             ? null
@@ -143,11 +154,17 @@ export function AppTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   className="hover:bg-muted/20 border-b-border/50 transition-colors"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const meta = cell.column.columnDef.meta as { align?: 'left' | 'center' | 'right'; className?: string } | undefined;
+                    const isActionCol = cell.column.id === 'actions' || (cell.column.id === 'id' && typeof cell.column.columnDef.header === 'string' && cell.column.columnDef.header.toLowerCase().includes('action'));
+                    const align = meta?.align || (isActionCol ? 'right' : 'left');
+
+                    return (
+                      <TableCell key={cell.id} className={cn("py-3", align === 'right' && "text-right", align === 'center' && "text-center", meta?.className)}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (

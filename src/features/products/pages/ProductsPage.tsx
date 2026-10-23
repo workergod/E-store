@@ -191,8 +191,10 @@ export default function ProductsPage() {
       },
       {
         id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end items-center gap-2">
             {row.original.status !== 'DELETED' && (
               <AppButton variant="ghost" size="icon" onClick={() => handleEdit(row.original)}>
                 <Edit className="h-4 w-4" />

@@ -167,17 +167,14 @@ export default function EmployeeDashboard() {
     {
       header: 'Status',
       accessorKey: 'status',
-      cell: ({ row }: any) => (
-        <div className="flex justify-center">
-          <StatusBadge status={row.original.status} />
-        </div>
-      )
+      cell: ({ row }: any) => <StatusBadge status={row.original.status} />
     },
     {
+      id: 'actions',
       header: 'Actions',
-      accessorKey: 'id',
+      enableSorting: false,
       cell: ({ row }: any) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end items-center gap-2">
           <AppButton variant="ghost" size="icon" onClick={() => navigate(`/employees/${row.original.id}`)}>
             <Eye className="h-4 w-4" />
           </AppButton>
