@@ -171,7 +171,10 @@ export default function RegisterPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
+        hasSeenWelcome: false,
       });
+
+      sessionStorage.setItem('cryodeal_is_new_user', 'true');
 
       // Sign out immediately so they don't get auto-logged in and hit access-denied
       await auth.signOut();

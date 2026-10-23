@@ -7,6 +7,8 @@ import { signOut } from "../../firebase/auth"
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
 import { productRepository } from '../../repositories/ProductRepository'
+import { doc, updateDoc } from 'firebase/firestore'
+import { db } from '../../firebase/firestore'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
 import { WelcomeScreen } from '../overlays/WelcomeScreen'
@@ -29,24 +31,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showWelcome, setShowWelcome] = useState(false)
 
-  // Trigger welcome screen for MD and new logins
+  // Trigger welcome screen ONLY for new users (e.g. new technicians, newly created accounts) on their first visit
+  // It will NOT auto-open every time for existing users
   useEffect(() => {
     if (!user?.uid) return
-    const welcomedKey = `cryodeal_welcomed_${user.uid}`
-    const isPending = sessionStorage.getItem('cryodeal_welcome_pending') === 'true'
-    const hasBeenWelcomed = sessionStorage.getItem(welcomedKey) === 'true'
+    const welcomedStorageKey = `cryodeal_welcomed_${user.uid}`
+    const hasAlreadySeenLocally = localStorage.getItem(welcomedStorageKey) === 'true'
+    const hasSeenInProfile = (user as any)?.hasSeenWelcome === true
 
-    if (isPending || !hasBeenWelcomed) {
+    // If already seen, never auto-show
+    if (hasAlreadySeenLocally || hasSeenInProfile) {
+      return
+    }
+
+    // Only auto-open if explicitly a new user (just registered session or hasSeenWelcome: false)
+    const isNewUserSession = sessionStorage.getItem('cryodeal_is_new_user') === 'true'
+    const isUnseenAccount = (user as any)?.hasSeenWelcome === false
+
+    if (isNewUserSession || isUnseenAccount) {
       setShowWelcome(true)
     }
-  }, [user?.uid])
+  }, [user?.uid, (user as any)?.hasSeenWelcome])
 
-  const handleCloseWelcome = () => {
+  const handleCloseWelcome = async () => {
     setShowWelcome(false)
     if (user?.uid) {
-      sessionStorage.setItem(`cryodeal_welcomed_${user.uid}`, 'true')
+      // Permanently remember in localStorage so it never shows again on this machine
+      localStorage.setItem(`cryodeal_welcomed_${user.uid}`, 'true')
+      sessionStorage.removeItem('cryodeal_is_new_user')
+      
+      // Also update user doc in Firestore so it's permanently recorded
+      try {
+        const userRef = doc(db, 'users', user.uid)
+        await updateDoc(userRef, { hasSeenWelcome: true })
+      } catch {
+        // Silently catch
+      }
     }
-    sessionStorage.removeItem('cryodeal_welcome_pending')
   }
 
   useEffect(() => {
