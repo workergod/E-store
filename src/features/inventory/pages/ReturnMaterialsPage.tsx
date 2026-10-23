@@ -408,18 +408,19 @@ export default function ReturnMaterialsPage() {
                               <td className="px-4 py-3 text-center text-muted-foreground">{item.returnedQty} <span className="text-xs">{item.unit || ''}</span></td>
                               <td className="px-4 py-3 text-center font-semibold text-[hsl(var(--success))]">{maxReturnable} <span className="text-xs">{item.unit || ''}</span></td>
                               <td className="px-2 py-2">
-                                <div className="relative flex items-center">
-                                  <AppInput 
+                                <div className="relative flex items-center min-w-[120px]">
+                                  <input 
                                     type="number" 
                                     step="any" 
                                     max={maxReturnable}
                                     min={0}
                                     {...methods.register(`returns.${index}.returnQty` as const)} 
                                     disabled={maxReturnable <= 0}
-                                    className="pr-10"
+                                    className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3.5 pr-14 shadow-xs transition-all outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    placeholder="0"
                                   />
                                   {item.unit && (
-                                    <span className="absolute right-2 pointer-events-none text-xs text-muted-foreground font-semibold">
+                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
                                       {item.unit}
                                     </span>
                                   )}
@@ -536,7 +537,7 @@ export default function ReturnMaterialsPage() {
                       </td>
 
                       <td className="px-3 py-2.5">
-                        <div className="relative flex items-center">
+                        <div className="relative flex items-center min-w-[120px]">
                           <input
                             type="number"
                             step="any"
@@ -545,7 +546,7 @@ export default function ReturnMaterialsPage() {
                             value={item.returnQty}
                             onChange={(e) => updateDirectQty(item.id, e.target.value)}
                             disabled={!item.productId}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-center font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground px-3 shadow-xs transition-all outline-none disabled:cursor-not-allowed disabled:opacity-50 text-center"
                           />
                         </div>
                       </td>

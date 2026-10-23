@@ -205,9 +205,9 @@ export default function PurchaseOrderForm() {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium text-left w-[40%]">Product</th>
+                        <th className="px-4 py-3 font-medium text-left w-[38%]">Product</th>
                         <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
-                        <th className="px-4 py-3 font-medium text-left w-[20%]">Order Qty</th>
+                        <th className="px-4 py-3 font-medium text-left w-[22%] min-w-[130px]">Order Qty</th>
                         <th className="px-4 py-3 font-medium text-left w-[17%]">New Total</th>
                         <th className="px-4 py-3 font-medium text-center w-[5%]"></th>
                       </tr>
@@ -238,17 +238,17 @@ export default function PurchaseOrderForm() {
                               ) : '-'}
                             </td>
                             <td className="p-2">
-                              <div className="relative flex items-center">
+                              <div className="relative flex items-center min-w-[120px]">
                                 <input 
                                   type="number" 
-                                  step="any"
-                                  min="0.01"
+                                  step="any" 
+                                  min="0.01" 
                                   {...methods.register(`items.${index}.quantity` as const)} 
-                                  className="w-full h-10 bg-transparent border-transparent hover:bg-muted/50 focus:bg-background focus:border-input focus:ring-2 focus:ring-primary rounded-md pl-3 pr-12 text-sm transition-all outline-none" 
-                                  placeholder="Qty" 
+                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3.5 pr-14 shadow-xs transition-all outline-none" 
+                                  placeholder="0" 
                                 />
                                 {unit && (
-                                  <span className="absolute right-3 pointer-events-none text-xs font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
                                     {unit}
                                   </span>
                                 )}

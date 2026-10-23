@@ -248,8 +248,8 @@ export default function PurchaseOrderDetails() {
                     <td className="px-4 py-3 text-right">{item.receivedQuantity || 0} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
                     <td className="px-4 py-3 text-right font-semibold">{remaining} <span className="text-xs text-muted-foreground">{item.unit || ''}</span></td>
                     <td className="px-4 py-3">
-                      <div className="relative flex items-center">
-                        <AppInput 
+                      <div className="relative flex items-center min-w-[110px]">
+                        <input 
                           type="number" 
                           step="any"
                           min={0}
@@ -259,10 +259,10 @@ export default function PurchaseOrderDetails() {
                             ...prev,
                             [item.productId]: Math.min(remaining, Math.max(0, parseFloat(e.target.value) || 0))
                           }))}
-                          className="text-right h-9 pr-10"
+                          className="w-full h-9 rounded-md border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground px-3 pr-12 shadow-xs transition-all outline-none text-right"
                         />
                         {item.unit && (
-                          <span className="absolute right-2 pointer-events-none text-xs text-muted-foreground font-semibold">
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded border border-border/50 select-none">
                             {item.unit}
                           </span>
                         )}
