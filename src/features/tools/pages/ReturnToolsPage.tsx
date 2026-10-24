@@ -16,6 +16,7 @@ import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
 import { AppDialog } from '../../../shared/overlays/AppDialog';
+import { ToolSearchSelect } from '../../../shared/forms/ToolSearchSelect';
 import { escapeHtml } from '../../../shared/utils/security';
 import { cn } from '../../../shared/utils/cn';
 
@@ -709,22 +710,16 @@ export default function ReturnToolsPage() {
                     const tool = tools.find(t => t.id === row.toolId);
 
                     return (
-                      <tr key={row.id} className="hover:bg-muted/10 transition-colors">
-                        <td className="px-3 py-2.5">
-                          <select
+                      <tr key={row.id} className="hover:bg-muted/10 transition-colors relative focus-within:z-40">
+                        <td className="p-2 relative">
+                          <ToolSearchSelect
                             value={row.toolId}
-                            onChange={e => updateDirectRow(row.id, 'toolId', e.target.value)}
-                            className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          >
-                            <option value="">Choose tool...</option>
-                            {tools.map(t => (
-                              <option key={t.id} value={t.id}>
-                                [{t.toolCode}] {t.name} ({t.brand || 'No brand'})
-                              </option>
-                            ))}
-                          </select>
+                            onChange={toolId => updateDirectRow(row.id, 'toolId', toolId)}
+                            tools={tools}
+                            placeholder="Type tool name, tag code, or brand..."
+                          />
                           {tool && (
-                            <div className="text-[11px] text-muted-foreground mt-1">
+                            <div className="text-[11px] text-muted-foreground mt-1 px-1">
                               Currently in Store: <b className="text-foreground">{tool.availableQty}</b> / Total: {tool.totalQty}
                             </div>
                           )}

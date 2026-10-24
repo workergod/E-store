@@ -45,7 +45,14 @@ const OPERATIONS_NAV: NavItemDef[] = [
 ]
 
 const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: boolean, pathname: string }) => {
-  const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path))
+  const isActive = (() => {
+    if (pathname === item.path) return true;
+    if (item.path === '/') return false;
+    if (item.path === '/tools') {
+      return pathname.startsWith('/tools/') && !pathname.startsWith('/tools/issue') && !pathname.startsWith('/tools/return');
+    }
+    return pathname.startsWith(item.path + '/');
+  })();
   const Icon = item.icon
   
   return (
