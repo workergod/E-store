@@ -118,17 +118,6 @@ export default function PurchaseOrderDetails() {
     }
   };
 
-  const handleApprove = async () => {
-    if (!companyId || !user || !po?.id) return;
-    try {
-      await purchaseOrderRepository.updateStatus(po.id, companyId, 'Approved', user.uid);
-      toast.success("Purchase Approved");
-      setPo(prev => prev ? { ...prev, status: 'Approved' } : null);
-    } catch (error) {
-      toast.error("Failed to approve purchase");
-    }
-  };
-
   const handleReceiveGoods = async () => {
     if (!companyId || !user || !po?.id) return;
     try {
@@ -246,20 +235,15 @@ export default function PurchaseOrderDetails() {
         description={`Created on ${po.purchaseDate && typeof (po.purchaseDate as any).toDate === 'function' ? (po.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}${displaySupplier ? ` • Supplier: ${displaySupplier}` : ''}`}
         actions={
           <div className="flex gap-2.5 items-center flex-wrap">
-            {po.status === 'Draft' && (
+            {po.status !== 'Completed' && po.status !== 'Cancelled' && (
               <>
                 <AppButton onClick={() => navigate(`/purchases/edit/${po.id}`)} variant="outline">
                   <Edit className="h-4 w-4 mr-2" /> Edit Purchase
                 </AppButton>
-                <AppButton onClick={handleApprove} variant="default">
-                  <CheckCircle className="h-4 w-4 mr-2" /> Approve Purchase
+                <AppButton onClick={() => setIsReceiveModalOpen(true)} variant="success">
+                  <PackageOpen className="h-4 w-4 mr-2" /> Receive Goods
                 </AppButton>
               </>
-            )}
-            {(po.status === 'Approved' || po.status === 'Partially Received') && (
-              <AppButton onClick={() => setIsReceiveModalOpen(true)} variant="success">
-                <PackageOpen className="h-4 w-4 mr-2" /> Receive Goods
-              </AppButton>
             )}
             <AppButton variant="outline" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" /> Print Receipt

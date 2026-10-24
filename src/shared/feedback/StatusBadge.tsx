@@ -13,14 +13,12 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     variant = 'softSuccess'
   } else if (s === 'PARTIALLY RECEIVED') {
     variant = 'softWarning'
-  } else if (s === 'DRAFT') {
-    variant = 'softSuccess'
+  } else if (s === 'ORDERED' || s === 'OPEN' || s === 'IN_TRANSIT' || s === 'APPROVED') {
+    variant = 'softPrimary'
   } else if (s === 'PENDING' || s === 'DRAFT' || s === 'ON_LEAVE' || s === 'PROCESSING') {
     variant = 'softWarning'
   } else if (s === 'ARCHIVED' || s === 'CANCELLED' || s === 'TERMINATED' || s === 'SUSPENDED') {
     variant = 'softDestructive'
-  } else if (s === 'IN_TRANSIT' || s === 'APPROVED') {
-    variant = 'softPrimary'
   }
 
   return (

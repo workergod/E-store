@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type POStatus = 'Draft' | 'Approved' | 'Partially Received' | 'Completed' | 'Cancelled';
+export type POStatus = 'Ordered' | 'Approved' | 'Partially Received' | 'Completed' | 'Cancelled' | 'Draft';
 
 // Taxes removed since this is pure inventory
 

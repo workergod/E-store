@@ -145,8 +145,8 @@ export const purchaseOrderRepository = {
 
       const poData = poDoc.data() as PurchaseOrder;
       
-      if (poData.status !== 'Approved' && poData.status !== 'Partially Received') {
-        throw new Error('Cannot receive goods for a PO that is not Approved or Partially Received');
+      if (poData.status === 'Completed' || poData.status === 'Cancelled') {
+        throw new Error('Cannot receive goods for a purchase that is already Completed or Cancelled');
       }
 
       let allCompleted = true;

@@ -197,7 +197,7 @@ export default function PurchaseOrderForm() {
           companyId,
           supplierId: data.supplierId || '',
           supplierName: effectiveSupplierName,
-          status: 'Draft' as const,
+          status: 'Ordered' as const,
           purchaseDate: new Date(data.purchaseDate),
           notes: data.notes || '',
           items: enrichedItems,
@@ -227,7 +227,7 @@ export default function PurchaseOrderForm() {
       
       <PageHeader 
         title={isEditing ? `Edit Purchase ${existingPoNumber}` : "Create Purchase"} 
-        description={isEditing ? "Update details or line items for this draft purchase." : "Draft a new purchase to send to your supplier."} 
+        description={isEditing ? "Update details or line items for this purchase." : "Record a purchase to restock inventory from your supplier."} 
       />
 
       <FormProvider {...methods}>
@@ -433,7 +433,7 @@ export default function PurchaseOrderForm() {
                    <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                 </div>
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
-                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Draft')}
+                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Purchase')}
                 </AppButton>
                 <AppButton type="button" variant="ghost" onClick={() => navigate('/purchases')} disabled={isSaving} className="w-full text-muted-foreground">
                   Cancel

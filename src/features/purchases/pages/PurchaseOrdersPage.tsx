@@ -111,7 +111,7 @@ export default function PurchaseOrdersPage() {
       enableSorting: false,
       cell: ({ row }: any) => (
         <div className="flex justify-end items-center gap-1.5">
-          {row.original.status === 'Draft' && (
+          {row.original.status !== 'Completed' && row.original.status !== 'Cancelled' && (
             <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)} title="Edit Purchase">
               <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </AppButton>

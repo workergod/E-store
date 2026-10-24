@@ -196,7 +196,7 @@ export function Sidebar({
         )}
 
         {/* PURCHASING NAV */}
-        {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (
+        {user?.role !== Role.TECHNICIAN && (
           <div className="px-4">
             {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Purchasing</h4>}
             <div className="space-y-[var(--spacing-xs)]">
