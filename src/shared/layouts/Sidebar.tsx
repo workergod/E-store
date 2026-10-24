@@ -6,7 +6,7 @@ import {
   BarChart, 
   HelpCircle, MessageCircle,
   ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList,
-  PanelLeft
+  PanelLeft, Wrench
 } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -27,6 +27,12 @@ const INVENTORY_NAV: NavItemDef[] = [
   { path: '/products', label: 'Products', icon: PackageSearch },
   { path: '/issue', label: 'Issue Materials', icon: ArrowUpRight },
   { path: '/returns', label: 'Return Materials', icon: ArrowDownLeft },
+]
+
+const TOOLS_NAV: NavItemDef[] = [
+  { path: '/tools', label: 'Tools', icon: Wrench },
+  { path: '/tools/issue', label: 'Issue Tools', icon: ArrowUpRight },
+  { path: '/tools/return', label: 'Return Tools', icon: ArrowDownLeft },
 ]
 
 const PURCHASING_NAV: NavItemDef[] = [
@@ -171,6 +177,16 @@ export function Sidebar({
             )}
           </div>
         </div>
+
+        {/* TOOLS & EQUIPMENT NAV */}
+        {user?.role !== Role.TECHNICIAN && (
+          <div className="px-4">
+            {!collapsed && <h4 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tools</h4>}
+            <div className="space-y-[var(--spacing-xs)]">
+              {TOOLS_NAV.map(item => <NavItem key={item.path} item={item} collapsed={collapsed} pathname={location.pathname} />)}
+            </div>
+          </div>
+        )}
 
         {/* PURCHASING NAV */}
         {user?.role !== Role.TECHNICIAN && user?.role !== Role.STORE_KEEPER && (

@@ -228,6 +228,7 @@ export default function TransactionLogPage() {
             sku: it.sku || prodSkuMap[it.productId] || ''
           })),
           rawItems: d.items || [],
+          siteName: d.siteName || '',
           notes: d.notes,
           lastEditedByName: d.lastEditedByName,
           lastEditedByRole: d.lastEditedByRole,
@@ -510,6 +511,7 @@ export default function TransactionLogPage() {
 
         await updateDoc(returnRef, {
           employeeId: editForm.employeeId,
+          siteName: editForm.siteName || '',
           notes: editForm.notes,
           items: updatedItems,
           createdAt: newTxDate,
@@ -1440,8 +1442,8 @@ export default function TransactionLogPage() {
                 />
               </div>
 
-              {/* Site Name (for Issue) */}
-              {editForm.type === 'ISSUE' && (
+              {/* Site Name (for Issue & Return) */}
+              {(editForm.type === 'ISSUE' || editForm.type === 'RETURN') && (
                 <div className="col-span-1 sm:col-span-2">
                   <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">
                     Site Name / Location

@@ -56,9 +56,11 @@ export default function ReturnMaterialsPage() {
   // 1. "From Active Issue" State
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
   const [selectedIssueId, setSelectedIssueId] = useState<string>('');
+  const [linkedSiteName, setLinkedSiteName] = useState<string>('');
 
   // 2. "Direct Return" State
   const [directEmpId, setDirectEmpId] = useState<string>('');
+  const [directSiteName, setDirectSiteName] = useState<string>('');
   const [directNotes, setDirectNotes] = useState<string>('');
   const [directItems, setDirectItems] = useState<DirectReturnRow[]>([
     {
@@ -137,12 +139,14 @@ export default function ReturnMaterialsPage() {
   useEffect(() => {
     const issue = issues.find(i => i.id === selectedIssueId);
     if (issue) {
+      setLinkedSiteName((issue as any).siteName || '');
       const sortedItems = [...issue.items].sort((a, b) => (a.productName || '').localeCompare(b.productName || ''));
       replace(sortedItems.map(item => ({
         productId: item.productId,
         returnQty: 0
       })));
     } else {
+      setLinkedSiteName('');
       replace([]);
     }
   }, [selectedIssueId, issues, replace]);
@@ -159,7 +163,7 @@ export default function ReturnMaterialsPage() {
 
     try {
       setIsSaving(true);
-      await issueRepository.returnItems(selectedIssueId, data.returns, companyId, user.uid);
+      await issueRepository.returnItems(selectedIssueId, data.returns, companyId, user.uid, linkedSiteName.trim());
       toast.success("Materials returned successfully and restocked!");
       navigate('/products');
     } catch (error: any) {
@@ -252,6 +256,7 @@ export default function ReturnMaterialsPage() {
       setIsSaving(true);
       const res = await issueRepository.returnDirectItems({
         employeeId: directEmpId || 'UNLINKED',
+        siteName: directSiteName.trim(),
         items: validRows.map(r => ({
           productId: r.productId,
           productName: r.productName,
@@ -381,6 +386,35 @@ export default function ReturnMaterialsPage() {
           {selectedIssue && (
             <FormProvider {...methods}>
               <AppForm onSubmit={methods.handleSubmit(onSubmitLinked)}>
+                <div className="bg-card rounded-xl p-5 border border-border shadow-sm mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium leading-none mb-2 block">
+                        Site / Location (From Issue or Updated)
+                      </label>
+                      <input 
+                        type="text"
+                        value={linkedSiteName}
+                        onChange={e => setLinkedSiteName(e.target.value)}
+                        placeholder="e.g. 4S Catering (Pattom)"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-medium"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Specify or confirm the site where this material was retrieved from.</p>
+                    </div>
+
+                    {(selectedIssue as any).additionalTechnicians && (selectedIssue as any).additionalTechnicians.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium leading-none mb-2 block text-muted-foreground">
+                          Accompanying Technicians
+                        </label>
+                        <div className="flex items-center h-10 px-3 rounded-md bg-muted/40 border border-border text-sm text-foreground">
+                          {(selectedIssue as any).additionalTechnicians.join(', ')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <FormSection title={selectedIssue.issueNumber ? `Items to Return (Issue ${selectedIssue.issueNumber})` : "Items to Return"} description="Enter the quantity the technician is returning. The remaining quantity will be marked as Used.">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
@@ -459,7 +493,7 @@ export default function ReturnMaterialsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium leading-none mb-2 block">Technician / Employee (Optional)</label>
                 <select 
@@ -477,10 +511,21 @@ export default function ReturnMaterialsPage() {
               </div>
 
               <div>
+                <label className="text-sm font-medium leading-none mb-2 block">Site / Location</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 4S Catering (Pattom)"
+                  value={directSiteName}
+                  onChange={e => setDirectSiteName(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+
+              <div>
                 <label className="text-sm font-medium leading-none mb-2 block">Reason / Return Notes</label>
                 <input
                   type="text"
-                  placeholder="e.g. Leftover material from project, surplus, customer return..."
+                  placeholder="e.g. Leftover material from project, surplus..."
                   value={directNotes}
                   onChange={e => setDirectNotes(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -35,6 +35,10 @@ import IssueMaterialsPage from './features/inventory/pages/IssueMaterialsPage';
 import ReturnMaterialsPage from './features/inventory/pages/ReturnMaterialsPage';
 import MyMaterialsPage from './features/inventory/pages/MyMaterialsPage';
 
+import ToolsPage from './features/tools/pages/ToolsPage';
+import IssueToolsPage from './features/tools/pages/IssueToolsPage';
+import ReturnToolsPage from './features/tools/pages/ReturnToolsPage';
+
 import TransactionLogPage from './features/reports/pages/TransactionLogPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
 import HelpPage from './features/settings/pages/HelpPage';
@@ -103,6 +107,10 @@ function MainApp() {
                 <Route path="/issue" element={<IssueMaterialsPage />} />
                 <Route path="/returns" element={<ReturnMaterialsPage />} />
                 <Route path="/my-materials" element={<MyMaterialsPage />} />
+
+                <Route path="/tools" element={<ToolsPage />} />
+                <Route path="/tools/issue" element={<IssueToolsPage />} />
+                <Route path="/tools/return" element={<ReturnToolsPage />} />
 
                 <Route path="/transaction-log" element={<TransactionLogPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

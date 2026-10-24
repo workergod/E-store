@@ -83,6 +83,7 @@ export default function DashboardPage() {
             id: i.id,
             issueNumber: i.issueNumber || 'CRYO-1',
             technician: techName,
+            siteName: i.siteName || '',
             item: itemsText || 'No items',
             date: `${dateFormatted}, ${timeFormatted}`,
             status: i.status || 'ISSUED'
@@ -111,6 +112,7 @@ export default function DashboardPage() {
             returnRef,
             isDirectReturn: Boolean(r.isDirectReturn),
             technician: techName,
+            siteName: r.siteName || '',
             item: itemsText || 'No items',
             date: `${dateFormatted}, ${timeFormatted}`,
             status: r.isDirectReturn ? 'DIRECT RETURN' : 'RETURN'
@@ -141,7 +143,14 @@ export default function DashboardPage() {
       header: 'Technician', 
       accessorKey: 'technician',
       cell: ({ row }: any) => (
-        <span className="font-medium text-foreground">{row.original.technician}</span>
+        <div>
+          <span className="font-medium text-foreground">{row.original.technician}</span>
+          {row.original.siteName && (
+            <div className="text-[10px] text-muted-foreground font-semibold">
+              Site: {row.original.siteName}
+            </div>
+          )}
+        </div>
       )
     },
     { 
@@ -195,7 +204,14 @@ export default function DashboardPage() {
       header: 'Technician', 
       accessorKey: 'technician',
       cell: ({ row }: any) => (
-        <span className="font-medium text-foreground">{row.original.technician}</span>
+        <div>
+          <span className="font-medium text-foreground">{row.original.technician}</span>
+          {row.original.siteName && (
+            <div className="text-[10px] text-muted-foreground font-semibold">
+              Site: {row.original.siteName}
+            </div>
+          )}
+        </div>
       )
     },
     { 

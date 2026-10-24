@@ -139,7 +139,7 @@ export const issueRepository = {
     return docRef.id;
   },
 
-  returnItems: async (issueId: string, returns: { productId: string; returnQty: number }[], companyId: string, userId: string): Promise<void> => {
+  returnItems: async (issueId: string, returns: { productId: string; returnQty: number }[], companyId: string, userId: string, siteName?: string): Promise<void> => {
     const docRef = doc(db, 'issueTransactions', issueId);
     
     const issueDoc = await getDoc(docRef);
@@ -193,7 +193,7 @@ export const issueRepository = {
         quantity: ret.returnQty,
         referenceId: issueId,
         referenceType: 'ISSUE_RETURN',
-        notes: `Returned by employee ${issueData.employeeId}`,
+        notes: `Returned by employee ${issueData.employeeId}${siteName || (issueData as any).siteName ? ` [Site: ${siteName || (issueData as any).siteName}]` : ''}`,
         performedBy: userId
       });
     }
@@ -215,6 +215,7 @@ export const issueRepository = {
         employeeId: issueData.employeeId,
         issueId,
         issueNumber: issueData.issueNumber || null,
+        siteName: siteName !== undefined ? siteName : ((issueData as any).siteName || ''),
         items: returnedItemsPayload,
         createdAt: serverTimestamp(),
         createdBy: userId,
@@ -238,13 +239,14 @@ export const issueRepository = {
   returnDirectItems: async (
     params: {
       employeeId: string;
+      siteName?: string;
       items: { productId: string; productName: string; sku?: string; returnQty: number; unit?: string }[];
       notes?: string;
     },
     companyId: string,
     userId: string
   ): Promise<{ id: string; directReturnNumber: string }> => {
-    const { employeeId, items, notes } = params;
+    const { employeeId, siteName, items, notes } = params;
     if (!items || items.length === 0) throw new Error('No items specified for return');
 
     const directReturnNumber = await issueRepository.generateDirectReturnNumber(companyId);
@@ -296,7 +298,7 @@ export const issueRepository = {
         quantity: qty,
         referenceId: directReturnNumber,
         referenceType: 'DIRECT_RETURN',
-        notes: `Direct Return (${directReturnNumber}) from ${employeeName || 'Technician'}${notes ? `: ${notes}` : ''}`,
+        notes: `Direct Return (${directReturnNumber}) from ${employeeName || 'Technician'}${siteName ? ` [Site: ${siteName}]` : ''}${notes ? `: ${notes}` : ''}`,
         performedBy: userId
       });
     }
@@ -309,6 +311,7 @@ export const issueRepository = {
       companyId,
       employeeId: employeeId || 'UNLINKED',
       employeeName: employeeName || 'Technician',
+      siteName: siteName || '',
       issueId: 'DIRECT_RETURN',
       isDirectReturn: true,
       directReturnNumber,
@@ -321,6 +324,7 @@ export const issueRepository = {
 
     await auditLogRepository.logAction(userId, companyId, 'CREATE', 'DirectReturnTransaction', retDocRef.id, {
       directReturnNumber,
+      siteName,
       items: returnedItemsPayload,
       notes
     });
