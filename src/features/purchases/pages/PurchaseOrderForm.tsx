@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,8 +56,13 @@ export default function PurchaseOrderForm() {
   const { id } = useParams<{ id?: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, company } = useAuthStore();
   const companyId = company?.companyId;
+
+  const prefillProduct = (location.state as any)?.prefillProduct;
+  const prefillProductId = searchParams.get('productId') || prefillProduct?.id || '';
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -69,10 +74,10 @@ export default function PurchaseOrderForm() {
   const methods = useForm<POFormData>({
     resolver: zodResolver(poSchema) as any,
     defaultValues: {
-      supplierId: '',
+      supplierId: prefillProduct?.supplierId || '',
       supplierName: '',
       purchaseDate: new Date().toISOString().split('T')[0],
-      items: [{ productId: '', quantity: 1 }]
+      items: [{ productId: prefillProductId, quantity: 1 }]
     }
   });
 
@@ -90,8 +95,15 @@ export default function PurchaseOrderForm() {
         supplierRepository.getAll(companyId),
         productRepository.getAll(companyId)
       ]);
-      setSuppliers(supData.filter(s => s.status === 'Active'));
-      setProducts(prodData.filter(p => p.status === 'Active'));
+      setSuppliers(supData.filter(s => !s.status || s.status.toLowerCase() === 'active'));
+      setProducts(prodData.filter(p => !p.status || p.status.toLowerCase() === 'active'));
+
+      if (!id && prefillProductId) {
+        methods.setValue('items.0.productId', prefillProductId);
+        if (prefillProduct?.supplierId) {
+          methods.setValue('supplierId', prefillProduct.supplierId);
+        }
+      }
 
       if (id) {
         try {
@@ -122,7 +134,7 @@ export default function PurchaseOrderForm() {
       }
     };
     loadData();
-  }, [companyId, id, methods]);
+  }, [companyId, id, methods, prefillProductId, prefillProduct]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -221,13 +233,13 @@ export default function PurchaseOrderForm() {
     <PageContainer>
       <div className="mb-[var(--spacing-md)]">
         <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')} className="-ml-4 text-muted-foreground">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchase
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchases
         </AppButton>
       </div>
       
       <PageHeader 
-        title={isEditing ? `Edit Purchase ${existingPoNumber}` : "Create Purchase"} 
-        description={isEditing ? "Update details or line items for this purchase." : "Record a purchase to restock inventory from your supplier."} 
+        title={isEditing ? `Edit Purchase Order ${existingPoNumber}` : "Create Purchase Order"} 
+        description={isEditing ? "Update details or line items for this purchase order." : "Record a new purchase order to restock materials from your supplier."} 
       />
 
       <FormProvider {...methods}>
@@ -313,6 +325,16 @@ export default function PurchaseOrderForm() {
                       })}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => append({ productId: '', quantity: 1 })}
+                    className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> + Add Another Item
+                  </button>
                 </div>
               </FormSection>
 
@@ -433,7 +455,7 @@ export default function PurchaseOrderForm() {
                    <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                 </div>
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
-                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Purchase')}
+                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Purchase Order')}
                 </AppButton>
                 <AppButton type="button" variant="ghost" onClick={() => navigate('/purchases')} disabled={isSaving} className="w-full text-muted-foreground">
                   Cancel

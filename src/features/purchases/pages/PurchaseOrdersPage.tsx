@@ -138,12 +138,12 @@ export default function PurchaseOrdersPage() {
   return (
     <PageContainer>
       <PageHeader 
-        title="Purchase"
-        description="Manage vendor purchases and receive inventory."
+        title="Purchase Orders"
+        description="Manage supplier purchase orders, restock materials, and receive inventory."
         actions={
           <AppButton onClick={() => navigate('/purchases/new')}>
             <Plus className="h-4 w-4 mr-2" />
-            Create
+            Create Purchase Order
           </AppButton>
         }
       />
@@ -154,9 +154,18 @@ export default function PurchaseOrdersPage() {
         isLoading={isLoading}
         searchKey="search"
         searchPlaceholder="Search by Purchase ID or Supplier..."
-        emptyTitle="No purchases found"
-        emptyDescription="Create your first purchase to restock inventory."
+        emptyTitle="No Purchase Orders Yet"
+        emptyDescription="Create your first purchase order to restock inventory from suppliers."
       />
+
+      {pos.length === 0 && !isLoading && (
+        <div className="text-center pt-2 pb-6">
+          <AppButton onClick={() => navigate('/purchases/new')} className="font-semibold shadow-xs">
+            <Plus className="h-4 w-4 mr-2" />
+            Create First Purchase Order
+          </AppButton>
+        </div>
+      )}
     </PageContainer>
   );
 }

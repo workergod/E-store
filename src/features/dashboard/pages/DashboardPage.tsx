@@ -9,7 +9,7 @@ import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
   Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
-  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2
+  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Plus
 } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
@@ -958,7 +958,7 @@ export default function DashboardPage() {
                 onClick={() => navigate('/purchases/new')}
                 className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
               >
-                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> + New Purchase Order
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> + Create Purchase Order
               </AppButton>
             </div>
 
@@ -970,6 +970,14 @@ export default function DashboardPage() {
               emptyDescription="Create purchase orders to restock supplies and track vendor deliveries."
               hidePagination={true}
             />
+
+            {recentPurchases.length === 0 && !isLoading && (
+              <div className="text-center py-4">
+                <AppButton size="sm" onClick={() => navigate('/purchases/new')}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Create First Purchase Order
+                </AppButton>
+              </div>
+            )}
           </div>
         )}
       </div>
