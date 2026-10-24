@@ -9,7 +9,7 @@ import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
   Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
-  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Calendar
+  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2
 } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
@@ -597,13 +597,6 @@ export default function DashboardPage() {
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Real-time control center for inventory, tools, technician site dispatches & purchases.
             </p>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/60 shrink-0">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-foreground">
-              {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-            </span>
           </div>
         </div>
 
