@@ -618,10 +618,10 @@ export default function DashboardPage() {
           </AppButton>
           <AppButton 
             size="sm" 
-            onClick={() => navigate('/purchases/new')}
+            onClick={() => navigate('/purchases')}
             className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold shadow-xs"
           >
-            <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> New Purchase
+            <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Purchase
           </AppButton>
         </div>
       </div>
