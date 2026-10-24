@@ -6,7 +6,7 @@ import {
   BarChart, 
   HelpCircle, MessageCircle,
   ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList,
-  PanelLeft, Wrench
+  PanelLeft, Wrench, Hammer, RotateCcw
 } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -31,8 +31,8 @@ const INVENTORY_NAV: NavItemDef[] = [
 
 const TOOLS_NAV: NavItemDef[] = [
   { path: '/tools', label: 'Tools', icon: Wrench },
-  { path: '/tools/issue', label: 'Issue Tools', icon: ArrowUpRight },
-  { path: '/tools/return', label: 'Return Tools', icon: ArrowDownLeft },
+  { path: '/tools/issue', label: 'Issue Tools', icon: Hammer },
+  { path: '/tools/return', label: 'Return Tools', icon: RotateCcw },
 ]
 
 const PURCHASING_NAV: NavItemDef[] = [
