@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
+import { Role } from '../../../constants/roles'
 import { productRepository } from '../../../repositories/ProductRepository'
 import { issueRepository } from '../../../repositories/IssueRepository'
 import { employeeRepository } from '../../../repositories/EmployeeRepository'
@@ -60,6 +61,27 @@ export default function DashboardPage() {
     openPurchases: 0,
     totalPurchases: 0
   })
+
+  // Welcome display name & Role label (specifically for Store Keeper, MD, Supervisor, etc.)
+  const welcomeName = useMemo(() => {
+    if (user?.fullName && user.fullName.trim()) {
+      return user.fullName.trim();
+    }
+    if (user?.username && user.username.trim()) {
+      return user.username.replace('@', '').trim();
+    }
+    return 'User';
+  }, [user]);
+
+  const roleLabel = useMemo(() => {
+    const r = (user?.role as string) || '';
+    if (r.toLowerCase().includes('store') || r === Role.STORE_KEEPER) return 'Store Keeper';
+    if (r.toLowerCase() === 'md' || r.toLowerCase().includes('managing')) return 'Managing Director (MD)';
+    if (r.toLowerCase().includes('supervis') || r === Role.SUPERVISOR) return 'Supervisor';
+    if (r === Role.SUPER_ADMIN) return 'Super Admin';
+    if (r === Role.OWNER) return 'Managing Director (MD)';
+    return r || 'Store Keeper';
+  }, [user]);
 
   useEffect(() => {
     if (!companyId) return
@@ -554,54 +576,71 @@ export default function DashboardPage() {
 
   return (
     <PageContainer>
-      {/* CLEAN STANDARD PAGE HEADER WITH INTEGRATED ACTION BUTTONS */}
-      <PageHeader 
-        title="Dashboard" 
-        description="Real-time control center for inventory, tools, technician site dispatches & purchases."
-        actions={
-          <div className="flex items-center gap-2 flex-wrap">
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/issue')}
-              className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-            >
-              <ArrowUpRight className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Materials
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/returns')}
-              className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            >
-              <ArrowDownLeft className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Materials
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/tools/issue')}
-              className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-            >
-              <Hammer className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Tools
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/tools/return')}
-              className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
-            >
-              <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Tools
-            </AppButton>
-            <AppButton 
-              size="sm" 
-              onClick={() => navigate('/purchases/new')}
-              className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
-            >
-              <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> New Purchase
-            </AppButton>
+      {/* PERSONALIZED WELCOME & FAST ACTIONS HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {roleLabel} Workspace
+            </span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              {company?.companyName || 'Cryodeal'} Central Store
+            </span>
           </div>
-        }
-      />
+
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+            Welcome, <span className="text-primary">{welcomeName}</span>! 👋
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Real-time control center for inventory, tools, technician site dispatches & purchases.
+          </p>
+        </div>
+
+        {/* 1-Click Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <AppButton 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/issue')}
+            className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+          >
+            <ArrowUpRight className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Materials
+          </AppButton>
+          <AppButton 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/returns')}
+            className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          >
+            <ArrowDownLeft className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Materials
+          </AppButton>
+          <AppButton 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/tools/issue')}
+            className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+          >
+            <Hammer className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Tools
+          </AppButton>
+          <AppButton 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/tools/return')}
+            className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+          >
+            <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Tools
+          </AppButton>
+          <AppButton 
+            size="sm" 
+            onClick={() => navigate('/purchases/new')}
+            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
+          >
+            <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> New Purchase
+          </AppButton>
+        </div>
+      </div>
 
       {/* 4-METRIC RESPONSIVE STAT CARDS (EXACT SYMMETRY & ALIGNMENT) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
