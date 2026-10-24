@@ -263,23 +263,13 @@ export default function IssueToolsPage() {
             
             {/* Tools Selection Card */}
             <div className="bg-card rounded-xl p-6 border border-border shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div>
-                  <h3 className="font-semibold text-foreground text-sm">
-                    Select Tools to Issue
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Search and pick tools from inventory and specify quantity.
-                  </p>
-                </div>
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => append({ toolId: '', quantity: 1, conditionOut: 'GOOD' })}
-                >
-                  <Plus className="h-4 w-4 mr-1.5" /> Add Tool
-                </AppButton>
+              <div className="border-b border-border pb-3">
+                <h3 className="font-semibold text-foreground text-sm">
+                  Select Tools to Issue
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Search and pick tools from inventory and specify quantity.
+                </p>
               </div>
 
               <div className="overflow-visible">
@@ -384,7 +374,7 @@ export default function IssueToolsPage() {
                   onClick={() => append({ toolId: '', quantity: 1, conditionOut: 'GOOD' })}
                   className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline cursor-pointer"
                 >
-                  <Plus className="h-3.5 w-3.5" /> + Add Another Tool
+                  <Plus className="h-3.5 w-3.5" /> Add Another Tool
                 </button>
               </div>
             </div>
