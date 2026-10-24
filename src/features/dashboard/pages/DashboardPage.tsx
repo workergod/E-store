@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../../firebase/firestore'
 import { PageContainer } from '../../../shared/layouts/PageContainer'
+import { PageHeader } from '../../../shared/layouts/PageHeader'
+import { AppCard } from '../../../shared/app/AppCard'
+import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
   Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
-  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2,
-  Boxes, ShieldAlert, Sparkles, Calendar
+  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2
 } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
@@ -18,7 +20,7 @@ import { toolRepository } from '../../../repositories/ToolRepository'
 import { toolTransactionRepository } from '../../../repositories/ToolTransactionRepository'
 import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepository'
 import type { Product } from '../../../shared/types/Product'
-import type { Tool, ToolIssueTransaction, ToolReturnTransaction } from '../../../shared/types/Tool'
+import type { Tool } from '../../../shared/types/Tool'
 import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder'
 
 type DashboardTab = 'materials' | 'tools' | 'low-stock' | 'purchases'
@@ -166,7 +168,7 @@ export default function DashboardPage() {
           };
         });
 
-        // Combine and sort material movements (newest first, limit 10)
+        // Combine and sort material movements (newest first, limit 8)
         const combinedMaterials = [...formattedIssues, ...formattedReturns].sort((a, b) => b.rawDate - a.rawDate);
         setRecentMaterialMovements(combinedMaterials);
 
@@ -293,7 +295,7 @@ export default function DashboardPage() {
       header: 'Items Dispatched / Returned', 
       accessorKey: 'items', 
       cell: ({ row }: any) => (
-        <span className="truncate max-w-[300px] block text-xs text-muted-foreground font-medium" title={row.original.items}>
+        <span className="truncate max-w-[340px] block text-xs text-muted-foreground font-medium" title={row.original.items}>
           {row.original.items}
         </span>
       )
@@ -334,7 +336,7 @@ export default function DashboardPage() {
       header: 'Transaction ID', 
       accessorKey: 'refNumber',
       cell: ({ row }: any) => (
-        <span className={`font-mono font-bold text-xs px-2.5 py-1 rounded border inline-flex items-center gap-1 ${
+        <span className={`font-mono font-bold text-xs px-2.5 py-1 rounded border inline-flex items-center gap-1.5 ${
           row.original.movementType === 'RETURN'
             ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
             : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -365,7 +367,7 @@ export default function DashboardPage() {
       header: 'Tools & Equipment', 
       accessorKey: 'toolsSummary', 
       cell: ({ row }: any) => (
-        <span className="truncate max-w-[320px] block text-xs text-muted-foreground font-medium" title={row.original.toolsSummary}>
+        <span className="truncate max-w-[340px] block text-xs text-muted-foreground font-medium" title={row.original.toolsSummary}>
           {row.original.toolsSummary}
         </span>
       )
@@ -397,8 +399,8 @@ export default function DashboardPage() {
       header: 'Product Name',
       accessorKey: 'name',
       cell: ({ row }: any) => (
-        <div>
-          <span className="font-semibold text-foreground text-xs block">{row.original.name}</span>
+        <div className="py-0.5">
+          <span className="font-semibold text-foreground text-xs block leading-tight">{row.original.name}</span>
           <span className="text-[11px] text-muted-foreground">{row.original.category || 'General'}</span>
         </div>
       )
@@ -407,24 +409,24 @@ export default function DashboardPage() {
       header: 'SKU / Barcode',
       accessorKey: 'sku',
       cell: ({ row }: any) => (
-        <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+        <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded border border-border/40">
           {row.original.sku || 'N/A'}
         </span>
       )
     },
     {
-      header: 'Current Stock',
+      header: 'Stock Status',
       accessorKey: 'currentStock',
       cell: ({ row }: any) => {
         const cur = row.original.currentStock || 0;
         const min = row.original.minimumStock || 0;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-baseline gap-1.5">
             <span className={`font-bold text-xs ${cur === 0 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
               {cur} {row.original.unit || ''}
             </span>
-            <span className="text-[10px] text-muted-foreground">
-              (Min: {min})
+            <span className="text-[11px] text-muted-foreground">
+              / min {min}
             </span>
           </div>
         );
@@ -436,27 +438,32 @@ export default function DashboardPage() {
       cell: ({ row }: any) => {
         const cur = row.original.currentStock || 0;
         return cur === 0 ? (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
-            OUT OF STOCK
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 uppercase tracking-wide">
+            Out of Stock
           </span>
         ) : (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            LOW STOCK
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">
+            Low Stock
           </span>
         );
       }
     },
     {
-      header: 'Quick Action',
+      header: '',
       id: 'action',
+      meta: { align: 'right' },
       cell: ({ row }: any) => (
-        <button
-          onClick={() => navigate('/purchases/new', { state: { prefillProduct: row.original } })}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
-        >
-          <ShoppingCart className="h-3 w-3" />
-          + Reorder
-        </button>
+        <div className="text-right">
+          <AppButton
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/purchases/new', { state: { prefillProduct: row.original } })}
+            className="h-7 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10"
+          >
+            <ShoppingCart className="h-3 w-3 mr-1" />
+            Reorder
+          </AppButton>
+        </div>
       )
     }
   ];
@@ -527,236 +534,190 @@ export default function DashboardPage() {
       }
     },
     {
-      header: 'Action',
+      header: '',
       id: 'action',
+      meta: { align: 'right' },
       cell: () => (
-        <button
-          onClick={() => navigate('/purchases')}
-          className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-        >
-          View <ArrowRight className="h-3 w-3" />
-        </button>
+        <div className="text-right">
+          <AppButton
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate('/purchases')}
+            className="h-7 text-xs px-2.5 text-primary hover:underline"
+          >
+            View <ArrowRight className="h-3 w-3 ml-1" />
+          </AppButton>
+        </div>
       )
     }
   ];
 
   return (
     <PageContainer>
-      {/* Title & Live Badge */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/40">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Dashboard
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Store Active
-            </span>
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Real-time control center for inventory, tools, technician site dispatches & purchases.
-          </p>
-        </div>
-
-        {/* Store Keeper Quick Status */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/60">
-          <Calendar className="h-3.5 w-3.5 text-primary" />
-          <span className="font-medium text-foreground">
-            {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-          </span>
-        </div>
-      </div>
-
-      {/* QUICK ACTIONS TOOLBAR */}
-      <div className="bg-card border border-border/70 rounded-xl p-3.5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground block">Quick Store Actions</span>
-              <span className="text-[11px] text-muted-foreground">Fast 1-click workflows for daily operations</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 1. Issue Materials */}
-            <button
+      {/* CLEAN STANDARD PAGE HEADER WITH INTEGRATED ACTION BUTTONS */}
+      <PageHeader 
+        title="Dashboard" 
+        description="Real-time control center for inventory, tools, technician site dispatches & purchases."
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <AppButton 
+              variant="outline" 
+              size="sm" 
               onClick={() => navigate('/issue')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors cursor-pointer"
-              title="Issue materials to technicians"
+              className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
             >
-              <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
-              Issue Materials
-            </button>
-
-            {/* 2. Return Materials */}
-            <button
+              <ArrowUpRight className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Materials
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
               onClick={() => navigate('/returns')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer"
-              title="Process material returns from site"
+              className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
             >
-              <ArrowDownLeft className="h-3.5 w-3.5 stroke-[2.5]" />
-              Return Materials
-            </button>
-
-            {/* 3. Issue Tools */}
-            <button
+              <ArrowDownLeft className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Materials
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
               onClick={() => navigate('/tools/issue')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
-              title="Assign equipment & tools to technician"
+              className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
             >
-              <Hammer className="h-3.5 w-3.5 stroke-[2.5]" />
-              Issue Tools
-            </button>
-
-            {/* 4. Return Tools */}
-            <button
+              <Hammer className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Tools
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
               onClick={() => navigate('/tools/return')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-colors cursor-pointer"
-              title="Inspect and check in returned tools"
+              className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
             >
-              <RotateCcw className="h-3.5 w-3.5 stroke-[2.5]" />
-              Return Tools
-            </button>
-
-            {/* 5. New Purchase */}
-            <button
+              <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Tools
+            </AppButton>
+            <AppButton 
+              size="sm" 
               onClick={() => navigate('/purchases/new')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors cursor-pointer"
-              title="Create new vendor purchase order"
+              className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
             >
-              <ShoppingCart className="h-3.5 w-3.5 stroke-[2.5]" />
-              New Purchase
-            </button>
+              <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> New Purchase
+            </AppButton>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* 4-METRIC RESPONSIVE STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4-METRIC RESPONSIVE STAT CARDS (EXACT SYMMETRY & ALIGNMENT) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         {/* Card 1: Products */}
-        <div 
+        <AppCard 
           onClick={() => navigate('/products')}
-          className="bg-card border border-border/70 rounded-xl p-4.5 shadow-xs hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 flex flex-col justify-between h-[132px] cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Products Catalog</span>
-            <div className="h-9 w-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Package className="h-4.5 w-4.5" />
+            <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Package className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <div className="text-3xl font-extrabold tracking-tight text-foreground">
-              {isLoading ? '...' : metrics.totalProducts}
-            </div>
+          <div className="text-3xl font-extrabold tracking-tight text-foreground">
+            {isLoading ? '...' : metrics.totalProducts}
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
             <span className="text-muted-foreground text-[11px]">Active inventory items</span>
             {metrics.lowStock > 0 ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
                 {metrics.lowStock} Low Stock
               </span>
             ) : (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                 In Stock
               </span>
             )}
           </div>
-        </div>
+        </AppCard>
 
         {/* Card 2: Tools & Equipment */}
-        <div 
+        <AppCard 
           onClick={() => navigate('/tools')}
-          className="bg-card border border-border/70 rounded-xl p-4.5 shadow-xs hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 flex flex-col justify-between h-[132px] cursor-pointer hover:border-amber-500/50 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tools & Equipment</span>
-            <div className="h-9 w-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Wrench className="h-4.5 w-4.5" />
+            <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Wrench className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <div className="text-3xl font-extrabold tracking-tight text-foreground">
-              {isLoading ? '...' : metrics.totalTools}
-            </div>
+          <div className="text-3xl font-extrabold tracking-tight text-foreground">
+            {isLoading ? '...' : metrics.totalTools}
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
             <span className="text-muted-foreground text-[11px]">Units registered</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
               {metrics.toolsInUse} on site / {metrics.toolsAvailable} store
             </span>
           </div>
-        </div>
+        </AppCard>
 
         {/* Card 3: Active Materials Dispatched */}
-        <div 
+        <AppCard 
           onClick={() => navigate('/transaction-log', { state: { filter: 'ISSUE' } })}
-          className="bg-card border border-border/70 rounded-xl p-4.5 shadow-xs hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 flex flex-col justify-between h-[132px] cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Dispatches</span>
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <RefreshCw className="h-4.5 w-4.5" />
+            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <RefreshCw className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <div className="text-3xl font-extrabold tracking-tight text-foreground">
-              {isLoading ? '...' : metrics.pendingReturns}
-            </div>
+          <div className="text-3xl font-extrabold tracking-tight text-foreground">
+            {isLoading ? '...' : metrics.pendingReturns}
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
             <span className="text-muted-foreground text-[11px]">Material vouchers pending</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               Techs on site
             </span>
           </div>
-        </div>
+        </AppCard>
 
         {/* Card 4: Purchases & Orders */}
-        <div 
+        <AppCard 
           onClick={() => navigate('/purchases')}
-          className="bg-card border border-border/70 rounded-xl p-4.5 shadow-xs hover:border-indigo-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 flex flex-col justify-between h-[132px] cursor-pointer hover:border-indigo-500/50 hover:shadow-md transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Purchases & Orders</span>
-            <div className="h-9 w-9 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ShoppingCart className="h-4.5 w-4.5" />
+            <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <ShoppingCart className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <div className="text-3xl font-extrabold tracking-tight text-foreground">
-              {isLoading ? '...' : metrics.openPurchases}
-            </div>
+          <div className="text-3xl font-extrabold tracking-tight text-foreground">
+            {isLoading ? '...' : metrics.openPurchases}
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
             <span className="text-muted-foreground text-[11px]">Active vendor orders</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
               {metrics.totalPurchases} Total POs
             </span>
           </div>
-        </div>
+        </AppCard>
       </div>
 
-      {/* OPERATIONS & MOVEMENTS HUB (TABS) */}
-      <div className="space-y-4 pt-2">
-        {/* Hub Header with Tabs and Context Link */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-2">
-          {/* Tab Navigation */}
-          <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+      {/* OPERATIONS & MOVEMENTS HUB (UNIFIED TABS & TABLES) */}
+      <div className="mt-8">
+        {/* Tab Navigation Bar with single right action */}
+        <div className="flex items-center justify-between border-b border-border mb-5">
+          <div className="flex gap-2 sm:gap-6 overflow-x-auto custom-scrollbar">
             {/* Tab 1: Material Movements */}
             <button
               onClick={() => setActiveTab('materials')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'materials'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Package className="h-3.5 w-3.5" />
+              <Package className="h-4 w-4" />
               Material Movements
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                activeTab === 'materials' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-foreground'
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                activeTab === 'materials' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
               }`}>
                 {recentMaterialMovements.length}
               </span>
@@ -765,16 +726,16 @@ export default function DashboardPage() {
             {/* Tab 2: Tool Movements */}
             <button
               onClick={() => setActiveTab('tools')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'tools'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'
+                  ? 'border-amber-600 text-amber-600 dark:text-amber-400 font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Wrench className="h-3.5 w-3.5" />
+              <Wrench className="h-4 w-4" />
               Tool Movements
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                activeTab === 'tools' ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                activeTab === 'tools' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300' : 'bg-muted text-muted-foreground'
               }`}>
                 {recentToolMovements.length}
               </span>
@@ -783,16 +744,16 @@ export default function DashboardPage() {
             {/* Tab 3: Low Stock Alerts */}
             <button
               onClick={() => setActiveTab('low-stock')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'low-stock'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'
+                  ? 'border-rose-600 text-rose-600 dark:text-rose-400 font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              <AlertCircle className="h-3.5 w-3.5" />
-              Low Stock Urgent
+              <AlertCircle className="h-4 w-4" />
+              Low Stock Alerts
               {metrics.lowStock > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-extrabold bg-white text-rose-600">
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
                   {metrics.lowStock}
                 </span>
               )}
@@ -801,16 +762,16 @@ export default function DashboardPage() {
             {/* Tab 4: Purchase Orders */}
             <button
               onClick={() => setActiveTab('purchases')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'purchases'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
+              <ShoppingCart className="h-4 w-4" />
               Recent Purchases
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                activeTab === 'purchases' ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                activeTab === 'purchases' ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300' : 'bg-muted text-muted-foreground'
               }`}>
                 {purchaseList.length}
               </span>
@@ -818,38 +779,26 @@ export default function DashboardPage() {
           </div>
 
           {/* Contextual Jump Link */}
-          <div>
+          <div className="shrink-0 hidden sm:block">
             {activeTab === 'materials' && (
-              <button 
-                onClick={() => navigate('/transaction-log')}
-                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                Full Transaction Log <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <AppButton variant="ghost" size="sm" onClick={() => navigate('/transaction-log')}>
+                Full Transaction Log <ArrowRight className="h-4 w-4 ml-1.5" />
+              </AppButton>
             )}
             {activeTab === 'tools' && (
-              <button 
-                onClick={() => navigate('/tools')}
-                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                Manage All Tools <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <AppButton variant="ghost" size="sm" onClick={() => navigate('/tools')}>
+                Manage Tools <ArrowRight className="h-4 w-4 ml-1.5" />
+              </AppButton>
             )}
             {activeTab === 'low-stock' && (
-              <button 
-                onClick={() => navigate('/products')}
-                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                All Products Catalog <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <AppButton variant="ghost" size="sm" onClick={() => navigate('/products')}>
+                All Products Catalog <ArrowRight className="h-4 w-4 ml-1.5" />
+              </AppButton>
             )}
             {activeTab === 'purchases' && (
-              <button 
-                onClick={() => navigate('/purchases')}
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                All Purchase Orders <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')}>
+                All Purchase Orders <ArrowRight className="h-4 w-4 ml-1.5" />
+              </AppButton>
             )}
           </div>
         </div>
@@ -858,34 +807,35 @@ export default function DashboardPage() {
         {activeTab === 'materials' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground font-medium mr-1">Filter:</span>
                 <button
                   onClick={() => setMaterialFilter('ALL')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    materialFilter === 'ALL' ? 'bg-secondary text-secondary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    materialFilter === 'ALL' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   All ({recentMaterialMovements.length})
                 </button>
                 <button
                   onClick={() => setMaterialFilter('ISSUE')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    materialFilter === 'ISSUE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    materialFilter === 'ISSUE' ? 'bg-blue-600 text-white font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Issues Only
+                  Issues
                 </button>
                 <button
                   onClick={() => setMaterialFilter('RETURN')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    materialFilter === 'RETURN' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    materialFilter === 'RETURN' ? 'bg-emerald-600 text-white font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Returns Only
+                  Returns
                 </button>
               </div>
 
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Showing latest dispatches & returns
               </span>
             </div>
@@ -905,34 +855,35 @@ export default function DashboardPage() {
         {activeTab === 'tools' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground font-medium mr-1">Filter:</span>
                 <button
                   onClick={() => setToolFilter('ALL')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    toolFilter === 'ALL' ? 'bg-secondary text-secondary-foreground font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    toolFilter === 'ALL' ? 'bg-amber-600 text-white font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   All ({recentToolMovements.length})
                 </button>
                 <button
                   onClick={() => setToolFilter('ISSUE')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    toolFilter === 'ISSUE' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    toolFilter === 'ISSUE' ? 'bg-amber-600 text-white font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   Checkouts (Issues)
                 </button>
                 <button
                   onClick={() => setToolFilter('RETURN')}
-                  className={`px-2.5 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                    toolFilter === 'RETURN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 font-semibold' : 'text-muted-foreground hover:bg-muted'
+                  className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                    toolFilter === 'RETURN' ? 'bg-purple-600 text-white font-semibold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   Check-ins (Returns)
                 </button>
               </div>
 
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Live equipment tracking across job sites
               </span>
             </div>
@@ -953,16 +904,19 @@ export default function DashboardPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                 <span className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-                  {lowStockItems.length} items currently below minimum stock threshold
+                  {lowStockItems.length} products below minimum stock threshold
                 </span>
               </div>
-              <button
+              <AppButton 
+                size="sm" 
+                variant="outline" 
                 onClick={() => navigate('/purchases/new')}
-                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
               >
-                + Create Consolidated PO <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> + New Purchase Order
+              </AppButton>
             </div>
 
             <AppTable
@@ -983,12 +937,14 @@ export default function DashboardPage() {
               <span className="text-xs text-muted-foreground">
                 Showing latest purchase orders with suppliers
               </span>
-              <button
+              <AppButton 
+                size="sm" 
+                variant="outline" 
                 onClick={() => navigate('/purchases/new')}
-                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
               >
-                + New Purchase Order <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> + New Purchase Order
+              </AppButton>
             </div>
 
             <AppTable
