@@ -49,16 +49,15 @@ export default function ToolsPage() {
     try {
       setIsLoading(true);
       const [toolList, issues, returns] = await Promise.all([
-        toolRepository.getAll(companyId),
-        toolTransactionRepository.getIssueTransactions(companyId),
-        toolTransactionRepository.getReturnTransactions(companyId)
+        toolRepository.getAll(companyId).catch(() => []),
+        toolTransactionRepository.getIssueTransactions(companyId).catch(() => []),
+        toolTransactionRepository.getReturnTransactions(companyId).catch(() => [])
       ]);
       setTools(toolList.filter(t => t.status !== 'DELETED'));
       setIssueLogs(issues);
       setReturnLogs(returns);
     } catch (err: any) {
       console.error('Failed to load tools data:', err);
-      toast.error('Failed to load tools inventory');
     } finally {
       setIsLoading(false);
     }

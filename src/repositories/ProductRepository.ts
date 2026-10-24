@@ -10,7 +10,8 @@ export const productRepository = {
   getAll: async (companyId: string): Promise<Product[]> => {
     const q = query(productRepository.getCollection(), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    return all.filter(p => !p.isTool && (p as any).itemType !== 'TOOL');
   },
 
   getById: async (id: string, companyId: string): Promise<Product | null> => {

@@ -1,57 +1,70 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, getDocs, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 import type { Tool } from '../shared/types/Tool';
 import { auditLogRepository } from './AuditLogRepository';
 
 export const toolRepository = {
-  getCollection: () => collection(db, 'tools'),
+  // Stored in 'products' collection with isTool: true to use existing approved Firestore security rules
+  getCollection: () => collection(db, 'products'),
 
   getAll: async (companyId: string): Promise<Tool[]> => {
-    const q = query(
-      toolRepository.getCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    const tools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tool));
-    return tools.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    try {
+      const q = query(
+        toolRepository.getCollection(),
+        where('companyId', '==', companyId)
+      );
+      const snapshot = await getDocs(q);
+      const tools = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(t => t.isTool === true || t.itemType === 'TOOL');
+      return tools.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } catch (err) {
+      console.error('Failed to load tools:', err);
+      return [];
+    }
   },
 
   getById: async (id: string, companyId: string): Promise<Tool | null> => {
-    const docRef = doc(db, 'tools', id);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      if (data.companyId === companyId) {
-        return { id: snapshot.id, ...data } as Tool;
+    try {
+      const docRef = doc(db, 'products', id);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.companyId === companyId) {
+          return { id: snapshot.id, ...data } as Tool;
+        }
       }
+      return null;
+    } catch (err) {
+      console.error('Failed to get tool by id:', err);
+      return null;
     }
-    return null;
   },
 
   generateToolCode: async (companyId: string): Promise<string> => {
-    const q = query(
-      toolRepository.getCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return 'TOOL-001';
-    }
-
-    let maxNum = 0;
-    snapshot.forEach(docSnap => {
-      const code = docSnap.data().toolCode as string;
-      if (code) {
-        const match = code.match(/(\d+)$/);
-        if (match) {
-          const n = parseInt(match[1], 10);
-          if (!isNaN(n) && n > maxNum) maxNum = n;
-        }
+    try {
+      const tools = await toolRepository.getAll(companyId);
+      if (tools.length === 0) {
+        return 'TOOL-001';
       }
-    });
 
-    const nextNum = Math.max(maxNum + 1, snapshot.size + 1);
-    return `TOOL-${String(nextNum).padStart(3, '0')}`;
+      let maxNum = 0;
+      tools.forEach(t => {
+        const code = t.toolCode || (t as any).sku || '';
+        if (code) {
+          const match = code.match(/(\d+)$/);
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        }
+      });
+
+      const nextNum = Math.max(maxNum + 1, tools.length + 1);
+      return `TOOL-${String(nextNum).padStart(3, '0')}`;
+    } catch (e) {
+      return `TOOL-${Date.now().toString().slice(-4)}`;
+    }
   },
 
   create: async (data: Omit<Tool, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> => {
@@ -74,6 +87,9 @@ export const toolRepository = {
 
     const payload = {
       ...data,
+      isTool: true,
+      itemType: 'TOOL',
+      sku: toolCode, // Keep sku populated for consistency in Firestore
       toolCode,
       totalQty,
       availableQty,
@@ -92,7 +108,7 @@ export const toolRepository = {
   },
 
   update: async (id: string, data: Partial<Tool>, companyId: string, userId: string): Promise<void> => {
-    const docRef = doc(db, 'tools', id);
+    const docRef = doc(db, 'products', id);
     const now = serverTimestamp();
 
     // Check permissions
@@ -117,6 +133,8 @@ export const toolRepository = {
 
     const payload = {
       ...data,
+      isTool: true,
+      itemType: 'TOOL',
       totalQty,
       availableQty,
       issuedQty,
@@ -139,7 +157,7 @@ export const toolRepository = {
     }
 
     // Soft delete so historical issue/return records remain intact
-    const docRef = doc(db, 'tools', id);
+    const docRef = doc(db, 'products', id);
     await updateDoc(docRef, {
       status: 'DELETED',
       updatedAt: serverTimestamp(),

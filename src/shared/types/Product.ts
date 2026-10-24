@@ -38,6 +38,16 @@ export interface Product {
   isSerialized: boolean;
   status: ProductStatus;
   
+  // Tool Classification
+  isTool?: boolean;
+  itemType?: 'PRODUCT' | 'TOOL';
+  toolCode?: string;
+  totalQty?: number;
+  availableQty?: number;
+  issuedQty?: number;
+  maintenanceQty?: number;
+  condition?: string;
+  
   // Audit
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;

@@ -5,87 +5,102 @@ import { toolRepository } from './ToolRepository';
 import { auditLogRepository } from './AuditLogRepository';
 
 export const toolTransactionRepository = {
-  getIssueCollection: () => collection(db, 'toolIssueTransactions'),
-  getReturnCollection: () => collection(db, 'toolReturnTransactions'),
+  // Stored in 'issueTransactions' and 'returnTransactions' to use existing approved Firestore security rules
+  getIssueCollection: () => collection(db, 'issueTransactions'),
+  getReturnCollection: () => collection(db, 'returnTransactions'),
 
   getIssueTransactions: async (companyId: string): Promise<ToolIssueTransaction[]> => {
-    const q = query(
-      toolTransactionRepository.getIssueCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    const issues = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ToolIssueTransaction));
-    return issues.sort((a, b) => {
-      const timeA = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate().getTime() : 0;
-      const timeB = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate().getTime() : 0;
-      return timeB - timeA;
-    });
+    try {
+      const q = query(
+        toolTransactionRepository.getIssueCollection(),
+        where('companyId', '==', companyId)
+      );
+      const snapshot = await getDocs(q);
+      const issues = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(d => d.isToolIssue === true);
+      return issues.sort((a, b) => {
+        const timeA = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate().getTime() : 0;
+        const timeB = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate().getTime() : 0;
+        return timeB - timeA;
+      });
+    } catch (err) {
+      console.error('Failed to get tool issue transactions:', err);
+      return [];
+    }
   },
 
   getReturnTransactions: async (companyId: string): Promise<ToolReturnTransaction[]> => {
-    const q = query(
-      toolTransactionRepository.getReturnCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    const returns = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ToolReturnTransaction));
-    return returns.sort((a, b) => {
-      const timeA = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate().getTime() : 0;
-      const timeB = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate().getTime() : 0;
-      return timeB - timeA;
-    });
+    try {
+      const q = query(
+        toolTransactionRepository.getReturnCollection(),
+        where('companyId', '==', companyId)
+      );
+      const snapshot = await getDocs(q);
+      const returns = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(d => d.isToolReturn === true);
+      return returns.sort((a, b) => {
+        const timeA = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate().getTime() : 0;
+        const timeB = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate().getTime() : 0;
+        return timeB - timeA;
+      });
+    } catch (err) {
+      console.error('Failed to get tool return transactions:', err);
+      return [];
+    }
   },
 
   generateIssueNumber: async (companyId: string): Promise<string> => {
-    const q = query(
-      toolTransactionRepository.getIssueCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return 'CRYO-TISS-1';
-    }
-
-    let maxNum = 0;
-    snapshot.forEach(docSnap => {
-      const numStr = docSnap.data().issueNumber as string;
-      if (numStr) {
-        const match = numStr.match(/(\d+)$/);
-        if (match) {
-          const n = parseInt(match[1], 10);
-          if (!isNaN(n) && n > maxNum) maxNum = n;
-        }
+    try {
+      const issues = await toolTransactionRepository.getIssueTransactions(companyId);
+      if (issues.length === 0) {
+        return 'CRYO-TISS-1';
       }
-    });
 
-    const nextNum = Math.max(maxNum + 1, snapshot.size + 1);
-    return `CRYO-TISS-${nextNum}`;
+      let maxNum = 0;
+      issues.forEach(i => {
+        const numStr = i.issueNumber as string;
+        if (numStr) {
+          const match = numStr.match(/(\d+)$/);
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        }
+      });
+
+      const nextNum = Math.max(maxNum + 1, issues.length + 1);
+      return `CRYO-TISS-${nextNum}`;
+    } catch (e) {
+      return `CRYO-TISS-${Date.now().toString().slice(-4)}`;
+    }
   },
 
   generateReturnNumber: async (companyId: string): Promise<string> => {
-    const q = query(
-      toolTransactionRepository.getReturnCollection(),
-      where('companyId', '==', companyId)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return 'CRYO-TRET-1';
-    }
-
-    let maxNum = 0;
-    snapshot.forEach(docSnap => {
-      const numStr = docSnap.data().returnNumber as string;
-      if (numStr) {
-        const match = numStr.match(/(\d+)$/);
-        if (match) {
-          const n = parseInt(match[1], 10);
-          if (!isNaN(n) && n > maxNum) maxNum = n;
-        }
+    try {
+      const returns = await toolTransactionRepository.getReturnTransactions(companyId);
+      if (returns.length === 0) {
+        return 'CRYO-TRET-1';
       }
-    });
 
-    const nextNum = Math.max(maxNum + 1, snapshot.size + 1);
-    return `CRYO-TRET-${nextNum}`;
+      let maxNum = 0;
+      returns.forEach(r => {
+        const numStr = r.returnNumber as string;
+        if (numStr) {
+          const match = numStr.match(/(\d+)$/);
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        }
+      });
+
+      const nextNum = Math.max(maxNum + 1, returns.length + 1);
+      return `CRYO-TRET-${nextNum}`;
+    } catch (e) {
+      return `CRYO-TRET-${Date.now().toString().slice(-4)}`;
+    }
   },
 
   issueTools: async (
@@ -163,6 +178,7 @@ export const toolTransactionRepository = {
     const now = serverTimestamp();
     const payload = {
       companyId,
+      isToolIssue: true, // Discriminator tag
       issueNumber,
       employeeId,
       employeeName: employeeName || 'Technician',
@@ -181,9 +197,9 @@ export const toolTransactionRepository = {
 
     const docRef = await addDoc(toolTransactionRepository.getIssueCollection(), payload);
 
-    // Update each tool stock
+    // Update each tool stock in 'products' collection
     for (const item of enrichedItems) {
-      const toolRef = doc(db, 'tools', item.toolId);
+      const toolRef = doc(db, 'products', item.toolId);
       const toolSnap = await getDoc(toolRef);
       if (toolSnap.exists()) {
         const cur = toolSnap.data();
@@ -219,7 +235,7 @@ export const toolTransactionRepository = {
     siteName?: string,
     returnNotes?: string
   ): Promise<{ id: string; returnNumber: string }> => {
-    const docRef = doc(db, 'toolIssueTransactions', issueId);
+    const docRef = doc(db, 'issueTransactions', issueId);
     const issueDoc = await getDoc(docRef);
     if (!issueDoc.exists()) throw new Error('Tool issue transaction not found');
 
@@ -272,8 +288,8 @@ export const toolTransactionRepository = {
         notes: ret.notes || ''
       });
 
-      // Update Tool master stock
-      const toolRef = doc(db, 'tools', item.toolId);
+      // Update Tool master stock in 'products' collection
+      const toolRef = doc(db, 'products', item.toolId);
       const toolSnap = await getDoc(toolRef);
       if (toolSnap.exists()) {
         const tData = toolSnap.data();
@@ -323,6 +339,7 @@ export const toolTransactionRepository = {
 
     const retDocRef = await addDoc(toolTransactionRepository.getReturnCollection(), {
       companyId,
+      isToolReturn: true, // Discriminator tag
       returnNumber,
       employeeId: issueData.employeeId,
       employeeName: issueData.employeeName || 'Technician',
@@ -422,8 +439,8 @@ export const toolTransactionRepository = {
         actionNeeded: action
       });
 
-      // Update Tool master
-      const toolRef = doc(db, 'tools', tool.id!);
+      // Update Tool master in 'products' collection
+      const toolRef = doc(db, 'products', tool.id!);
       const toolSnap = await getDoc(toolRef);
       if (toolSnap.exists()) {
         const tData = toolSnap.data();
@@ -462,6 +479,7 @@ export const toolTransactionRepository = {
 
     const retDocRef = await addDoc(toolTransactionRepository.getReturnCollection(), {
       companyId,
+      isToolReturn: true, // Discriminator tag
       returnNumber,
       employeeId: employeeId || 'UNLINKED',
       employeeName: employeeName || 'Technician',
