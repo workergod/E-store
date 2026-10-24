@@ -6,7 +6,8 @@ import {
   BarChart, 
   HelpCircle, MessageCircle,
   ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList,
-  PanelLeft, Wrench, Hammer, RotateCcw
+  PanelLeft, Wrench, Hammer, RotateCcw,
+  PlusCircle, Building2
 } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -36,7 +37,9 @@ const TOOLS_NAV: NavItemDef[] = [
 ]
 
 const PURCHASING_NAV: NavItemDef[] = [
-  { path: '/purchases', label: 'Purchasing', icon: ShoppingCart },
+  { path: '/purchases', label: 'Purchase Orders', icon: ShoppingCart },
+  { path: '/purchases/new', label: 'New Purchase Order', icon: PlusCircle },
+  { path: '/suppliers', label: 'Suppliers', icon: Building2 },
 ]
 
 const OPERATIONS_NAV: NavItemDef[] = [
@@ -50,6 +53,9 @@ const NavItem = ({ item, collapsed, pathname }: { item: NavItemDef, collapsed: b
     if (item.path === '/') return false;
     if (item.path === '/tools') {
       return pathname.startsWith('/tools/') && !pathname.startsWith('/tools/issue') && !pathname.startsWith('/tools/return');
+    }
+    if (item.path === '/purchases') {
+      return pathname.startsWith('/purchases/') && !pathname.startsWith('/purchases/new');
     }
     return pathname.startsWith(item.path + '/');
   })();

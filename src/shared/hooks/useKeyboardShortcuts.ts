@@ -34,7 +34,8 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
         { key: '2', label: 'Products', path: '/products', description: 'Product catalog and stock' },
         { key: '3', label: 'Issue Materials', path: '/issue', description: 'Issue items to technicians' },
         { key: '4', label: 'Return Materials', path: '/returns', description: 'Process returned materials' },
-        { key: '5', label: 'Transaction Log', path: '/transaction-log', description: 'Full history of material movements' },
+        { key: '5', label: 'Purchase Orders', path: '/purchases', description: 'Purchase orders and restocking' },
+        { key: '6', label: 'Transaction Log', path: '/transaction-log', description: 'Full history of material movements' },
       ]
     }
 
@@ -44,7 +45,7 @@ export function useKeyboardShortcuts(options?: UseKeyboardShortcutsOptions) {
       { key: '2', label: 'Products', path: '/products', description: 'Product catalog and inventory levels' },
       { key: '3', label: 'Issue Materials', path: '/issue', description: 'Issue materials to staff' },
       { key: '4', label: 'Return Materials', path: '/returns', description: 'Return issued materials to store' },
-      { key: '5', label: 'Purchasing', path: '/purchases', description: 'Purchase orders and supplier requests' },
+      { key: '5', label: 'Purchase Orders', path: '/purchases', description: 'Purchase orders and supplier requests' },
       { key: '6', label: 'Employees', path: '/employees', description: 'Staff, technicians, and supervisor team' },
       { key: '7', label: 'Transaction Log', path: '/transaction-log', description: 'Full history of material movements' },
     ]
