@@ -469,24 +469,6 @@ export default function DashboardPage() {
           </span>
         );
       }
-    },
-    {
-      header: '',
-      id: 'action',
-      meta: { align: 'right' },
-      cell: ({ row }: any) => (
-        <div className="text-right">
-          <AppButton
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/purchases/new', { state: { prefillProduct: row.original } })}
-            className="h-7 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10"
-          >
-            <ShoppingCart className="h-3 w-3 mr-1" />
-            Reorder
-          </AppButton>
-        </div>
-      )
     }
   ];
 
@@ -950,14 +932,6 @@ export default function DashboardPage() {
                   {lowStockItems.length} products below minimum stock threshold
                 </span>
               </div>
-              <AppButton 
-                size="sm" 
-                variant="outline" 
-                onClick={() => navigate('/purchases/new')}
-                className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
-              >
-                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> + New Purchase Order
-              </AppButton>
             </div>
 
             <AppTable
