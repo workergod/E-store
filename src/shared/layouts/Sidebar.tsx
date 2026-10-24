@@ -38,7 +38,7 @@ const TOOLS_NAV: NavItemDef[] = [
 
 const PURCHASING_NAV: NavItemDef[] = [
   { path: '/purchases', label: 'Purchase Orders', icon: ShoppingCart },
-  { path: '/purchases/new', label: 'New Purchase Order', icon: PlusCircle },
+  { path: '/purchases/new', label: 'Purchase Order', icon: PlusCircle },
 ]
 
 const OPERATIONS_NAV: NavItemDef[] = [
