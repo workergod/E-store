@@ -9,7 +9,7 @@ import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
   Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
-  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2
+  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Calendar
 } from 'lucide-react'
 
 import { useAuthStore } from "../../../store/authStore"
@@ -577,34 +577,43 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       {/* PERSONALIZED WELCOME & FAST ACTIONS HEADER */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-border/40">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {roleLabel} Workspace
-            </span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              {company?.companyName || 'Cryodeal'} Central Store
-            </span>
+      <div className="space-y-4 pb-4 border-b border-border/40">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {roleLabel} Workspace
+              </span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {company?.companyName || 'Cryodeal'} Central Store
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Welcome, <span className="text-primary">{welcomeName}</span>! 👋
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Real-time control center for inventory, tools, technician site dispatches & purchases.
+            </p>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            Welcome, <span className="text-primary">{welcomeName}</span>! 👋
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Real-time control center for inventory, tools, technician site dispatches & purchases.
-          </p>
+          <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/60 shrink-0">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
         </div>
 
-        {/* 1-Click Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        {/* 1-Click Action Buttons Strip - Clean, full-width, guaranteed no wrapping collision */}
+        <div className="flex items-center gap-2 flex-wrap pt-1">
           <AppButton 
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/issue')}
-            className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-medium"
           >
             <ArrowUpRight className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Materials
           </AppButton>
@@ -612,7 +621,7 @@ export default function DashboardPage() {
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/returns')}
-            className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium"
           >
             <ArrowDownLeft className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Materials
           </AppButton>
@@ -620,7 +629,7 @@ export default function DashboardPage() {
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/tools/issue')}
-            className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+            className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-medium"
           >
             <Hammer className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Tools
           </AppButton>
@@ -628,14 +637,14 @@ export default function DashboardPage() {
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/tools/return')}
-            className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+            className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 font-medium"
           >
             <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Tools
           </AppButton>
           <AppButton 
             size="sm" 
             onClick={() => navigate('/purchases/new')}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
+            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold shadow-xs"
           >
             <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> New Purchase
           </AppButton>
