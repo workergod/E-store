@@ -952,14 +952,6 @@ export default function DashboardPage() {
               <span className="text-xs text-muted-foreground">
                 Showing latest purchase orders with suppliers
               </span>
-              <AppButton 
-                size="sm" 
-                variant="outline" 
-                onClick={() => navigate('/purchases/new')}
-                className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> + Create Purchase Order
-              </AppButton>
             </div>
 
             <AppTable
@@ -967,17 +959,9 @@ export default function DashboardPage() {
               data={recentPurchases}
               isLoading={isLoading}
               emptyTitle="No purchase orders created"
-              emptyDescription="Create purchase orders to restock supplies and track vendor deliveries."
+              emptyDescription="Recent purchase orders with suppliers will appear here."
               hidePagination={true}
             />
-
-            {recentPurchases.length === 0 && !isLoading && (
-              <div className="text-center py-4">
-                <AppButton size="sm" onClick={() => navigate('/purchases/new')}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Create First Purchase Order
-                </AppButton>
-              </div>
-            )}
           </div>
         )}
       </div>
