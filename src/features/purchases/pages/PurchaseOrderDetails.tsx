@@ -15,6 +15,7 @@ import { supplierRepository } from '../../../repositories/SupplierRepository';
 import type { PurchaseOrder, PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
 import type { Supplier } from '../../../shared/types/Supplier';
 import { PurchaseOrderPrintDocument } from '../components/PurchaseOrderPrintDocument';
+import { printPurchaseOrder } from '../utils/printPurchaseOrder';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -218,6 +219,16 @@ export default function PurchaseOrderDetails() {
     }
   };
 
+  const handlePrint = () => {
+    if (!po) return;
+    printPurchaseOrder(
+      po, 
+      supplierObj, 
+      company, 
+      user?.displayName || user?.email || 'Store In-Charge'
+    );
+  };
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-medium">Loading Purchase details...</div>;
   if (!po) return null;
 
@@ -262,6 +273,9 @@ export default function PurchaseOrderDetails() {
                   </>
                 )}
                 <AppButton variant="outline" onClick={() => setIsPrintPreviewOpen(true)}>
+                  <Eye className="h-4 w-4 mr-2" /> Preview Document
+                </AppButton>
+                <AppButton onClick={handlePrint} className="shadow-xs">
                   <Printer className="h-4 w-4 mr-2" /> Print Purchase Order
                 </AppButton>
                 {canDelete && (
@@ -614,9 +628,10 @@ export default function PurchaseOrderDetails() {
         isOpen={isPrintPreviewOpen} 
         onClose={() => setIsPrintPreviewOpen(false)}
         title="Purchase Order Print Preview"
-        description="Official Cryodeal Purchase Order voucher layout. Click 'Print Now' to print or save as PDF."
+        description="Official Cryodeal Purchase Order format. Click 'Print Now' to print or export to PDF."
+        className="max-w-4xl w-[94vw] max-h-[92vh] p-6"
       >
-        <div className="my-4 max-h-[70vh] overflow-y-auto p-3 bg-muted/30 rounded-xl border border-border">
+        <div className="my-2 max-h-[68vh] overflow-y-auto p-4 bg-muted/20 rounded-xl border border-border flex justify-center">
           <PurchaseOrderPrintDocument 
             po={po} 
             supplier={supplierObj} 
@@ -624,7 +639,7 @@ export default function PurchaseOrderDetails() {
             creatorName={user?.displayName || user?.email || 'Store In-Charge'} 
           />
         </div>
-        <div className="flex justify-between items-center pt-4 border-t border-border">
+        <div className="flex justify-between items-center pt-3 border-t border-border">
           <span className="text-xs text-muted-foreground">
             A4 Standard • Cryodeal Industrial Format
           </span>
@@ -632,7 +647,7 @@ export default function PurchaseOrderDetails() {
             <AppButton variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>
               Close
             </AppButton>
-            <AppButton onClick={() => window.print()} className="shadow-sm">
+            <AppButton onClick={handlePrint} className="shadow-sm">
               <Printer className="h-4 w-4 mr-2" /> Print Now
             </AppButton>
           </div>

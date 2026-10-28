@@ -118,11 +118,11 @@ export const PurchaseOrderPrintDocument: React.FC<PurchaseOrderPrintDocumentProp
         <table className="w-full text-xs text-left border-collapse border border-slate-300">
           <thead>
             <tr className="bg-slate-100 text-slate-800 uppercase text-[11px] font-bold tracking-wider print:bg-slate-200">
-              <th className="border border-slate-300 px-3 py-2.5 text-center w-10">#</th>
-              <th className="border border-slate-300 px-3 py-2.5">Item Description & SKU</th>
-              <th className="border border-slate-300 px-3 py-2.5 text-right w-24">Ordered Qty</th>
-              <th className="border border-slate-300 px-3 py-2.5 text-right w-28">Rate / Unit</th>
-              <th className="border border-slate-300 px-3 py-2.5 text-right w-32">Total Amount</th>
+              <th className="border border-slate-300 px-3 py-2.5 text-center w-12 whitespace-nowrap">#</th>
+              <th className="border border-slate-300 px-4 py-2.5 whitespace-nowrap">Item Description & SKU</th>
+              <th className="border border-slate-300 px-4 py-2.5 text-right w-28 whitespace-nowrap">Ordered Qty</th>
+              <th className="border border-slate-300 px-4 py-2.5 text-right w-32 whitespace-nowrap">Rate / Unit</th>
+              <th className="border border-slate-300 px-4 py-2.5 text-right w-36 whitespace-nowrap">Total Amount</th>
             </tr>
           </thead>
           <tbody>

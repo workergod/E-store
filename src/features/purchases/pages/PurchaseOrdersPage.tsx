@@ -12,6 +12,7 @@ import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepo
 import { supplierRepository } from '../../../repositories/SupplierRepository';
 import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
 import type { Supplier } from '../../../shared/types/Supplier';
+import { printPurchaseOrder } from '../utils/printPurchaseOrder';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -82,6 +83,23 @@ export default function PurchaseOrdersPage() {
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete purchase');
     }
+  };
+
+  const handlePrintPO = async (poToPrint: PurchaseOrder) => {
+    let sup: Supplier | null = suppliers[poToPrint.supplierId] || null;
+    if (!sup && poToPrint.supplierId && companyId) {
+      try {
+        sup = await supplierRepository.getById(poToPrint.supplierId, companyId);
+      } catch {
+        // ignore
+      }
+    }
+    printPurchaseOrder(
+      poToPrint, 
+      sup, 
+      company, 
+      user?.displayName || user?.email || 'Store In-Charge'
+    );
   };
 
   // Metrics
@@ -182,8 +200,8 @@ export default function PurchaseOrdersPage() {
           <AppButton 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate(`/purchases/${row.original.id}`)} 
-            title="View PO & Print"
+            onClick={() => handlePrintPO(row.original)} 
+            title="Print Purchase Order"
           >
             <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground" />
           </AppButton>
