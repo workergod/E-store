@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
+import { 
+  Plus, Eye, Edit, Trash2, Printer, 
+  ShoppingCart, Clock, CheckCircle2, Receipt 
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuthStore } from "../../../store/authStore";
@@ -13,8 +16,12 @@ import type { Supplier } from '../../../shared/types/Supplier';
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
+import { AppCard } from '../../../shared/app/AppCard';
 import { AppTable } from '../../../shared/tables/AppTable';
 import { StatusBadge } from '../../../shared/feedback/StatusBadge';
+import { cn } from '../../../shared/utils/cn';
+
+type FilterTab = 'ALL' | 'ACTIVE' | 'COMPLETED';
 
 export default function PurchaseOrdersPage() {
   const navigate = useNavigate();
@@ -33,6 +40,7 @@ export default function PurchaseOrdersPage() {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Record<string, Supplier>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
 
   const loadData = useCallback(async () => {
     if (!companyId) return;
@@ -76,11 +84,35 @@ export default function PurchaseOrdersPage() {
     }
   };
 
+  // Metrics
+  const totalCount = pos.length;
+  const activeCount = pos.filter(p => p.status === 'Ordered' || p.status === 'Approved' || p.status === 'Partially Received').length;
+  const completedCount = pos.filter(p => p.status === 'Completed').length;
+  const totalSpend = pos.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
+
+  // Filtered dataset
+  const filteredPOs = useMemo(() => {
+    if (activeTab === 'ACTIVE') {
+      return pos.filter(p => p.status === 'Ordered' || p.status === 'Approved' || p.status === 'Partially Received');
+    }
+    if (activeTab === 'COMPLETED') {
+      return pos.filter(p => p.status === 'Completed');
+    }
+    return pos;
+  }, [pos, activeTab]);
+
   const columns = [
     {
       header: 'Purchase ID',
       accessorKey: 'poNumber',
-      cell: ({ row }: any) => <span className="font-semibold text-primary font-mono">{row.original.poNumber}</span>
+      cell: ({ row }: any) => (
+        <span 
+          onClick={() => navigate(`/purchases/${row.original.id}`)}
+          className="font-semibold text-primary font-mono cursor-pointer hover:underline"
+        >
+          {row.original.poNumber}
+        </span>
+      )
     },
     {
       header: 'Date',
@@ -99,6 +131,42 @@ export default function PurchaseOrdersPage() {
       }
     },
     {
+      header: 'Items & Qty',
+      cell: ({ row }: any) => {
+        const items = row.original.items || [];
+        const units = row.original.totalQuantity ?? items.reduce((s: number, i: any) => s + (Number(i.quantity) || 0), 0);
+        return (
+          <span className="text-xs text-foreground font-medium">
+            {items.length} {items.length === 1 ? 'item' : 'items'} • <span className="text-muted-foreground">{units} units</span>
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Total Amount',
+      accessorKey: 'totalAmount',
+      cell: ({ row }: any) => {
+        const amt = row.original.totalAmount;
+        if (amt === undefined || amt === null || isNaN(amt) || Number(amt) === 0) {
+          // Check if items have unit prices
+          const calculated = (row.original.items || []).reduce((acc: number, curr: any) => acc + ((Number(curr.quantity) || 0) * (Number(curr.unitPrice) || 0)), 0);
+          if (calculated > 0) {
+            return (
+              <span className="font-mono font-bold text-foreground">
+                ₹ {calculated.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            );
+          }
+          return <span className="text-muted-foreground">-</span>;
+        }
+        return (
+          <span className="font-mono font-bold text-foreground">
+            ₹ {Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        );
+      }
+    },
+    {
       header: 'Status',
       accessorKey: 'status',
       cell: ({ row }: any) => (
@@ -111,14 +179,32 @@ export default function PurchaseOrdersPage() {
       enableSorting: false,
       cell: ({ row }: any) => (
         <div className="flex justify-end items-center gap-1.5">
+          <AppButton 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(`/purchases/${row.original.id}`)} 
+            title="View PO & Print"
+          >
+            <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+          </AppButton>
+          <AppButton 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(`/purchases/${row.original.id}`)} 
+            title="View Details"
+          >
+            <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+          </AppButton>
           {row.original.status !== 'Completed' && row.original.status !== 'Cancelled' && (
-            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/edit/${row.original.id}`)} title="Edit Purchase">
+            <AppButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(`/purchases/edit/${row.original.id}`)} 
+              title="Edit Purchase Order"
+            >
               <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </AppButton>
           )}
-          <AppButton variant="ghost" size="icon" onClick={() => navigate(`/purchases/${row.original.id}`)} title="View Details">
-            <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-          </AppButton>
           {canDelete && (
             <AppButton 
               variant="ghost" 
@@ -139,7 +225,7 @@ export default function PurchaseOrdersPage() {
     <PageContainer>
       <PageHeader 
         title="Purchase Orders"
-        description="Manage supplier purchase orders, restock materials, and receive inventory."
+        description="Manage active orders, supplier deliveries, and history of completed purchases."
         actions={
           <AppButton onClick={() => navigate('/purchases/new')}>
             <Plus className="h-4 w-4 mr-2" />
@@ -147,15 +233,110 @@ export default function PurchaseOrdersPage() {
           </AppButton>
         }
       />
+
+      {/* KPI Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <AppCard className="p-4 flex items-center justify-between border border-border shadow-xs">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Orders</p>
+            <p className="text-2xl font-black text-foreground mt-1">{totalCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">All time purchase history</p>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+        </AppCard>
+
+        <AppCard className="p-4 flex items-center justify-between border border-border shadow-xs">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In-Progress</p>
+            <p className="text-2xl font-black text-warning mt-1">{activeCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Awaiting supplier delivery</p>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+            <Clock className="h-5 w-5" />
+          </div>
+        </AppCard>
+
+        <AppCard className="p-4 flex items-center justify-between border border-border shadow-xs">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Already Purchased</p>
+            <p className="text-2xl font-black text-success mt-1">{completedCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Completed & received stock</p>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-success/10 text-success flex items-center justify-center">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+        </AppCard>
+
+        <AppCard className="p-4 flex items-center justify-between border border-border shadow-xs">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Spend</p>
+            <p className="text-xl font-mono font-black text-foreground mt-1">
+              ₹ {totalSpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Overall order spend</p>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+            <Receipt className="h-5 w-5" />
+          </div>
+        </AppCard>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('ALL')}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+            activeTab === 'ALL'
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          All Orders ({totalCount})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('ACTIVE')}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+            activeTab === 'ACTIVE'
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          Pending / In Progress ({activeCount})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('COMPLETED')}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+            activeTab === 'COMPLETED'
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          Completed & Already Purchased ({completedCount})
+        </button>
+      </div>
       
       <AppTable
-        data={pos}
+        data={filteredPOs}
         columns={columns}
         isLoading={isLoading}
         searchKey="search"
-        searchPlaceholder="Search by Purchase ID or Supplier..."
-        emptyTitle="No Purchase Orders Yet"
-        emptyDescription="Create your first purchase order to restock inventory from suppliers."
+        searchPlaceholder="Search by PO Number or Supplier..."
+        emptyTitle={activeTab === 'COMPLETED' ? "No Completed Purchases Yet" : activeTab === 'ACTIVE' ? "No In-Progress Orders" : "No Purchase Orders Yet"}
+        emptyDescription={
+          activeTab === 'COMPLETED'
+            ? "When goods are received or recorded as already purchased, they will appear here."
+            : "Create your first purchase order to restock inventory from suppliers."
+        }
       />
 
       {pos.length === 0 && !isLoading && (

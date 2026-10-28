@@ -31,6 +31,7 @@ import { SupplierSearchSelect } from '../../../shared/forms/SupplierSearchSelect
 const itemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.coerce.number().min(0.01, "Must be > 0"),
+  unitPrice: z.coerce.number().min(0, "Must be >= 0").optional().default(0),
 });
 
 const poSchema = z.object({
@@ -38,6 +39,7 @@ const poSchema = z.object({
   supplierName: z.string().optional(),
   purchaseDate: z.string().min(1, "Date is required"),
   notes: z.string().optional(),
+  markAsReceived: z.boolean().optional().default(false),
   items: z.array(itemSchema).min(1, "Add at least one item")
 });
 
@@ -46,9 +48,11 @@ type POFormData = {
   supplierName?: string;
   purchaseDate: string;
   notes?: string;
+  markAsReceived?: boolean;
   items: {
     productId: string;
     quantity: number;
+    unitPrice?: number;
   }[];
 };
 
@@ -77,7 +81,8 @@ export default function PurchaseOrderForm() {
       supplierId: prefillProduct?.supplierId || '',
       supplierName: '',
       purchaseDate: new Date().toISOString().split('T')[0],
-      items: [{ productId: prefillProductId, quantity: 1 }]
+      markAsReceived: false,
+      items: [{ productId: prefillProductId, quantity: 1, unitPrice: 0 }]
     }
   });
 
@@ -86,7 +91,9 @@ export default function PurchaseOrderForm() {
     name: "items"
   });
 
-  const watchedItems = methods.watch("items");
+  const watchedItems = methods.watch("items") || [];
+  const totalUnits = watchedItems.reduce((acc, curr) => acc + (Number(curr?.quantity) || 0), 0);
+  const grandTotal = watchedItems.reduce((acc, curr) => acc + ((Number(curr?.quantity) || 0) * (Number(curr?.unitPrice) || 0)), 0);
 
   useEffect(() => {
     if (!companyId) return;
@@ -122,9 +129,11 @@ export default function PurchaseOrderForm() {
               supplierName: data.supplierName || '',
               purchaseDate: pDate,
               notes: data.notes || '',
+              markAsReceived: data.status === 'Completed',
               items: (data.items || []).map((it: any) => ({
                 productId: it.productId,
-                quantity: it.quantity
+                quantity: it.quantity,
+                unitPrice: it.unitPrice || 0
               }))
             });
           }
@@ -177,15 +186,22 @@ export default function PurchaseOrderForm() {
       const enrichedItems = data.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
         const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.unitPrice) || 0;
         return {
           ...item,
-          quantity: Number(item.quantity),
+          quantity: qty,
+          unitPrice: price,
+          totalAmount: Math.round(qty * price * 100) / 100,
           unit,
           productName: prod?.name || 'Unknown',
           sku: prod?.sku || '',
-          receivedQuantity: 0
+          receivedQuantity: data.markAsReceived ? qty : 0
         };
       });
+
+      const totalQuantity = enrichedItems.reduce((sum, item) => sum + item.quantity, 0);
+      const totalAmount = Math.round(enrichedItems.reduce((sum, item) => sum + item.totalAmount, 0) * 100) / 100;
 
       const effectiveSupplierName = data.supplierName || 
         (data.supplierId ? suppliers.find(s => s.id === data.supplierId)?.companyName : '') || 
@@ -199,6 +215,8 @@ export default function PurchaseOrderForm() {
           purchaseDate: new Date(data.purchaseDate),
           notes: data.notes || '',
           items: enrichedItems,
+          totalQuantity,
+          totalAmount,
           attachments,
           attachmentUrls: attachments.map(a => a.url),
           updatedAt: serverTimestamp()
@@ -209,17 +227,19 @@ export default function PurchaseOrderForm() {
           companyId,
           supplierId: data.supplierId || '',
           supplierName: effectiveSupplierName,
-          status: 'Ordered' as const,
+          status: (data.markAsReceived ? 'Completed' : 'Ordered') as any,
           purchaseDate: new Date(data.purchaseDate),
           notes: data.notes || '',
           items: enrichedItems,
+          totalQuantity,
+          totalAmount,
           attachments,
           attachmentUrls: attachments.map(a => a.url),
           createdBy: user.uid
         };
 
-        await purchaseOrderRepository.create(payload, user.uid);
-        toast.success("Purchase created successfully");
+        await purchaseOrderRepository.create(payload, user.uid, Boolean(data.markAsReceived));
+        toast.success(data.markAsReceived ? "Purchase Order recorded & stock added!" : "Purchase Order created successfully");
       }
       navigate('/purchases');
     } catch (error: any) {
@@ -247,10 +267,10 @@ export default function PurchaseOrderForm() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Line Items & Notes */}
             <div className="lg:col-span-2 space-y-6">
-              <FormSection title="Line Items" description="Add products to this order.">
+              <FormSection title="Line Items" description="Add products to this order with quantities and pricing.">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
-                  <AppButton type="button" variant="secondary" size="sm" onClick={() => append({ productId: '', quantity: 1 })} className="shadow-sm">
+                  <AppButton type="button" variant="secondary" size="sm" onClick={() => append({ productId: '', quantity: 1, unitPrice: 0 })} className="shadow-sm">
                     <Plus className="h-4 w-4 mr-2" /> Add Item
                   </AppButton>
                 </div>
@@ -259,11 +279,12 @@ export default function PurchaseOrderForm() {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium text-left w-[38%]">Product</th>
-                        <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
-                        <th className="px-4 py-3 font-medium text-left w-[22%] min-w-[130px]">Order Qty</th>
-                        <th className="px-4 py-3 font-medium text-left w-[17%]">New Total</th>
-                        <th className="px-4 py-3 font-medium text-center w-[5%]"></th>
+                        <th className="px-3 py-3 font-medium text-left w-[34%]">Product</th>
+                        <th className="px-3 py-3 font-medium text-left w-[13%]">Stock</th>
+                        <th className="px-3 py-3 font-medium text-left w-[18%] min-w-[110px]">Order Qty</th>
+                        <th className="px-3 py-3 font-medium text-left w-[17%] min-w-[110px]">Rate / Unit</th>
+                        <th className="px-3 py-3 font-medium text-right w-[14%]">Amount</th>
+                        <th className="px-2 py-3 font-medium text-center w-[4%]"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -273,7 +294,9 @@ export default function PurchaseOrderForm() {
                         const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
                         const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
                         const orderQty = Number(wItem?.quantity) || 0;
-                        const newTotal = prod ? Math.round((currentStock + orderQty) * 10000) / 10000 : null;
+                        const unitPrice = Number(wItem?.unitPrice) || 0;
+                        const lineAmount = Math.round(orderQty * unitPrice * 100) / 100;
+
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
                             <td className="p-2 relative">
@@ -281,39 +304,52 @@ export default function PurchaseOrderForm() {
                                 value={wItem?.productId || ''}
                                 onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
                                 products={products}
-                                placeholder="Type to search product or SKU..."
+                                placeholder="Search product or SKU..."
                               />
                             </td>
-                            <td className="px-4 py-2 font-medium">
+                            <td className="px-3 py-2 font-medium">
                               {prod ? (
-                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold" : "text-muted-foreground font-medium"}>
-                                  {currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold text-xs" : "text-muted-foreground font-medium text-xs"}>
+                                  {currentStock} <span className="font-normal text-muted-foreground">{unit}</span>
                                 </span>
                               ) : '-'}
                             </td>
                             <td className="p-2">
-                              <div className="relative flex items-center min-w-[120px]">
+                              <div className="relative flex items-center min-w-[110px]">
                                 <input 
                                   type="number" 
                                   step="any" 
                                   min="0.01" 
                                   {...methods.register(`items.${index}.quantity` as const)} 
-                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3.5 pr-14 shadow-xs transition-all outline-none" 
-                                  placeholder="0" 
+                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3 pr-12 shadow-xs transition-all outline-none" 
+                                  placeholder="1" 
                                 />
                                 {unit && (
-                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[11px] font-medium text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded border border-border/50 select-none">
                                     {unit}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-2">
-                              {prod ? (
-                                <span className="text-xs font-semibold px-2 py-1 rounded inline-block bg-primary/10 text-primary">
-                                  {newTotal} {unit}
+                            <td className="p-2">
+                              <div className="relative flex items-center min-w-[105px]">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-semibold text-muted-foreground select-none">
+                                  ₹
                                 </span>
-                              ) : '-'}
+                                <input 
+                                  type="number" 
+                                  step="any" 
+                                  min="0" 
+                                  {...methods.register(`items.${index}.unitPrice` as const)} 
+                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-6 pr-2 shadow-xs transition-all outline-none" 
+                                  placeholder="0.00" 
+                                />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="font-mono font-semibold text-sm text-foreground">
+                                ₹ {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
                             </td>
                             <td className="p-2 text-center">
                               <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">
@@ -330,10 +366,10 @@ export default function PurchaseOrderForm() {
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => append({ productId: '', quantity: 1 })}
+                    onClick={() => append({ productId: '', quantity: 1, unitPrice: 0 })}
                     className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline cursor-pointer"
                   >
-                    <Plus className="h-3.5 w-3.5" /> + Add Another Item
+                    <Plus className="h-3.5 w-3.5" /> Add Another Item
                   </button>
                 </div>
               </FormSection>
@@ -449,11 +485,44 @@ export default function PurchaseOrderForm() {
               </FormSection>
 
               <div className="bg-card rounded-xl shadow-sm border border-border p-6 sticky top-[90px]">
-                <h3 className="font-semibold mb-4 text-lg border-b border-border pb-2">Summary</h3>
-                <div className="flex justify-between items-center mb-6 text-sm">
-                   <span className="text-muted-foreground">Total Unique Items</span>
-                   <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
+                <h3 className="font-semibold mb-4 text-lg border-b border-border pb-2">Order Summary</h3>
+                <div className="space-y-3 mb-6 text-sm">
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Total Unique Items</span>
+                    <span className="font-semibold text-foreground">{watchedItems.filter(i => i.productId).length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Total Units</span>
+                    <span className="font-semibold text-foreground">{totalUnits}</span>
+                  </div>
+                  <div className="pt-2 border-t border-border flex justify-between items-center">
+                    <span className="font-medium text-foreground">Grand Total</span>
+                    <span className="font-bold text-lg text-primary font-mono">
+                      ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
+
+                {!isEditing && (
+                  <div className="mb-6 p-3.5 rounded-lg border border-primary/20 bg-primary/5">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        {...methods.register('markAsReceived')}
+                        className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-foreground block">
+                          Already Purchased & Received
+                        </span>
+                        <span className="text-[11px] text-muted-foreground block leading-tight">
+                          Check this if you are recording an old or already paid purchase. It will immediately complete the order and add items to stock.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
                 <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
                   {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Purchase Order')}
                 </AppButton>

@@ -45,7 +45,28 @@ export const purchaseOrderRepository = {
   getAll: async (companyId: string): Promise<PurchaseOrder[]> => {
     const q = query(collection(db, COLLECTION_NAME), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+    const pos = snapshot.docs.map(doc => {
+      const data = doc.data() as any;
+      const items = (data.items || []).map((it: any) => ({
+        ...it,
+        unitPrice: Number(it.unitPrice) || 0,
+        totalAmount: Number(it.totalAmount) || ((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0))
+      }));
+      const totalAmount = data.totalAmount !== undefined 
+        ? Number(data.totalAmount) 
+        : items.reduce((sum: number, it: any) => sum + (it.totalAmount || 0), 0);
+      const totalQuantity = data.totalQuantity !== undefined 
+        ? Number(data.totalQuantity) 
+        : items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 0), 0);
+
+      return { 
+        id: doc.id, 
+        ...data,
+        items,
+        totalAmount,
+        totalQuantity
+      } as PurchaseOrder;
+    });
     return pos.sort((a, b) => {
       const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
       const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
@@ -57,24 +78,118 @@ export const purchaseOrderRepository = {
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists() && docSnap.data().companyId === companyId) {
-      return { id: docSnap.id, ...docSnap.data() } as PurchaseOrder;
+      const data = docSnap.data() as any;
+      const items = (data.items || []).map((it: any) => ({
+        ...it,
+        unitPrice: Number(it.unitPrice) || 0,
+        totalAmount: Number(it.totalAmount) || ((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0))
+      }));
+      const totalAmount = data.totalAmount !== undefined 
+        ? Number(data.totalAmount) 
+        : items.reduce((sum: number, it: any) => sum + (it.totalAmount || 0), 0);
+      const totalQuantity = data.totalQuantity !== undefined 
+        ? Number(data.totalQuantity) 
+        : items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 0), 0);
+
+      return { 
+        id: docSnap.id, 
+        ...data,
+        items,
+        totalAmount,
+        totalQuantity
+      } as PurchaseOrder;
     }
     return null;
   },
 
-  create: async (poData: Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> => {
+  create: async (
+    poData: Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt' | 'updatedAt'>, 
+    userId: string,
+    markAsReceived = false
+  ): Promise<string> => {
     const docRef = doc(collection(db, COLLECTION_NAME));
     const poNumber = await purchaseOrderRepository.generatePONumber(poData.companyId);
+
+    const enrichedItems = (poData.items || []).map(item => {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      return {
+        ...item,
+        quantity: qty,
+        unitPrice: price,
+        totalAmount: Math.round(qty * price * 100) / 100,
+        receivedQuantity: markAsReceived ? qty : (Number(item.receivedQuantity) || 0)
+      };
+    });
+
+    const totalQuantity = enrichedItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalAmount = Math.round(enrichedItems.reduce((sum, item) => sum + item.totalAmount, 0) * 100) / 100;
     
-    const dataToSave = {
+    const dataToSave: any = {
       ...poData,
       poNumber,
+      items: enrichedItems,
+      totalQuantity,
+      totalAmount,
+      status: markAsReceived ? 'Completed' : (poData.status || 'Ordered'),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
+    if (markAsReceived) {
+      dataToSave.receivedBy = userId;
+    }
+
     await setDoc(docRef, dataToSave);
-    await auditLogRepository.logAction(userId, poData.companyId, 'CREATE', 'PurchaseOrder', docRef.id, { poNumber });
+
+    // If marked as already received / purchased, update product stocks and stock ledger immediately
+    if (markAsReceived) {
+      for (const item of enrichedItems) {
+        if (item.quantity <= 0) continue;
+        try {
+          const prodRef = doc(db, 'products', item.productId);
+          const prodSnap = await getDoc(prodRef);
+          if (prodSnap.exists()) {
+            const currentStock = Number(prodSnap.data().currentStock) || 0;
+            const newStock = Math.round((currentStock + item.quantity) * 10000) / 10000;
+            await updateDoc(prodRef, {
+              currentStock: newStock,
+              updatedAt: serverTimestamp()
+            });
+
+            const ledgerRef = doc(collection(db, 'stockLedger'));
+            await setDoc(ledgerRef, {
+              transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              companyId: poData.companyId,
+              productId: item.productId,
+              transactionType: 'PURCHASE',
+              referenceType: 'PURCHASE_ORDER',
+              referenceId: docRef.id,
+              referenceNumber: poNumber,
+              supplierId: poData.supplierId || '',
+              quantity: item.quantity,
+              beforeQuantity: currentStock,
+              afterQuantity: newStock,
+              createdAt: serverTimestamp(),
+              performedBy: userId
+            });
+          }
+        } catch (stockErr) {
+          console.warn('Failed to auto-update stock on create received PO:', stockErr);
+        }
+      }
+    }
+
+    try {
+      await auditLogRepository.logAction(userId, poData.companyId, 'CREATE', 'PurchaseOrder', docRef.id, { 
+        poNumber, 
+        status: dataToSave.status,
+        markAsReceived 
+      });
+    } catch {
+      // ignore
+    }
+
     return docRef.id;
   },
 

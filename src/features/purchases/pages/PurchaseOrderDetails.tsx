@@ -13,6 +13,8 @@ import { Role } from '../../../constants/roles';
 import { purchaseOrderRepository } from '../../../repositories/PurchaseOrderRepository';
 import { supplierRepository } from '../../../repositories/SupplierRepository';
 import type { PurchaseOrder, PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
+import type { Supplier } from '../../../shared/types/Supplier';
+import { PurchaseOrderPrintDocument } from '../components/PurchaseOrderPrintDocument';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -36,9 +38,11 @@ export default function PurchaseOrderDetails() {
   const companyId = company?.companyId;
 
   const [po, setPo] = useState<PurchaseOrder | null>(null);
+  const [supplierObj, setSupplierObj] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [displaySupplier, setDisplaySupplier] = useState<string>('');
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
 
   // Receiving state
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
@@ -71,13 +75,17 @@ export default function PurchaseOrderDetails() {
         }
         setPo(data);
 
-        // Resolve supplier name
+        // Resolve supplier details
         if (data.supplierName) {
           setDisplaySupplier(data.supplierName);
-        } else if (data.supplierId) {
+        }
+        if (data.supplierId) {
           try {
             const s = await supplierRepository.getById(data.supplierId, companyId);
-            if (s) setDisplaySupplier(s.companyName);
+            if (s) {
+              setSupplierObj(s);
+              if (!data.supplierName) setDisplaySupplier(s.companyName);
+            }
           } catch {
             // ignore
           }
@@ -213,92 +221,139 @@ export default function PurchaseOrderDetails() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-medium">Loading Purchase details...</div>;
   if (!po) return null;
 
+  const totalQty = (po.items || []).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+  const totalReceivedQty = (po.items || []).reduce((acc, curr) => acc + (Number(curr.receivedQuantity) || 0), 0);
+  const grandTotal = po.totalAmount !== undefined 
+    ? po.totalAmount 
+    : (po.items || []).reduce((acc, curr) => acc + ((Number(curr.quantity) || 0) * (Number(curr.unitPrice) || 0)), 0);
+
   return (
-    <PageContainer>
-      <div className="mb-[var(--spacing-md)]">
-        <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')} className="-ml-4 text-muted-foreground">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchase
-        </AppButton>
-      </div>
-
-      <PageHeader 
-        title={
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
-              Purchase ID
-            </span>
-            <span className="font-mono text-2xl font-bold tracking-tight text-foreground">
-              {po.poNumber}
-            </span>
-          </div>
-        }
-        description={`Created on ${po.purchaseDate && typeof (po.purchaseDate as any).toDate === 'function' ? (po.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}${displaySupplier ? ` • Supplier: ${displaySupplier}` : ''}`}
-        actions={
-          <div className="flex gap-2.5 items-center flex-wrap">
-            {po.status !== 'Completed' && po.status !== 'Cancelled' && (
-              <>
-                <AppButton onClick={() => navigate(`/purchases/edit/${po.id}`)} variant="outline">
-                  <Edit className="h-4 w-4 mr-2" /> Edit Purchase
-                </AppButton>
-                <AppButton onClick={() => setIsReceiveModalOpen(true)} variant="success">
-                  <PackageOpen className="h-4 w-4 mr-2" /> Receive Goods
-                </AppButton>
-              </>
-            )}
-            <AppButton variant="outline" onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-2" /> Print Receipt
+    <>
+      <div className="no-print">
+        <PageContainer>
+          <div className="mb-[var(--spacing-md)]">
+            <AppButton variant="ghost" size="sm" onClick={() => navigate('/purchases')} className="-ml-4 text-muted-foreground">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Purchases
             </AppButton>
-            {canDelete && (
-              <AppButton 
-                variant="destructive" 
-                onClick={handleDeletePO} 
-                disabled={isDeleting}
-                title="Delete this purchase"
-                className="shadow-sm"
-              >
-                <Trash2 className="h-4 w-4 mr-1.5" /> {isDeleting ? 'Deleting...' : 'Delete Purchase'}
-              </AppButton>
-            )}
           </div>
-        }
-      >
-        <StatusBadge status={po.status} />
-      </PageHeader>
 
-      <div className="space-y-6">
-        {/* Line Items Card */}
-        <AppCard className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Line Items</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3 text-right">Ordered Qty</th>
-                  <th className="px-4 py-3 text-right">Received Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(po.items || []).map((item, idx) => (
-                  <tr key={idx} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground">{item.productName}</div>
-                      <div className="text-xs text-muted-foreground">{item.sku}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-foreground font-medium">
-                      {item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-semibold ${item.receivedQuantity === item.quantity ? 'text-success' : (item.receivedQuantity || 0) > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
-                        {item.receivedQuantity || 0} <span className="text-xs font-normal">{item.unit || ''}</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </AppCard>
+          <PageHeader 
+            title={
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
+                  Purchase Order
+                </span>
+                <span className="font-mono text-2xl font-bold tracking-tight text-foreground">
+                  {po.poNumber}
+                </span>
+              </div>
+            }
+            description={`Created on ${po.purchaseDate && typeof (po.purchaseDate as any).toDate === 'function' ? (po.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}${displaySupplier ? ` • Supplier: ${displaySupplier}` : ''}`}
+            actions={
+              <div className="flex gap-2.5 items-center flex-wrap">
+                {po.status !== 'Completed' && po.status !== 'Cancelled' && (
+                  <>
+                    <AppButton onClick={() => navigate(`/purchases/edit/${po.id}`)} variant="outline">
+                      <Edit className="h-4 w-4 mr-2" /> Edit Order
+                    </AppButton>
+                    <AppButton onClick={() => setIsReceiveModalOpen(true)} variant="success">
+                      <PackageOpen className="h-4 w-4 mr-2" /> Receive Goods
+                    </AppButton>
+                  </>
+                )}
+                <AppButton variant="outline" onClick={() => setIsPrintPreviewOpen(true)}>
+                  <Printer className="h-4 w-4 mr-2" /> Print Purchase Order
+                </AppButton>
+                {canDelete && (
+                  <AppButton 
+                    variant="destructive" 
+                    onClick={handleDeletePO} 
+                    disabled={isDeleting}
+                    title="Delete this purchase"
+                    className="shadow-sm"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" /> {isDeleting ? 'Deleting...' : 'Delete Purchase'}
+                  </AppButton>
+                )}
+              </div>
+            }
+          >
+            <StatusBadge status={po.status} />
+          </PageHeader>
+
+          <div className="space-y-6">
+            {/* Line Items Card */}
+            <AppCard className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Line Items</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Products, quantities, unit prices and line totals</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground block">Order Total</span>
+                  <span className="text-lg font-bold font-mono text-primary">
+                    ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3">Product</th>
+                      <th className="px-4 py-3 text-right">Ordered Qty</th>
+                      <th className="px-4 py-3 text-right">Received Qty</th>
+                      <th className="px-4 py-3 text-right">Rate / Unit</th>
+                      <th className="px-4 py-3 text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(po.items || []).map((item, idx) => {
+                      const qty = Number(item.quantity) || 0;
+                      const rate = Number(item.unitPrice) || 0;
+                      const lineTotal = item.totalAmount !== undefined 
+                        ? Number(item.totalAmount) 
+                        : Math.round(qty * rate * 100) / 100;
+
+                      return (
+                        <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-foreground">{item.productName}</div>
+                            {item.sku && <div className="text-xs text-muted-foreground font-mono mt-0.5">SKU: {item.sku}</div>}
+                          </td>
+                          <td className="px-4 py-3 text-right text-foreground font-medium">
+                            {item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`font-semibold ${item.receivedQuantity === item.quantity ? 'text-success' : (item.receivedQuantity || 0) > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
+                              {item.receivedQuantity || 0} <span className="text-xs font-normal">{item.unit || ''}</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-foreground">
+                            ₹ {rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-foreground">
+                            ₹ {lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-muted/30 font-semibold border-t-2 border-border">
+                    <tr>
+                      <td className="px-4 py-3 text-foreground font-bold uppercase text-xs">Total Order Value</td>
+                      <td className="px-4 py-3 text-right font-bold text-foreground">{totalQty} units</td>
+                      <td className="px-4 py-3 text-right font-bold text-success">{totalReceivedQty} units</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">-</td>
+                      <td className="px-4 py-3 text-right font-mono font-black text-primary text-base">
+                        ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </AppCard>
 
         {/* Attached Bills & Documents Card */}
         <AppCard className="p-6">
@@ -553,6 +608,48 @@ export default function PurchaseOrderDetails() {
           <AppButton variant="secondary" onClick={() => setPreviewAttachment(null)}>Close</AppButton>
         </div>
       </AppDialog>
+
+      {/* Print Preview Modal */}
+      <AppDialog 
+        isOpen={isPrintPreviewOpen} 
+        onClose={() => setIsPrintPreviewOpen(false)}
+        title="Purchase Order Print Preview"
+        description="Official Cryodeal Purchase Order voucher layout. Click 'Print Now' to print or save as PDF."
+      >
+        <div className="my-4 max-h-[70vh] overflow-y-auto p-3 bg-muted/30 rounded-xl border border-border">
+          <PurchaseOrderPrintDocument 
+            po={po} 
+            supplier={supplierObj} 
+            company={company} 
+            creatorName={user?.displayName || user?.email || 'Store In-Charge'} 
+          />
+        </div>
+        <div className="flex justify-between items-center pt-4 border-t border-border">
+          <span className="text-xs text-muted-foreground">
+            A4 Standard • Cryodeal Industrial Format
+          </span>
+          <div className="flex gap-2">
+            <AppButton variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>
+              Close
+            </AppButton>
+            <AppButton onClick={() => window.print()} className="shadow-sm">
+              <Printer className="h-4 w-4 mr-2" /> Print Now
+            </AppButton>
+          </div>
+        </div>
+      </AppDialog>
     </PageContainer>
+    </div>
+
+    {/* Dedicated Print Sheet for window.print() */}
+    <div className="print-only">
+      <PurchaseOrderPrintDocument 
+        po={po} 
+        supplier={supplierObj} 
+        company={company} 
+        creatorName={user?.displayName || user?.email || 'Store In-Charge'} 
+      />
+    </div>
+  </>
   );
 }

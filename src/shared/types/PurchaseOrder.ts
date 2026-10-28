@@ -11,6 +11,8 @@ export interface PurchaseOrderItem {
   unit?: string;
   quantity: number;
   receivedQuantity: number;
+  unitPrice?: number;
+  totalAmount?: number;
 }
 
 export interface PurchaseAttachment {
@@ -35,6 +37,8 @@ export interface PurchaseOrder {
   expectedDeliveryDate?: Timestamp | Date;
   
   items: PurchaseOrderItem[];
+  totalAmount?: number;
+  totalQuantity?: number;
   notes?: string;
   attachmentUrls?: string[]; // invoice, delivery challan, PO PDF
   attachments?: PurchaseAttachment[];

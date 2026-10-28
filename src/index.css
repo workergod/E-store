@@ -135,3 +135,40 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+/* Print Rules & Media Optimization */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print,
+  button,
+  .sonner-toast,
+  [data-sonner-toaster],
+  .lucide-arrow-left,
+  .page-header-actions {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
