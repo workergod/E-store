@@ -125,58 +125,61 @@ export const purchaseOrderRepository = {
     const totalQuantity = enrichedItems.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = Math.round(enrichedItems.reduce((sum, item) => sum + item.totalAmount, 0) * 100) / 100;
     
+    const allReceived = enrichedItems.length > 0 && enrichedItems.every(i => (Number(i.receivedQuantity) || 0) >= (Number(i.quantity) || 0));
+    const anyReceived = enrichedItems.some(i => (Number(i.receivedQuantity) || 0) > 0);
+    const finalStatus: any = markAsReceived || allReceived ? 'Completed' : (anyReceived ? 'Partially Received' : (poData.status || 'Ordered'));
+
     const dataToSave: any = {
       ...poData,
       poNumber,
       items: enrichedItems,
       totalQuantity,
       totalAmount,
-      status: markAsReceived ? 'Completed' : (poData.status || 'Ordered'),
+      status: finalStatus,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
-    if (markAsReceived) {
+    if (markAsReceived || anyReceived) {
       dataToSave.receivedBy = userId;
     }
 
     await setDoc(docRef, dataToSave);
 
-    // If marked as already received / purchased, update product stocks and stock ledger immediately
-    if (markAsReceived) {
-      for (const item of enrichedItems) {
-        if (item.quantity <= 0 || !item.productId) continue;
-        try {
-          const prodRef = doc(db, 'products', item.productId);
-          const prodSnap = await getDoc(prodRef);
-          if (prodSnap.exists()) {
-            const currentStock = Number(prodSnap.data().currentStock) || 0;
-            const newStock = Math.round((currentStock + item.quantity) * 10000) / 10000;
-            await updateDoc(prodRef, {
-              currentStock: newStock,
-              updatedAt: serverTimestamp()
-            });
+    // Update product stocks and stock ledger immediately for all received items
+    for (const item of enrichedItems) {
+      const qtyToRestock = markAsReceived ? item.quantity : (Number(item.receivedQuantity) || 0);
+      if (qtyToRestock <= 0 || !item.productId) continue;
+      try {
+        const prodRef = doc(db, 'products', item.productId);
+        const prodSnap = await getDoc(prodRef);
+        if (prodSnap.exists()) {
+          const currentStock = Number(prodSnap.data().currentStock) || 0;
+          const newStock = Math.round((currentStock + qtyToRestock) * 10000) / 10000;
+          await updateDoc(prodRef, {
+            currentStock: newStock,
+            updatedAt: serverTimestamp()
+          });
 
-            const ledgerRef = doc(collection(db, 'stockLedger'));
-            await setDoc(ledgerRef, {
-              transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              companyId: poData.companyId,
-              productId: item.productId,
-              transactionType: 'PURCHASE',
-              referenceType: 'PURCHASE_ORDER',
-              referenceId: docRef.id,
-              referenceNumber: poNumber,
-              supplierId: poData.supplierId || '',
-              quantity: item.quantity,
-              beforeQuantity: currentStock,
-              afterQuantity: newStock,
-              createdAt: serverTimestamp(),
-              performedBy: userId
-            });
-          }
-        } catch (stockErr) {
-          console.warn('Failed to auto-update stock on create received PO:', stockErr);
+          const ledgerRef = doc(collection(db, 'stockLedger'));
+          await setDoc(ledgerRef, {
+            transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            companyId: poData.companyId,
+            productId: item.productId,
+            transactionType: 'PURCHASE',
+            referenceType: 'PURCHASE_ORDER',
+            referenceId: docRef.id,
+            referenceNumber: poNumber,
+            supplierId: poData.supplierId || '',
+            quantity: qtyToRestock,
+            beforeQuantity: currentStock,
+            afterQuantity: newStock,
+            createdAt: serverTimestamp(),
+            performedBy: userId
+          });
         }
+      } catch (stockErr) {
+        console.warn('Failed to auto-update stock on create PO item:', stockErr);
       }
     }
 
