@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Eye, Edit, Trash2, Printer, 
-  ShoppingCart, Clock, CheckCircle2, Receipt 
+  ShoppingCart, Clock, CheckCircle2, PackageSearch 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -106,7 +106,7 @@ export default function PurchaseOrdersPage() {
   const totalCount = pos.length;
   const activeCount = pos.filter(p => p.status === 'Ordered' || p.status === 'Approved' || p.status === 'Partially Received').length;
   const completedCount = pos.filter(p => p.status === 'Completed').length;
-  const totalSpend = pos.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
+  const totalUnits = pos.reduce((sum, p) => sum + (p.totalQuantity ?? (p.items || []).reduce((s: number, i: any) => s + (Number(i.quantity) || 0), 0)), 0);
 
   // Filtered dataset
   const filteredPOs = useMemo(() => {
@@ -156,30 +156,6 @@ export default function PurchaseOrdersPage() {
         return (
           <span className="text-xs text-foreground font-medium">
             {items.length} {items.length === 1 ? 'item' : 'items'} • <span className="text-muted-foreground">{units} units</span>
-          </span>
-        );
-      }
-    },
-    {
-      header: 'Total Amount',
-      accessorKey: 'totalAmount',
-      cell: ({ row }: any) => {
-        const amt = row.original.totalAmount;
-        if (amt === undefined || amt === null || isNaN(amt) || Number(amt) === 0) {
-          // Check if items have unit prices
-          const calculated = (row.original.items || []).reduce((acc: number, curr: any) => acc + ((Number(curr.quantity) || 0) * (Number(curr.unitPrice) || 0)), 0);
-          if (calculated > 0) {
-            return (
-              <span className="font-mono font-bold text-foreground">
-                ₹ {calculated.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            );
-          }
-          return <span className="text-muted-foreground">-</span>;
-        }
-        return (
-          <span className="font-mono font-bold text-foreground">
-            ₹ {Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         );
       }
@@ -289,14 +265,14 @@ export default function PurchaseOrdersPage() {
 
         <AppCard className="p-4 flex items-center justify-between border border-border shadow-xs">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Spend</p>
-            <p className="text-xl font-mono font-black text-foreground mt-1">
-              ₹ {totalSpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Units</p>
+            <p className="text-2xl font-black text-foreground mt-1">
+              {totalUnits}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Overall order spend</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Total units across orders</p>
           </div>
           <div className="w-11 h-11 rounded-xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center">
-            <Receipt className="h-5 w-5" />
+            <PackageSearch className="h-5 w-5" />
           </div>
         </AppCard>
       </div>

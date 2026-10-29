@@ -301,12 +301,12 @@ export default function PurchaseOrderDetails() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Line Items</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Products, quantities, unit prices and line totals</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Ordered products and quantities to receive</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs text-muted-foreground block">Order Total</span>
+                  <span className="text-xs text-muted-foreground block">Total Units</span>
                   <span className="text-lg font-bold font-mono text-primary">
-                    ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {totalQty} units
                   </span>
                 </div>
               </div>
@@ -318,51 +318,31 @@ export default function PurchaseOrderDetails() {
                       <th className="px-4 py-3">Product</th>
                       <th className="px-4 py-3 text-right">Ordered Qty</th>
                       <th className="px-4 py-3 text-right">Received Qty</th>
-                      <th className="px-4 py-3 text-right">Rate / Unit</th>
-                      <th className="px-4 py-3 text-right">Line Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(po.items || []).map((item, idx) => {
-                      const qty = Number(item.quantity) || 0;
-                      const rate = Number(item.unitPrice) || 0;
-                      const lineTotal = item.totalAmount !== undefined 
-                        ? Number(item.totalAmount) 
-                        : Math.round(qty * rate * 100) / 100;
-
-                      return (
-                        <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-foreground">{item.productName}</div>
-                            {item.sku && <div className="text-xs text-muted-foreground font-mono mt-0.5">SKU: {item.sku}</div>}
-                          </td>
-                          <td className="px-4 py-3 text-right text-foreground font-medium">
-                            {item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={`font-semibold ${item.receivedQuantity === item.quantity ? 'text-success' : (item.receivedQuantity || 0) > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
-                              {item.receivedQuantity || 0} <span className="text-xs font-normal">{item.unit || ''}</span>
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-foreground">
-                            ₹ {rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-foreground">
-                            ₹ {lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {(po.items || []).map((item, idx) => (
+                      <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-foreground">{item.productName}</div>
+                          {item.sku && <div className="text-xs text-muted-foreground font-mono mt-0.5">SKU: {item.sku}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-right text-foreground font-medium">
+                          {item.quantity} <span className="text-xs text-muted-foreground">{item.unit || ''}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`font-semibold ${item.receivedQuantity === item.quantity ? 'text-success' : (item.receivedQuantity || 0) > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
+                            {item.receivedQuantity || 0} <span className="text-xs font-normal">{item.unit || ''}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                   <tfoot className="bg-muted/30 font-semibold border-t-2 border-border">
                     <tr>
-                      <td className="px-4 py-3 text-foreground font-bold uppercase text-xs">Total Order Value</td>
-                      <td className="px-4 py-3 text-right font-bold text-foreground">{totalQty} units</td>
-                      <td className="px-4 py-3 text-right font-bold text-success">{totalReceivedQty} units</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">-</td>
-                      <td className="px-4 py-3 text-right font-mono font-black text-primary text-base">
-                        ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
+                      <td className="px-4 py-3 text-foreground font-bold uppercase text-xs">Total Units Status</td>
+                      <td className="px-4 py-3 text-right font-bold text-foreground">{totalQty} units ordered</td>
+                      <td className="px-4 py-3 text-right font-bold text-success">{totalReceivedQty} units received</td>
                     </tr>
                   </tfoot>
                 </table>

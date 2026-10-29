@@ -18,9 +18,6 @@ export function generatePurchaseOrderHtml(
     : (po.purchaseDate ? new Date(po.purchaseDate as any).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A');
 
   const totalQty = (po.items || []).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-  const grandTotal = po.totalAmount !== undefined 
-    ? po.totalAmount 
-    : (po.items || []).reduce((acc, curr) => acc + ((Number(curr.quantity) || 0) * (Number(curr.unitPrice) || 0)), 0);
 
   const vendorName = po.supplierName || supplier?.companyName || 'Direct Vendor / Cash';
   const notesText = po.notes?.trim() 
@@ -29,26 +26,16 @@ export function generatePurchaseOrderHtml(
 
   const rowsHtml = (po.items || []).map((item, idx) => {
     const qty = Number(item.quantity) || 0;
-    const rate = Number(item.unitPrice) || 0;
-    const lineTotal = item.totalAmount !== undefined 
-      ? Number(item.totalAmount) 
-      : Math.round(qty * rate * 100) / 100;
 
     return `
       <tr>
-        <td style="text-align: center; color: #64748b; font-weight: 500;">${idx + 1}</td>
-        <td>
+        <td style="text-align: center; color: #64748b; font-weight: 500; padding: 10px 8px;">${idx + 1}</td>
+        <td style="padding: 10px 12px;">
           <div style="font-weight: 700; color: #0f172a; font-size: 13px;">${item.productName || 'Item'}</div>
           ${item.sku ? `<div style="font-family: monospace; font-size: 11px; color: #64748b; margin-top: 2px;">SKU: ${item.sku}</div>` : ''}
         </td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a; white-space: nowrap;">
-          ${qty} <span style="font-size: 11px; color: #64748b; font-weight: 400;">${item.unit || 'pcs'}</span>
-        </td>
-        <td style="text-align: right; font-family: monospace; color: #334155; white-space: nowrap;">
-          ₹ ${rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </td>
-        <td style="text-align: right; font-family: monospace; font-weight: 700; color: #0f172a; white-space: nowrap;">
-          ₹ ${lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <td style="text-align: right; font-weight: 700; color: #0f172a; white-space: nowrap; font-size: 13px; padding: 10px 14px;">
+          ${qty} <span style="font-size: 11px; color: #64748b; font-weight: 500;">${item.unit || 'pcs'}</span>
         </td>
       </tr>
     `;
@@ -379,11 +366,9 @@ export function generatePurchaseOrderHtml(
             <table>
               <thead>
                 <tr>
-                  <th style="width: 40px; text-align: center;">#</th>
+                  <th style="width: 45px; text-align: center;">#</th>
                   <th style="text-align: left;">Item Description & SKU</th>
-                  <th style="width: 105px; text-align: right;">Ordered Qty</th>
-                  <th style="width: 115px; text-align: right;">Rate / Unit</th>
-                  <th style="width: 125px; text-align: right;">Total Amount</th>
+                  <th style="width: 140px; text-align: right;">Ordered Qty</th>
                 </tr>
               </thead>
               <tbody>
@@ -402,15 +387,11 @@ export function generatePurchaseOrderHtml(
             <div class="summary-card">
               <div class="summary-row">
                 <span>Total Line Items:</span>
-                <strong>${(po.items || []).length}</strong>
+                <strong>${(po.items || []).length} items</strong>
               </div>
-              <div class="summary-row">
-                <span>Total Quantity:</span>
-                <strong>${totalQty} units</strong>
-              </div>
-              <div class="grand-total-row">
-                <span>GRAND TOTAL:</span>
-                <span class="grand-total-val">₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <div class="summary-row" style="background: #f1f5f9; border-bottom: none; font-size: 13px; font-weight: 700; color: #0f172a;">
+                <span>Total Quantity to Supply:</span>
+                <strong style="font-size: 14px;">${totalQty} units</strong>
               </div>
             </div>
           </div>

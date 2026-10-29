@@ -93,7 +93,6 @@ export default function PurchaseOrderForm() {
 
   const watchedItems = methods.watch("items") || [];
   const totalUnits = watchedItems.reduce((acc, curr) => acc + (Number(curr?.quantity) || 0), 0);
-  const grandTotal = watchedItems.reduce((acc, curr) => acc + ((Number(curr?.quantity) || 0) * (Number(curr?.unitPrice) || 0)), 0);
 
   useEffect(() => {
     if (!companyId) return;
@@ -267,24 +266,19 @@ export default function PurchaseOrderForm() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Line Items & Notes */}
             <div className="lg:col-span-2 space-y-6">
-              <FormSection title="Line Items" description="Add products to this order with quantities and pricing.">
-                <div className="flex justify-between items-center mb-4">
+              <FormSection title="Line Items" description="Add products and quantities to this purchase order.">
+                <div className="mb-4">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
-                  <AppButton type="button" variant="secondary" size="sm" onClick={() => append({ productId: '', quantity: 1, unitPrice: 0 })} className="shadow-sm">
-                    <Plus className="h-4 w-4 mr-2" /> Add Item
-                  </AppButton>
                 </div>
 
                 <div className="overflow-visible">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-3 py-3 font-medium text-left w-[34%]">Product</th>
-                        <th className="px-3 py-3 font-medium text-left w-[13%]">Stock</th>
-                        <th className="px-3 py-3 font-medium text-left w-[18%] min-w-[110px]">Order Qty</th>
-                        <th className="px-3 py-3 font-medium text-left w-[17%] min-w-[110px]">Rate / Unit</th>
-                        <th className="px-3 py-3 font-medium text-right w-[14%]">Amount</th>
-                        <th className="px-2 py-3 font-medium text-center w-[4%]"></th>
+                        <th className="px-4 py-3 font-medium text-left w-[55%]">Product</th>
+                        <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
+                        <th className="px-4 py-3 font-medium text-left w-[22%] min-w-[130px]">Order Qty</th>
+                        <th className="px-3 py-3 font-medium text-center w-[5%]"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -293,65 +287,48 @@ export default function PurchaseOrderForm() {
                         const prod = products.find(p => p.id === wItem?.productId);
                         const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
                         const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
-                        const orderQty = Number(wItem?.quantity) || 0;
-                        const unitPrice = Number(wItem?.unitPrice) || 0;
-                        const lineAmount = Math.round(orderQty * unitPrice * 100) / 100;
 
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
-                            <td className="p-2 relative">
+                            <td className="p-3 relative">
                               <ProductSearchSelect
                                 value={wItem?.productId || ''}
                                 onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
                                 products={products}
-                                placeholder="Search product or SKU..."
+                                placeholder="Type or search product by name or SKU..."
                               />
+                              {prod?.sku && (
+                                <div className="text-[11px] font-mono text-muted-foreground mt-1 ml-1 flex items-center gap-1.5">
+                                  <span className="bg-muted px-1.5 py-0.5 rounded border border-border/40 text-[10px]">SKU</span>
+                                  <span>{prod.sku}</span>
+                                </div>
+                              )}
                             </td>
-                            <td className="px-3 py-2 font-medium">
+                            <td className="px-4 py-3 font-medium">
                               {prod ? (
-                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold text-xs" : "text-muted-foreground font-medium text-xs"}>
-                                  {currentStock} <span className="font-normal text-muted-foreground">{unit}</span>
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold text-sm" : "text-muted-foreground font-medium text-sm"}>
+                                  {currentStock} <span className="font-normal text-xs text-muted-foreground">{unit}</span>
                                 </span>
                               ) : '-'}
                             </td>
-                            <td className="p-2">
-                              <div className="relative flex items-center min-w-[110px]">
+                            <td className="p-3">
+                              <div className="relative flex items-center min-w-[120px]">
                                 <input 
                                   type="number" 
                                   step="any" 
                                   min="0.01" 
                                   {...methods.register(`items.${index}.quantity` as const)} 
-                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3 pr-12 shadow-xs transition-all outline-none" 
+                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3.5 pr-14 shadow-xs transition-all outline-none" 
                                   placeholder="1" 
                                 />
                                 {unit && (
-                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[11px] font-medium text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded border border-border/50 select-none">
+                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
                                     {unit}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="p-2">
-                              <div className="relative flex items-center min-w-[105px]">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-semibold text-muted-foreground select-none">
-                                  ₹
-                                </span>
-                                <input 
-                                  type="number" 
-                                  step="any" 
-                                  min="0" 
-                                  {...methods.register(`items.${index}.unitPrice` as const)} 
-                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-6 pr-2 shadow-xs transition-all outline-none" 
-                                  placeholder="0.00" 
-                                />
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <span className="font-mono font-semibold text-sm text-foreground">
-                                ₹ {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                            </td>
-                            <td className="p-2 text-center">
+                            <td className="p-3 text-center">
                               <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">
                                 <Trash2 className="h-4 w-4" />
                               </AppButton>
@@ -492,14 +469,8 @@ export default function PurchaseOrderForm() {
                     <span className="font-semibold text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                   </div>
                   <div className="flex justify-between items-center text-muted-foreground">
-                    <span>Total Units</span>
-                    <span className="font-semibold text-foreground">{totalUnits}</span>
-                  </div>
-                  <div className="pt-2 border-t border-border flex justify-between items-center">
-                    <span className="font-medium text-foreground">Grand Total</span>
-                    <span className="font-bold text-lg text-primary font-mono">
-                      ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <span>Total Units to Purchase</span>
+                    <span className="font-bold text-foreground font-mono text-base">{totalUnits}</span>
                   </div>
                 </div>
 

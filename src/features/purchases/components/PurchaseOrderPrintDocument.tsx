@@ -26,9 +26,6 @@ export const PurchaseOrderPrintDocument: React.FC<PurchaseOrderPrintDocumentProp
     : (po.purchaseDate ? new Date(po.purchaseDate as any).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A');
 
   const totalQty = (po.items || []).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-  const grandTotal = po.totalAmount !== undefined 
-    ? po.totalAmount 
-    : (po.items || []).reduce((acc, curr) => acc + ((Number(curr.quantity) || 0) * (Number(curr.unitPrice) || 0)), 0);
 
   const vendorName = po.supplierName || supplier?.companyName || 'Direct Vendor / Cash';
 
@@ -120,38 +117,26 @@ export const PurchaseOrderPrintDocument: React.FC<PurchaseOrderPrintDocumentProp
             <tr className="bg-slate-100 text-slate-800 uppercase text-[11px] font-bold tracking-wider print:bg-slate-200">
               <th className="border border-slate-300 px-3 py-2.5 text-center w-12 whitespace-nowrap">#</th>
               <th className="border border-slate-300 px-4 py-2.5 whitespace-nowrap">Item Description & SKU</th>
-              <th className="border border-slate-300 px-4 py-2.5 text-right w-28 whitespace-nowrap">Ordered Qty</th>
-              <th className="border border-slate-300 px-4 py-2.5 text-right w-32 whitespace-nowrap">Rate / Unit</th>
-              <th className="border border-slate-300 px-4 py-2.5 text-right w-36 whitespace-nowrap">Total Amount</th>
+              <th className="border border-slate-300 px-4 py-2.5 text-right w-40 whitespace-nowrap">Ordered Qty</th>
             </tr>
           </thead>
           <tbody>
             {(po.items || []).map((item, idx) => {
               const qty = Number(item.quantity) || 0;
-              const rate = Number(item.unitPrice) || 0;
-              const lineTotal = item.totalAmount !== undefined 
-                ? Number(item.totalAmount) 
-                : Math.round(qty * rate * 100) / 100;
 
               return (
                 <tr key={idx} className="border border-slate-300 hover:bg-slate-50/50">
                   <td className="border border-slate-300 px-3 py-2 text-center text-slate-500 font-medium">
                     {idx + 1}
                   </td>
-                  <td className="border border-slate-300 px-3 py-2">
-                    <div className="font-bold text-slate-900">{item.productName || 'Item'}</div>
+                  <td className="border border-slate-300 px-4 py-2">
+                    <div className="font-bold text-slate-900 text-sm">{item.productName || 'Item'}</div>
                     {item.sku && (
-                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">SKU: {item.sku}</div>
+                      <div className="text-[11px] font-mono text-slate-500 mt-0.5">SKU: {item.sku}</div>
                     )}
                   </td>
-                  <td className="border border-slate-300 px-3 py-2 text-right font-medium text-slate-900 whitespace-nowrap">
-                    {qty} <span className="text-[10px] text-slate-500">{item.unit || 'pcs'}</span>
-                  </td>
-                  <td className="border border-slate-300 px-3 py-2 text-right font-mono text-slate-800 whitespace-nowrap">
-                    ₹ {rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="border border-slate-300 px-3 py-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                    ₹ {lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td className="border border-slate-300 px-4 py-2 text-right font-bold text-slate-900 whitespace-nowrap text-sm">
+                    {qty} <span className="text-xs font-normal text-slate-500">{item.unit || 'pcs'}</span>
                   </td>
                 </tr>
               );
@@ -172,19 +157,13 @@ export const PurchaseOrderPrintDocument: React.FC<PurchaseOrderPrintDocumentProp
         </div>
 
         <div className="border border-slate-300 rounded-lg overflow-hidden">
-          <div className="flex justify-between items-center px-4 py-2 border-b border-slate-200 bg-slate-50 text-slate-700">
+          <div className="flex justify-between items-center px-4 py-2.5 border-b border-slate-200 bg-slate-50 text-slate-700">
             <span className="font-semibold">Total Line Items:</span>
-            <span className="font-bold font-mono">{(po.items || []).length}</span>
+            <span className="font-bold font-mono">{(po.items || []).length} items</span>
           </div>
-          <div className="flex justify-between items-center px-4 py-2 border-b border-slate-200 text-slate-700">
-            <span className="font-semibold">Total Quantity:</span>
-            <span className="font-bold font-mono">{totalQty} units</span>
-          </div>
-          <div className="flex justify-between items-center px-4 py-3 bg-slate-900 text-white font-bold text-sm">
-            <span className="uppercase tracking-wider">Grand Total Amount:</span>
-            <span className="font-mono text-base">
-              ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
+          <div className="flex justify-between items-center px-4 py-3 bg-slate-100 text-slate-900 font-bold text-sm">
+            <span>Total Quantity to Supply:</span>
+            <span className="font-mono text-base">{totalQty} units</span>
           </div>
         </div>
       </div>
