@@ -1,26 +1,30 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, Check, ChevronDown } from 'lucide-react';
+import { Search, X, Check, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import type { Product } from '../types/Product';
 
 interface ProductSearchSelectProps {
   value: string;
-  onChange: (productId: string) => void;
+  productName?: string;
+  onChange: (productId: string, productName?: string, product?: Product) => void;
   products: Product[];
   placeholder?: string;
   error?: boolean;
   disabled?: boolean;
   className?: string;
+  allowCustom?: boolean;
 }
 
 export function ProductSearchSelect({
   value,
+  productName,
   onChange,
   products = [],
   placeholder = "Type to search product...",
   error = false,
   disabled = false,
-  className
+  className,
+  allowCustom = false
 }: ProductSearchSelectProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,36 +34,52 @@ export function ProductSearchSelect({
   }, [products, value]);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => productName || selectedProduct?.name || '');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
-  // Synchronize search term with selected product when value changes
+  // Synchronize search term when value or productName changes from outside
   useEffect(() => {
-    if (selectedProduct) {
+    if (productName !== undefined) {
+      setSearchTerm(productName);
+    } else if (selectedProduct) {
       setSearchTerm(selectedProduct.name);
-    } else {
+    } else if (!allowCustom && !value) {
       setSearchTerm('');
     }
-  }, [selectedProduct]);
+  }, [productName, selectedProduct, allowCustom, value]);
 
-  // Close dropdown on click outside
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
-        // Reset search term back to selected product name if not picking something new
-        if (selectedProduct) {
-          setSearchTerm(selectedProduct.name);
+        if (allowCustom) {
+          const trimmed = searchTerm.trim();
+          if (trimmed) {
+            const matched = products.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
+            if (matched) {
+              onChange(matched.id, matched.name, matched);
+            } else {
+              onChange('', trimmed);
+            }
+          } else {
+            onChange('', '');
+          }
         } else {
-          setSearchTerm('');
+          // Reset search term back to selected product name if not picking something new
+          if (selectedProduct) {
+            setSearchTerm(selectedProduct.name);
+          } else {
+            setSearchTerm('');
+          }
         }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedProduct]);
+  }, [selectedProduct, allowCustom, searchTerm, products, onChange]);
 
-  // Filter and smart sort products (e.g. typing 'c' puts products starting with 'c' first, 'copper' matches all copper)
+  // Filter and smart sort products
   const filteredProducts = useMemo(() => {
     const rawTerm = searchTerm.toLowerCase().trim();
     let list = [...products];
@@ -77,7 +97,7 @@ export function ProductSearchSelect({
       });
 
       // Smart sorting:
-      // 1. Starts with search term (e.g. 'c' or 'copper')
+      // 1. Starts with search term
       // 2. Contains search term
       // 3. Alphabetical order
       list.sort((a, b) => {
@@ -91,7 +111,6 @@ export function ProductSearchSelect({
         return aName.localeCompare(bName);
       });
     } else {
-      // Default: Alphabetical A-Z
       list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     }
 
@@ -100,15 +119,30 @@ export function ProductSearchSelect({
 
   const handleSelect = (product: Product) => {
     if (!product.id) return;
-    onChange(product.id);
+    onChange(product.id, product.name, product);
     setSearchTerm(product.name);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleSelectCustom = (customName: string) => {
+    const trimmed = customName.trim();
+    if (!trimmed) return;
+    const matched = products.find(p => p.name.toLowerCase() === trimmed.toLowerCase());
+    if (matched) {
+      onChange(matched.id, matched.name, matched);
+      setSearchTerm(matched.name);
+    } else {
+      onChange('', trimmed);
+      setSearchTerm(trimmed);
+    }
     setIsOpen(false);
     setHighlightedIndex(-1);
   };
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange('');
+    onChange('', '');
     setSearchTerm('');
     setIsOpen(true);
     inputRef.current?.focus();
@@ -130,11 +164,20 @@ export function ProductSearchSelect({
       e.preventDefault();
       if (isOpen && highlightedIndex >= 0 && highlightedIndex < filteredProducts.length) {
         handleSelect(filteredProducts[highlightedIndex]);
+      } else if (allowCustom && searchTerm.trim()) {
+        handleSelectCustom(searchTerm);
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
   };
+
+  const hasExactMatch = useMemo(() => {
+    const trimmed = searchTerm.trim().toLowerCase();
+    return Boolean(trimmed && products.some(p => p.name.toLowerCase() === trimmed));
+  }, [searchTerm, products]);
+
+  const hasValue = Boolean(value || (allowCustom && searchTerm.trim()));
 
   return (
     <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
@@ -164,15 +207,24 @@ export function ProductSearchSelect({
             setIsOpen(true);
           }}
           onChange={(e) => {
-            setSearchTerm(e.target.value);
+            const val = e.target.value;
+            setSearchTerm(val);
             setIsOpen(true);
             setHighlightedIndex(-1);
+            if (allowCustom) {
+              const matched = products.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+              if (matched) {
+                onChange(matched.id, matched.name, matched);
+              } else {
+                onChange('', val);
+              }
+            }
           }}
           onKeyDown={handleKeyDown}
           className="w-full h-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground truncate"
         />
 
-        {value ? (
+        {hasValue ? (
           <button
             type="button"
             onClick={handleClear}
@@ -200,10 +252,32 @@ export function ProductSearchSelect({
         <div 
           className="absolute left-0 top-full mt-1.5 w-full min-w-[340px] max-w-lg bg-popover text-popover-foreground border-2 border-primary/30 rounded-xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-100"
         >
+          {/* Quick Option to use typed text as Custom Item */}
+          {allowCustom && searchTerm.trim() && !hasExactMatch && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelectCustom(searchTerm);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border-b border-border text-xs font-semibold cursor-pointer transition-colors"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                Use typed item: <strong className="underline">&quot;{searchTerm.trim()}&quot;</strong>
+              </span>
+            </div>
+          )}
+
           <div className="max-h-64 overflow-y-auto custom-scrollbar p-1">
             {filteredProducts.length === 0 ? (
               <div className="p-4 text-center text-xs text-muted-foreground">
-                No matching products found. Try typing a different name or SKU.
+                {allowCustom && searchTerm.trim() ? (
+                  <span>
+                    No catalog items found. Press <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px] border border-border">Enter</kbd> to order &quot;<strong>{searchTerm.trim()}</strong>&quot; as a custom item.
+                  </span>
+                ) : (
+                  <span>No matching products found. Try typing a different name or SKU.</span>
+                )}
               </div>
             ) : (
               filteredProducts.map((p, idx) => {

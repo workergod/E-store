@@ -145,7 +145,7 @@ export const purchaseOrderRepository = {
     // If marked as already received / purchased, update product stocks and stock ledger immediately
     if (markAsReceived) {
       for (const item of enrichedItems) {
-        if (item.quantity <= 0) continue;
+        if (item.quantity <= 0 || !item.productId) continue;
         try {
           const prodRef = doc(db, 'products', item.productId);
           const prodSnap = await getDoc(prodRef);
@@ -223,7 +223,7 @@ export const purchaseOrderRepository = {
     const items = poData.items || [];
     for (const item of items) {
       const receivedQty = item.receivedQuantity || 0;
-      if (receivedQty > 0) {
+      if (receivedQty > 0 && item.productId) {
         try {
           await stockLedgerRepository.recordTransaction({
             transactionId: `revert_po_${Date.now()}_${Math.floor(Math.random() * 1000)}`,

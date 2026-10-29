@@ -355,7 +355,7 @@ export default function PurchaseOrderDetails() {
             <div>
               <div className="flex items-center gap-2">
                 <Paperclip className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold text-foreground">Attached Bills & Documents</h3>
+                <h3 className="text-lg font-semibold text-foreground">Bill & Document Attachments</h3>
                 {(po.attachments && po.attachments.length > 0) && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                     {po.attachments.length}
@@ -363,7 +363,7 @@ export default function PurchaseOrderDetails() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Vendor invoices, bills, delivery challans, and receipt photos.
+                Attach supplier bill, invoice, or receipt photos (Image, PDF, Document).
               </p>
             </div>
 

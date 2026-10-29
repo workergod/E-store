@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Trash2, ArrowLeft, Paperclip, FileText, Loader2, Info } from 'lucide-react';
+import { 
+  Plus, Trash2, ArrowLeft, Printer, Eye, 
+  ShoppingCart, PackageSearch, CheckCircle2 
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/firestore';
@@ -14,23 +17,25 @@ import { supplierRepository } from '../../../repositories/SupplierRepository';
 import { productRepository } from '../../../repositories/ProductRepository';
 import type { Supplier } from '../../../shared/types/Supplier';
 import type { Product } from '../../../shared/types/Product';
-import type { PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
-import { processAttachmentFile, formatFileSize, isImageFile, validateAttachmentFile } from '../../../shared/utils/attachmentUtils';
+import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
+import { printPurchaseOrder } from '../utils/printPurchaseOrder';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
-import { AppForm, FormActions } from '../../../shared/forms/FormLayout';
+import { AppForm } from '../../../shared/forms/FormLayout';
 import { FormSection } from '../../../shared/forms/FormSection';
-import { FormRow } from '../../../shared/forms/FormLayout';
 import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
 import { SupplierSearchSelect } from '../../../shared/forms/SupplierSearchSelect';
+import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 
 const itemSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
+  productId: z.string().optional().default(''),
+  productName: z.string().min(1, "Product name is required"),
   quantity: z.coerce.number().min(0.01, "Must be > 0"),
+  unit: z.string().optional().default('pcs'),
   unitPrice: z.coerce.number().min(0, "Must be >= 0").optional().default(0),
 });
 
@@ -50,8 +55,10 @@ type POFormData = {
   notes?: string;
   markAsReceived?: boolean;
   items: {
-    productId: string;
+    productId?: string;
+    productName: string;
     quantity: number;
+    unit?: string;
     unitPrice?: number;
   }[];
 };
@@ -70,10 +77,10 @@ export default function PurchaseOrderForm() {
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [createdOrders, setCreatedOrders] = useState<PurchaseOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [existingPoNumber, setExistingPoNumber] = useState<string>('');
-  const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
 
   const methods = useForm<POFormData>({
     resolver: zodResolver(poSchema) as any,
@@ -82,7 +89,7 @@ export default function PurchaseOrderForm() {
       supplierName: '',
       purchaseDate: new Date().toISOString().split('T')[0],
       markAsReceived: false,
-      items: [{ productId: prefillProductId, quantity: 1, unitPrice: 0 }]
+      items: [{ productId: prefillProductId, productName: prefillProduct?.name || '', quantity: 1, unit: 'pcs', unitPrice: 0 }]
     }
   });
 
@@ -93,6 +100,20 @@ export default function PurchaseOrderForm() {
 
   const watchedItems = methods.watch("items") || [];
   const totalUnits = watchedItems.reduce((acc, curr) => acc + (Number(curr?.quantity) || 0), 0);
+  const totalUniqueItems = watchedItems.filter(i => (i?.productName && i.productName.trim().length > 0) || i?.productId).length;
+
+  const loadCreatedOrders = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      setIsLoadingOrders(true);
+      const orders = await purchaseOrderRepository.getAll(companyId);
+      setCreatedOrders(orders);
+    } catch (err) {
+      console.error("Failed to load created purchase orders:", err);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  }, [companyId]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -105,9 +126,16 @@ export default function PurchaseOrderForm() {
       setProducts(prodData.filter(p => !p.status || p.status.toLowerCase() === 'active'));
 
       if (!id && prefillProductId) {
+        const foundProd = prodData.find(p => p.id === prefillProductId) || prefillProduct;
         methods.setValue('items.0.productId', prefillProductId);
-        if (prefillProduct?.supplierId) {
-          methods.setValue('supplierId', prefillProduct.supplierId);
+        if (foundProd?.name) {
+          methods.setValue('items.0.productName', foundProd.name);
+        }
+        if (foundProd?.unitId || (foundProd as any)?.unit) {
+          methods.setValue('items.0.unit', foundProd.unitId || (foundProd as any).unit);
+        }
+        if (foundProd?.supplierId) {
+          methods.setValue('supplierId', foundProd.supplierId);
         }
       }
 
@@ -117,7 +145,6 @@ export default function PurchaseOrderForm() {
           if (poSnap.exists() && poSnap.data().companyId === companyId) {
             const data = poSnap.data();
             setExistingPoNumber(data.poNumber || '');
-            setAttachments(data.attachments || []);
             let pDate = new Date().toISOString().split('T')[0];
             if (data.purchaseDate) {
               const d = data.purchaseDate.toDate ? data.purchaseDate.toDate() : new Date(data.purchaseDate);
@@ -130,8 +157,10 @@ export default function PurchaseOrderForm() {
               notes: data.notes || '',
               markAsReceived: data.status === 'Completed',
               items: (data.items || []).map((it: any) => ({
-                productId: it.productId,
+                productId: it.productId || '',
+                productName: it.productName || '',
                 quantity: it.quantity,
+                unit: it.unit || 'pcs',
                 unitPrice: it.unitPrice || 0
               }))
             });
@@ -141,40 +170,19 @@ export default function PurchaseOrderForm() {
         }
       }
     };
+
     loadData();
-  }, [companyId, id, methods, prefillProductId, prefillProduct]);
+    loadCreatedOrders();
+  }, [companyId, id, methods, prefillProductId, prefillProduct, loadCreatedOrders]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    try {
-      setIsUploading(true);
-      const newAtts: PurchaseAttachment[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const validation = validateAttachmentFile(file);
-        if (!validation.valid) {
-          toast.error(validation.error);
-          continue;
-        }
-        const att = await processAttachmentFile(file, companyId);
-        newAtts.push(att);
-      }
-      if (newAtts.length > 0) {
-        setAttachments(prev => [...prev, ...newAtts]);
-        toast.success(`${newAtts.length} document(s) attached!`);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to attach file');
-    } finally {
-      setIsUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  const removeAttachment = (attId: string) => {
-    setAttachments(prev => prev.filter(a => a.id !== attId));
+  const handlePrintOrder = (orderToPrint: PurchaseOrder) => {
+    const sup = suppliers.find(s => s.id === orderToPrint.supplierId) || null;
+    printPurchaseOrder(
+      orderToPrint,
+      sup,
+      company,
+      user?.displayName || user?.email || 'Store In-Charge'
+    );
   };
 
   const onSubmit = async (data: POFormData) => {
@@ -184,17 +192,18 @@ export default function PurchaseOrderForm() {
       
       const enrichedItems = data.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
-        const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
+        const finalName = item.productName?.trim() || prod?.name || 'Custom Item';
+        const unit = prod?.unitId || (prod as any)?.unit || item.unit || 'pcs';
         const qty = Number(item.quantity) || 0;
         const price = Number(item.unitPrice) || 0;
         return {
-          ...item,
+          productId: item.productId || '',
+          productName: finalName,
+          sku: prod?.sku || '',
           quantity: qty,
           unitPrice: price,
           totalAmount: Math.round(qty * price * 100) / 100,
           unit,
-          productName: prod?.name || 'Unknown',
-          sku: prod?.sku || '',
           receivedQuantity: data.markAsReceived ? qty : 0
         };
       });
@@ -202,9 +211,9 @@ export default function PurchaseOrderForm() {
       const totalQuantity = enrichedItems.reduce((sum, item) => sum + item.quantity, 0);
       const totalAmount = Math.round(enrichedItems.reduce((sum, item) => sum + item.totalAmount, 0) * 100) / 100;
 
-      const effectiveSupplierName = data.supplierName || 
+      const effectiveSupplierName = data.supplierName?.trim() || 
         (data.supplierId ? suppliers.find(s => s.id === data.supplierId)?.companyName : '') || 
-        '';
+        'Direct Vendor / Cash';
 
       if (isEditing && id) {
         const poRef = doc(db, 'purchaseOrders', id);
@@ -216,11 +225,10 @@ export default function PurchaseOrderForm() {
           items: enrichedItems,
           totalQuantity,
           totalAmount,
-          attachments,
-          attachmentUrls: attachments.map(a => a.url),
           updatedAt: serverTimestamp()
         });
-        toast.success(`Purchase ${existingPoNumber || ''} updated successfully`);
+        toast.success(`Purchase ${existingPoNumber || ''} updated successfully!`);
+        navigate(`/purchases/${id}`);
       } else {
         const payload = {
           companyId,
@@ -232,17 +240,33 @@ export default function PurchaseOrderForm() {
           items: enrichedItems,
           totalQuantity,
           totalAmount,
-          attachments,
-          attachmentUrls: attachments.map(a => a.url),
+          attachments: [],
+          attachmentUrls: [],
           createdBy: user.uid
         };
 
-        await purchaseOrderRepository.create(payload, user.uid, Boolean(data.markAsReceived));
-        toast.success(data.markAsReceived ? "Purchase Order recorded & stock added!" : "Purchase Order created successfully");
+        const newId = await purchaseOrderRepository.create(payload, user.uid, Boolean(data.markAsReceived));
+        toast.success(
+          data.markAsReceived 
+            ? "Purchase Order recorded & completed! Added to the list below." 
+            : "Purchase Order created successfully! Added to the list below."
+        );
+
+        // Refresh list of created purchase orders right on this page
+        await loadCreatedOrders();
+
+        // Reset form for next order
+        methods.reset({
+          supplierId: '',
+          supplierName: '',
+          purchaseDate: new Date().toISOString().split('T')[0],
+          markAsReceived: false,
+          notes: '',
+          items: [{ productId: '', productName: '', quantity: 1, unit: 'pcs', unitPrice: 0 }]
+        });
       }
-      navigate('/purchases');
     } catch (error: any) {
-      toast.error(error.message || "Failed to save purchase");
+      toast.error(error.message || "Failed to save purchase order");
     } finally {
       setIsSaving(false);
     }
@@ -285,31 +309,48 @@ export default function PurchaseOrderForm() {
                       {fields.map((field, index) => {
                         const wItem = watchedItems[index];
                         const prod = products.find(p => p.id === wItem?.productId);
-                        const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
+                        const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : (wItem?.unit || 'pcs');
                         const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
+                        const isCustom = !wItem?.productId && Boolean(wItem?.productName?.trim());
 
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
                             <td className="p-3 relative">
                               <ProductSearchSelect
                                 value={wItem?.productId || ''}
-                                onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
+                                productName={wItem?.productName || ''}
+                                onChange={(prodId, prodName, product) => {
+                                  methods.setValue(`items.${index}.productId`, prodId);
+                                  methods.setValue(`items.${index}.productName`, prodName || product?.name || '', { shouldValidate: true });
+                                  if (product) {
+                                    const u = product.unitId || (product as any).unit || 'pcs';
+                                    methods.setValue(`items.${index}.unit`, u);
+                                  }
+                                }}
                                 products={products}
-                                placeholder="Type or search product by name or SKU..."
+                                allowCustom={true}
+                                placeholder="Type any product name or search..."
                               />
-                              {prod?.sku && (
+                              {prod?.sku ? (
                                 <div className="text-[11px] font-mono text-muted-foreground mt-1 ml-1 flex items-center gap-1.5">
                                   <span className="bg-muted px-1.5 py-0.5 rounded border border-border/40 text-[10px]">SKU</span>
                                   <span>{prod.sku}</span>
                                 </div>
-                              )}
+                              ) : isCustom ? (
+                                <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 ml-1 flex items-center gap-1.5">
+                                  <span className="bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 text-[10px]">Custom Item</span>
+                                  <span>Direct Purchase Item</span>
+                                </div>
+                              ) : null}
                             </td>
                             <td className="px-4 py-3 font-medium">
                               {prod ? (
                                 <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold text-sm" : "text-muted-foreground font-medium text-sm"}>
                                   {currentStock} <span className="font-normal text-xs text-muted-foreground">{unit}</span>
                                 </span>
-                              ) : '-'}
+                              ) : (
+                                <span className="text-muted-foreground font-medium text-sm">-</span>
+                              )}
                             </td>
                             <td className="p-3">
                               <div className="relative flex items-center min-w-[120px]">
@@ -329,7 +370,14 @@ export default function PurchaseOrderForm() {
                               </div>
                             </td>
                             <td className="p-3 text-center">
-                              <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">
+                              <AppButton 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => remove(index)} 
+                                disabled={fields.length === 1}
+                                className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8 disabled:opacity-30"
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </AppButton>
                             </td>
@@ -343,7 +391,7 @@ export default function PurchaseOrderForm() {
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => append({ productId: '', quantity: 1, unitPrice: 0 })}
+                    onClick={() => append({ productId: '', productName: '', quantity: 1, unit: 'pcs', unitPrice: 0 })}
                     className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" /> Add Another Item
@@ -353,89 +401,13 @@ export default function PurchaseOrderForm() {
 
               <FormSection title="Additional Details" description="Provide any extra notes for the supplier.">
                 <FormField label="Notes / Remarks" error={methods.formState.errors.notes?.message}>
-                  <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="Any instructions for the supplier..." rows={4}></textarea>
+                  <textarea 
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" 
+                    {...methods.register('notes')} 
+                    placeholder="Any instructions for the supplier..." 
+                    rows={4}
+                  />
                 </FormField>
-              </FormSection>
-
-              <FormSection title="Bill & Document Attachments" description="Attach supplier bill, invoice, or receipt photos (Image, PDF, Document).">
-                <div className="space-y-4">
-                  {/* Limitations Helper Box */}
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200">
-                    <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                    <div className="space-y-1">
-                      <p className="font-semibold text-blue-950 dark:text-blue-100">
-                        Attachment Limitations:
-                      </p>
-                      <ul className="list-disc list-inside space-y-0.5 text-muted-foreground text-[11px]">
-                        <li><strong className="text-foreground font-semibold">PDF & Documents</strong>: Maximum <strong>2 MB</strong> per file.</li>
-                        <li><strong className="text-foreground font-semibold">Bill Photos & Images</strong>: Up to <strong>10 MB</strong> accepted (automatically compressed down to ~200 KB).</li>
-                        <li><strong className="text-foreground font-semibold">Supported formats</strong>: JPG, PNG, WebP, PDF, DOC, DOCX.</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept="image/*,.pdf,.doc,.docx" 
-                      onChange={handleFileChange} 
-                      className="hidden" 
-                      id="form-doc-upload"
-                      disabled={isUploading}
-                    />
-                    <label 
-                      htmlFor="form-doc-upload" 
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs ${isUploading ? 'opacity-60 pointer-events-none' : ''}`}
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Processing Attachments...
-                        </>
-                      ) : (
-                        <>
-                          <Paperclip className="h-4 w-4" /> Attach Bill / Document / Image
-                        </>
-                      )}
-                    </label>
-                    <span className="text-xs text-muted-foreground font-medium">
-                      Max 2 MB per document
-                    </span>
-                  </div>
-
-                  {attachments.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      {attachments.map((att) => {
-                        const isImg = isImageFile(att.type, att.name);
-                        return (
-                          <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/60 hover:border-primary/40 transition-colors">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {isImg ? (
-                                <img src={att.url} alt={att.name} className="w-10 h-10 rounded object-cover border border-border flex-shrink-0" />
-                              ) : (
-                                <div className="w-10 h-10 rounded bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                                  <FileText className="h-5 w-5" />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-foreground truncate max-w-[180px]" title={att.name}>{att.name}</p>
-                                <p className="text-[11px] text-muted-foreground">{formatFileSize(att.size)}</p>
-                              </div>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => removeAttachment(att.id)}
-                              className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors cursor-pointer"
-                              title="Remove file"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               </FormSection>
             </div>
 
@@ -466,7 +438,7 @@ export default function PurchaseOrderForm() {
                 <div className="space-y-3 mb-6 text-sm">
                   <div className="flex justify-between items-center text-muted-foreground">
                     <span>Total Unique Items</span>
-                    <span className="font-semibold text-foreground">{watchedItems.filter(i => i.productId).length}</span>
+                    <span className="font-semibold text-foreground">{totalUniqueItems}</span>
                   </div>
                   <div className="flex justify-between items-center text-muted-foreground">
                     <span>Total Units to Purchase</span>
@@ -505,6 +477,115 @@ export default function PurchaseOrderForm() {
           </div>
         </AppForm>
       </FormProvider>
+
+      {/* Created Purchase Orders Section Inside Create Purchase Order */}
+      <div className="mt-12 pt-8 border-t border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" /> Created Purchase Orders
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              All purchase orders recorded in your system. Print orders or open details to attach bills.
+            </p>
+          </div>
+          <AppButton variant="outline" size="sm" onClick={() => navigate('/purchases')} className="self-start sm:self-auto">
+            View All in Purchase Orders →
+          </AppButton>
+        </div>
+
+        <div className="bg-card rounded-xl border border-border shadow-xs overflow-hidden">
+          {createdOrders.length === 0 ? (
+            <div className="p-8 text-center flex flex-col items-center justify-center">
+              <PackageSearch className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
+              <p className="text-sm font-semibold text-foreground">No purchase orders created yet</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                Fill in the form above and click &quot;Create Purchase Order&quot; to record your first order. It will immediately show here.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Purchase ID</th>
+                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold">Supplier</th>
+                    <th className="px-4 py-3 font-semibold">Items & Qty</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {createdOrders.map((order) => {
+                    const totalOrderUnits = order.totalQuantity ?? (order.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                    const orderDate = order.purchaseDate && typeof (order.purchaseDate as any).toDate === 'function'
+                      ? (order.purchaseDate as any).toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : (order.purchaseDate ? new Date(order.purchaseDate as any).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A');
+
+                    const supplierDisplay = order.supplierName || suppliers.find(s => s.id === order.supplierId)?.companyName || 'Direct Vendor / Cash';
+
+                    return (
+                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <span 
+                            onClick={() => navigate(`/purchases/${order.id}`)}
+                            className="font-mono font-bold text-primary hover:underline cursor-pointer"
+                          >
+                            {order.poNumber}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {orderDate}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-foreground text-xs">
+                          {supplierDisplay}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-xs font-medium text-foreground">
+                            {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'}
+                            <span className="text-muted-foreground font-normal ml-1">({totalOrderUnits} units)</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground truncate max-w-[220px]" title={(order.items || []).map(i => i.productName || 'Item').join(', ')}>
+                            {(order.items || []).map(i => i.productName || 'Item').join(', ')}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <StatusBadge status={order.status} />
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5 justify-end">
+                            <AppButton
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintOrder(order)}
+                              className="h-8 px-2.5 text-xs font-semibold"
+                              title="Print Purchase Order"
+                            >
+                              <Printer className="h-3.5 w-3.5 mr-1" /> Print
+                            </AppButton>
+                            <AppButton
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/purchases/${order.id}`)}
+                              className="h-8 px-2.5 text-xs font-semibold"
+                              title="View Details & Attached Bills"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" /> View
+                            </AppButton>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </PageContainer>
   );
 }
