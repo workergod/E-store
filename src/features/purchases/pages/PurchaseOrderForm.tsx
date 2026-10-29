@@ -631,7 +631,7 @@ export default function PurchaseOrderForm() {
           </div>
 
           {/* Full-width Items Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-visible min-h-[160px]">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-lg">
                 <tr>
@@ -685,7 +685,7 @@ export default function PurchaseOrderForm() {
                       </td>
 
                       {/* Product Selector / Input */}
-                      <td className="p-3 relative">
+                      <td className="p-3 relative overflow-visible">
                         <ProductSearchSelect
                           value={item.productId || ''}
                           productName={item.productName || ''}

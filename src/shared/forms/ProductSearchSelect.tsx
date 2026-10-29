@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X, Check, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import type { Product } from '../types/Product';
@@ -28,6 +29,7 @@ export function ProductSearchSelect({
 }: ProductSearchSelectProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedProduct = useMemo(() => {
     return products.find(p => p.id === value);
@@ -36,6 +38,47 @@ export function ProductSearchSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(() => productName || selectedProduct?.name || '');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    placement: 'bottom' | 'top';
+  } | null>(null);
+
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const estimatedHeight = 320;
+    const placeAbove = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
+
+    const width = Math.max(rect.width, 360);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+
+    setDropdownPos({
+      top: placeAbove ? rect.top - 4 : rect.bottom + 4,
+      left,
+      width,
+      placement: placeAbove ? 'top' : 'bottom'
+    });
+  }, []);
+
+  // Update floating dropdown coordinates on open, scroll, or resize
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+
+    const handleScrollOrResize = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
+  }, [isOpen, updatePosition]);
 
   // Synchronize search term when value or productName changes from outside
   useEffect(() => {
@@ -48,10 +91,15 @@ export function ProductSearchSelect({
     }
   }, [productName, selectedProduct, allowCustom, value]);
 
-  // Handle click outside
+  // Handle click outside (checks both input container and portaled dropdown)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        (!dropdownRef.current || !dropdownRef.current.contains(target))
+      ) {
         setIsOpen(false);
         if (allowCustom) {
           const trimmed = searchTerm.trim();
@@ -146,11 +194,13 @@ export function ProductSearchSelect({
     setSearchTerm('');
     setIsOpen(true);
     inputRef.current?.focus();
+    updatePosition();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       setIsOpen(true);
+      updatePosition();
       return;
     }
 
@@ -180,12 +230,13 @@ export function ProductSearchSelect({
   const hasValue = Boolean(value || (allowCustom && searchTerm.trim()));
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
+    <div ref={containerRef} className={cn("relative w-full", className)}>
       <div 
         onClick={() => {
           if (!disabled) {
             setIsOpen(true);
             inputRef.current?.focus();
+            updatePosition();
           }
         }}
         className={cn(
@@ -201,16 +252,21 @@ export function ProductSearchSelect({
           value={searchTerm}
           disabled={disabled}
           placeholder={placeholder}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            updatePosition();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(true);
+            updatePosition();
           }}
           onChange={(e) => {
             const val = e.target.value;
             setSearchTerm(val);
             setIsOpen(true);
             setHighlightedIndex(-1);
+            updatePosition();
             if (allowCustom) {
               const matched = products.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
               if (matched) {
@@ -240,6 +296,7 @@ export function ProductSearchSelect({
               e.stopPropagation();
               setIsOpen(!isOpen);
               inputRef.current?.focus();
+              updatePosition();
             }}
             className="p-1 mr-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
@@ -248,9 +305,19 @@ export function ProductSearchSelect({
         )}
       </div>
 
-      {isOpen && (
+      {/* Unclipped Floating Dropdown Menu rendered via Portal into document.body */}
+      {isOpen && dropdownPos && createPortal(
         <div 
-          className="absolute left-0 top-full mt-1.5 w-full min-w-[340px] max-w-lg bg-popover text-popover-foreground border-2 border-primary/30 rounded-xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.placement === 'top' ? undefined : `${dropdownPos.top}px`,
+            bottom: dropdownPos.placement === 'top' ? `${window.innerHeight - dropdownPos.top}px` : undefined,
+            left: `${dropdownPos.left}px`,
+            width: `${dropdownPos.width}px`,
+            zIndex: 999999
+          }}
+          className="max-w-lg bg-popover text-popover-foreground border-2 border-primary/40 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
         >
           {/* Quick Option to use typed text as Custom Item */}
           {allowCustom && searchTerm.trim() && !hasExactMatch && (
@@ -307,7 +374,7 @@ export function ProductSearchSelect({
                         {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {p.sku && <span className="font-mono bg-muted px-1 rounded text-[11px]">{p.sku}</span>}
+                        {p.sku && <span className="font-mono bg-muted px-1 rounded text-[11px]">SKU: {p.sku}</span>}
                         {p.shortName && <span>• {p.shortName}</span>}
                       </div>
                     </div>
@@ -327,7 +394,8 @@ export function ProductSearchSelect({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
