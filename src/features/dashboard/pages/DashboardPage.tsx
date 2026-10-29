@@ -629,29 +629,6 @@ export default function DashboardPage() {
               Real-time control center for inventory, tools, technician site dispatches & purchases.
             </p>
           </div>
-
-          {/* Quick Metrics Glance on right side for desktop */}
-          <div className="hidden lg:flex flex-col items-end gap-1.5 p-3 rounded-xl bg-muted/40 border border-border/60 shrink-0">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Overview</span>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-base font-black text-foreground">{metrics.totalProducts}</div>
-                <div className="text-[10px] text-muted-foreground font-medium">Products</div>
-              </div>
-              <div className="h-7 w-px bg-border/80" />
-              <div className="text-right">
-                <div className={cn("text-base font-black", metrics.lowStock > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
-                  {metrics.lowStock}
-                </div>
-                <div className="text-[10px] text-muted-foreground font-medium">Low Stock</div>
-              </div>
-              <div className="h-7 w-px bg-border/80" />
-              <div className="text-right">
-                <div className="text-base font-black text-foreground">{metrics.openPurchases}</div>
-                <div className="text-[10px] text-muted-foreground font-medium">Active POs</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
