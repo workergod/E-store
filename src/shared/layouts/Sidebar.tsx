@@ -7,7 +7,7 @@ import {
   HelpCircle, MessageCircle,
   ArrowUpRight, ArrowDownLeft, ShoppingBag, ClipboardList,
   PanelLeft, Wrench, Hammer, RotateCcw,
-  PlusCircle
+  PlusCircle, Receipt
 } from 'lucide-react'
 import { cn } from "../utils/cn"
 import { useAuthStore } from "../../store/authStore"
@@ -38,7 +38,7 @@ const TOOLS_NAV: NavItemDef[] = [
 
 const PURCHASING_NAV: NavItemDef[] = [
   { path: '/purchases', label: 'Purchase Orders', icon: ShoppingCart },
-  { path: '/purchases/new', label: 'Create Purchase Order', icon: PlusCircle },
+  { path: '/purchases/new', label: 'Purchase Order Bills', icon: Receipt },
 ]
 
 const OPERATIONS_NAV: NavItemDef[] = [

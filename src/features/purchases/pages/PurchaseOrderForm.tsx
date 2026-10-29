@@ -4,7 +4,7 @@ import {
   Plus, Trash2, ArrowLeft, Printer, Eye, 
   ShoppingCart, PackageSearch, CheckCircle2, AlertTriangle, 
   Sparkles, CheckSquare, Square,
-  Paperclip, Upload, Download, FileText, Image as ImageIcon, Loader2, Info
+  Paperclip, Upload, Download, FileText, Image as ImageIcon, Loader2, Info, Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -475,11 +475,11 @@ export default function PurchaseOrderForm() {
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Purchases
           </AppButton>
           <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2.5">
-            <ShoppingCart className="h-6 w-6 text-primary" />
-            {isEditing ? `Edit Purchase Bill ${existingPoNumber}` : "Create Purchase Order & Restock Bill"}
+            <Receipt className="h-6 w-6 text-primary" />
+            {isEditing ? `Edit Purchase Bill ${existingPoNumber}` : "Purchase Order Bills"}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Record supplier purchases. Tick items to automatically restock products and add new items to your store catalog.
+            Record supplier purchase bills, attach bill & document photos, and tick items to automatically restock products.
           </p>
         </div>
 
