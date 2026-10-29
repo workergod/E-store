@@ -8,9 +8,9 @@ import { AppCard } from '../../../shared/app/AppCard'
 import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
-  Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
+  Package, AlertCircle, RefreshCw, ArrowRight, 
   Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Plus, Printer,
-  Calendar, Sparkles
+  Calendar
 } from 'lucide-react'
 import { cn } from '../../../shared/utils/cn'
 import { printLowStockList } from '../utils/printLowStockList'
@@ -651,56 +651,6 @@ export default function DashboardPage() {
                 <div className="text-[10px] text-muted-foreground font-medium">Active POs</div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* 1-Click Fast Operations Strip - Clean, elevated designer operations dock */}
-        <div className="relative z-10 mt-5 pt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span>Fast Operations</span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/issue')}
-              className="border-blue-600/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 hover:border-blue-500/60 font-semibold text-xs transition-all shadow-2xs"
-            >
-              <ArrowUpRight className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-blue-600 dark:text-blue-400" /> Issue Materials
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/returns')}
-              className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/60 font-semibold text-xs transition-all shadow-2xs"
-            >
-              <ArrowDownLeft className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-emerald-600 dark:text-emerald-400" /> Return Materials
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/tools/issue')}
-              className="border-amber-600/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/60 font-semibold text-xs transition-all shadow-2xs"
-            >
-              <Hammer className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-amber-600 dark:text-amber-400" /> Issue Tools
-            </AppButton>
-            <AppButton 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/tools/return')}
-              className="border-purple-600/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 hover:border-purple-500/60 font-semibold text-xs transition-all shadow-2xs"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-purple-600 dark:text-purple-400" /> Return Tools
-            </AppButton>
-            <AppButton 
-              size="sm" 
-              onClick={() => navigate('/purchases')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs shadow-xs"
-            >
-              <ShoppingCart className="h-3.5 w-3.5 mr-1.5 stroke-[2.5]" /> Purchase
-            </AppButton>
           </div>
         </div>
       </div>
