@@ -102,6 +102,30 @@ export default function PurchaseOrderForm() {
   const totalUnits = watchedItems.reduce((acc, curr) => acc + (Number(curr?.quantity) || 0), 0);
   const totalUniqueItems = watchedItems.filter(i => (i?.productName && i.productName.trim().length > 0) || i?.productId).length;
 
+  const lowStockProducts = products.filter(p => (Number(p.currentStock) || 0) <= (Number(p.minimumStock) || 0));
+
+  const handleAddAllLowStock = () => {
+    if (lowStockProducts.length === 0) {
+      toast.info("No low stock products found!");
+      return;
+    }
+    const items = lowStockProducts.map(p => {
+      const minStock = Number(p.minimumStock) || 0;
+      const curStock = Number(p.currentStock) || 0;
+      const needed = Math.max(minStock - curStock, 1);
+      const u = p.unitId || (p as any).unit || 'pcs';
+      return {
+        productId: p.id || '',
+        productName: p.name,
+        quantity: needed,
+        unit: u,
+        unitPrice: 0
+      };
+    });
+    methods.setValue('items', items, { shouldValidate: true });
+    toast.success(`Added ${items.length} low-stock products to refill!`);
+  };
+
   const loadCreatedOrders = useCallback(async () => {
     if (!companyId) return;
     try {
@@ -185,7 +209,7 @@ export default function PurchaseOrderForm() {
     );
   };
 
-  const onSubmit = async (data: POFormData) => {
+  const onSubmit = async (data: POFormData, shouldPrint = false) => {
     if (!companyId || !user) return;
     try {
       setIsSaving(true);
@@ -246,11 +270,23 @@ export default function PurchaseOrderForm() {
         };
 
         const newId = await purchaseOrderRepository.create(payload, user.uid, Boolean(data.markAsReceived));
+        const createdPO = await purchaseOrderRepository.getById(newId, companyId);
+
         toast.success(
           data.markAsReceived 
             ? "Purchase Order recorded & completed! Added to the list below." 
             : "Purchase Order created successfully! Added to the list below."
         );
+
+        if (shouldPrint && createdPO) {
+          const sup = suppliers.find(s => s.id === createdPO.supplierId) || null;
+          printPurchaseOrder(
+            createdPO,
+            sup,
+            company,
+            user?.displayName || user?.email || 'Store In-Charge'
+          );
+        }
 
         // Refresh list of created purchase orders right on this page
         await loadCreatedOrders();
@@ -291,6 +327,23 @@ export default function PurchaseOrderForm() {
             {/* Left Column: Line Items & Notes */}
             <div className="lg:col-span-2 space-y-6">
               <FormSection title="Line Items" description="Add products and quantities to this purchase order.">
+                {lowStockProducts.length > 0 && !isEditing && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs mb-4">
+                    <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                      <span>
+                        <strong>{lowStockProducts.length} product(s)</strong> are low in stock in store.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddAllLowStock}
+                      className="px-3 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors cursor-pointer self-start sm:self-auto shrink-0 shadow-xs"
+                    >
+                      + Add Low Stock Products to Refill
+                    </button>
+                  </div>
+                )}
+
                 <div className="mb-4">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
                 </div>
@@ -466,8 +519,25 @@ export default function PurchaseOrderForm() {
                   </div>
                 )}
 
-                <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
-                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Purchase Order')}
+                {!isEditing && (
+                  <AppButton 
+                    type="button" 
+                    onClick={() => methods.handleSubmit((d) => onSubmit(d, true))()}
+                    disabled={isSaving} 
+                    className="w-full h-12 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-premium mb-2.5"
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    {isSaving ? 'Creating...' : 'Print & Create Order'}
+                  </AppButton>
+                )}
+
+                <AppButton 
+                  type="submit" 
+                  variant={!isEditing ? "outline" : "default"}
+                  disabled={isSaving} 
+                  className="w-full h-11 text-sm font-semibold mb-3"
+                >
+                  {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Order Only')}
                 </AppButton>
                 <AppButton type="button" variant="ghost" onClick={() => navigate('/purchases')} disabled={isSaving} className="w-full text-muted-foreground">
                   Cancel
