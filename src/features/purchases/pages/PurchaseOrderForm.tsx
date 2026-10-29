@@ -3,7 +3,8 @@ import { useNavigate, useParams, useLocation, useSearchParams } from 'react-rout
 import { 
   Plus, Trash2, ArrowLeft, Printer, Eye, 
   ShoppingCart, PackageSearch, CheckCircle2, AlertTriangle, 
-  Sparkles, CheckSquare, Square
+  Sparkles, CheckSquare, Square,
+  Paperclip, Upload, Download, FileText, Image as ImageIcon, Loader2, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -15,17 +16,26 @@ import { supplierRepository } from '../../../repositories/SupplierRepository';
 import { productRepository } from '../../../repositories/ProductRepository';
 import type { Supplier } from '../../../shared/types/Supplier';
 import type { Product } from '../../../shared/types/Product';
-import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
+import type { PurchaseOrder, PurchaseAttachment } from '../../../shared/types/PurchaseOrder';
 import { printPurchaseOrder } from '../utils/printPurchaseOrder';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
 import { AppButton } from '../../../shared/app/AppButton';
 import { AppCard } from '../../../shared/app/AppCard';
+import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
 import { SupplierSearchSelect } from '../../../shared/forms/SupplierSearchSelect';
 import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 import { cn } from '../../../shared/utils/cn';
+import {
+  processAttachmentFile,
+  formatFileSize,
+  isImageFile,
+  isPdfFile,
+  downloadAttachment,
+  validateAttachmentFile
+} from '../../../shared/utils/attachmentUtils';
 
 interface FormBillItem {
   id: string; // unique row id
@@ -62,6 +72,11 @@ export default function PurchaseOrderForm() {
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [billNumber, setBillNumber] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Bill Attachments State
+  const [attachments, setAttachments] = useState<PurchaseAttachment[]>([]);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<PurchaseAttachment | null>(null);
 
   // Items State (Ticking Method)
   const [items, setItems] = useState<FormBillItem[]>([
@@ -147,6 +162,12 @@ export default function PurchaseOrderForm() {
               saveAsNewProduct: false
             }))
           );
+
+          if (data.attachments && Array.isArray(data.attachments)) {
+            setAttachments(data.attachments);
+          } else {
+            setAttachments([]);
+          }
         }
       }
     } catch (err) {
@@ -231,6 +252,42 @@ export default function PurchaseOrderForm() {
 
   const handleToggleAllTicked = (targetState: boolean) => {
     setItems(prev => prev.map(i => ({ ...i, restockNow: targetState })));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !companyId) return;
+
+    try {
+      setIsUploadingAttachment(true);
+      const newAttachments: PurchaseAttachment[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const validation = validateAttachmentFile(file);
+        if (!validation.valid) {
+          toast.error(validation.error);
+          continue;
+        }
+        const att = await processAttachmentFile(file, companyId);
+        newAttachments.push(att);
+      }
+
+      if (newAttachments.length === 0) return;
+
+      setAttachments(prev => [...prev, ...newAttachments]);
+      toast.success(`${newAttachments.length} document(s) attached!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload attachment');
+    } finally {
+      setIsUploadingAttachment(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = (attId: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== attId));
+    toast.info("Attachment removed from bill");
   };
 
   // Submit Handler: Saves PO, creates any new products, automatically restocks ticked products, and prints
@@ -327,8 +384,8 @@ export default function PurchaseOrderForm() {
         items: enrichedItems,
         totalQuantity,
         totalAmount: 0,
-        attachments: [],
-        attachmentUrls: [],
+        attachments,
+        attachmentUrls: attachments.map(a => a.url),
         createdBy: user.uid
       };
 
@@ -342,6 +399,8 @@ export default function PurchaseOrderForm() {
           notes: notes || '',
           items: enrichedItems,
           totalQuantity,
+          attachments,
+          attachmentUrls: attachments.map(a => a.url),
           updatedAt: serverTimestamp()
         });
         toast.success(`Purchase Order ${existingPoNumber || ''} updated!`);
@@ -380,6 +439,7 @@ export default function PurchaseOrderForm() {
         setSupplierName('');
         setBillNumber('');
         setNotes('');
+        setAttachments([]);
         setPurchaseDate(new Date().toISOString().split('T')[0]);
         setItems([
           {
@@ -767,7 +827,156 @@ export default function PurchaseOrderForm() {
           </div>
         </AppCard>
 
-        {/* SECTION 4: Bill Summary & Action Controls Bar */}
+        {/* SECTION 4: Bill & Document Attachments */}
+        <AppCard className="p-6 border border-border shadow-xs bg-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Paperclip className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-bold text-foreground">Bill & Document Attachments</h3>
+                {attachments.length > 0 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {attachments.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Attach supplier bill, invoice, or receipt photos (Image, PDF, Document).
+              </p>
+            </div>
+
+            <div>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*,.pdf,.doc,.docx" 
+                onChange={handleFileUpload} 
+                className="hidden" 
+                id="form-bill-upload"
+                disabled={isUploadingAttachment}
+              />
+              <label 
+                htmlFor="form-bill-upload" 
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer ${isUploadingAttachment ? 'opacity-60 pointer-events-none' : ''}`}
+              >
+                {isUploadingAttachment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" /> Attach Bill / Document
+                  </>
+                )}
+              </label>
+            </div>
+          </div>
+
+          {/* Limitations Helper Box */}
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-200 mb-4">
+            <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+            <div className="space-y-0.5">
+              <span className="font-semibold text-blue-950 dark:text-blue-100">Attachment Limitations: </span>
+              <span className="text-muted-foreground text-[11px]">
+                Maximum <strong>2 MB</strong> per PDF / document bill. Camera photos are accepted up to <strong>10 MB</strong> and auto-compressed to ~200 KB. Formats: <span className="font-mono">PDF, JPG, PNG, WebP, DOC, DOCX</span>.
+              </span>
+            </div>
+          </div>
+
+          {attachments.length === 0 ? (
+            <div className="p-8 border-2 border-dashed border-border rounded-xl text-center flex flex-col items-center justify-center bg-muted/20">
+              <Paperclip className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm font-semibold text-foreground">No documents or bills attached yet</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                Attach bills, supplier receipts, or photos to keep complete purchase records.
+              </p>
+              <label 
+                htmlFor="form-bill-upload" 
+                className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <Upload className="h-3.5 w-3.5" /> Upload First Bill / Document
+              </label>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {attachments.map((att) => {
+                const isImg = isImageFile(att.type, att.name);
+                const isPdf = isPdfFile(att.type, att.name);
+
+                return (
+                  <div 
+                    key={att.id} 
+                    className="flex flex-col justify-between p-3.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      {isImg ? (
+                        <div 
+                          onClick={() => setPreviewAttachment(att)}
+                          className="w-14 h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0 cursor-pointer border border-border/60 hover:opacity-90"
+                        >
+                          <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => setPreviewAttachment(att)}
+                          className={`w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer ${isPdf ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-primary/10 text-primary'}`}
+                        >
+                          {isPdf ? <FileText className="h-7 w-7" /> : <ImageIcon className="h-7 w-7" />}
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate" title={att.name}>
+                          {att.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatFileSize(att.size)} • Attached
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1.5 mt-3 pt-2.5 border-t border-border/60">
+                      <AppButton 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setPreviewAttachment(att)}
+                        className="h-7 px-2 text-xs"
+                        title="View / Preview"
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1" /> View
+                      </AppButton>
+
+                      <AppButton 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => downloadAttachment(att)}
+                        className="h-7 px-2 text-xs"
+                        title="Download file"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" /> Download
+                      </AppButton>
+
+                      <AppButton 
+                        type="button"
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleRemoveAttachment(att.id)}
+                        className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        title="Remove attachment"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </AppButton>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </AppCard>
+
+        {/* SECTION 5: Bill Summary & Action Controls Bar */}
         <AppCard className="p-6 border-2 border-primary/20 shadow-md bg-gradient-to-r from-card to-primary/[0.03]">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1.5">
@@ -779,6 +988,11 @@ export default function PurchaseOrderForm() {
                 <span className="px-2.5 py-0.5 rounded-md bg-muted text-xs font-bold text-foreground">
                   {totalUnits} Total Units
                 </span>
+                {attachments.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-xs font-bold text-primary flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" /> {attachments.length} Bill Document{attachments.length > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
 
               {/* Automatic Restock Feedback */}
@@ -873,12 +1087,19 @@ export default function PurchaseOrderForm() {
                       return (
                         <tr key={order.id} className="hover:bg-muted/30 transition-colors">
                           <td className="px-4 py-3">
-                            <span 
-                              onClick={() => navigate(`/purchases/${order.id}`)}
-                              className="font-mono font-bold text-primary hover:underline cursor-pointer"
-                            >
-                              {order.poNumber}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span 
+                                onClick={() => navigate(`/purchases/${order.id}`)}
+                                className="font-mono font-bold text-primary hover:underline cursor-pointer"
+                              >
+                                {order.poNumber}
+                              </span>
+                              {(order.attachments && order.attachments.length > 0) && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20" title={`${order.attachments.length} attached bill document(s)`}>
+                                  <Paperclip className="h-3 w-3" /> {order.attachments.length}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {orderDate}
@@ -940,6 +1161,49 @@ export default function PurchaseOrderForm() {
           </div>
         </div>
       </div>
+
+      {/* Bill Attachment Preview Modal */}
+      <AppDialog 
+        isOpen={!!previewAttachment} 
+        onClose={() => setPreviewAttachment(null)}
+        title={previewAttachment?.name || "Document Preview"}
+        description={previewAttachment ? `${formatFileSize(previewAttachment.size)} • Attached Bill Document` : ''}
+      >
+        <div className="my-4 flex flex-col items-center justify-center max-h-[70vh] overflow-y-auto">
+          {previewAttachment && isImageFile(previewAttachment.type, previewAttachment.name) ? (
+            <img 
+              src={previewAttachment.url} 
+              alt={previewAttachment.name} 
+              className="max-h-[65vh] w-auto rounded-lg object-contain border border-border shadow-sm" 
+            />
+          ) : previewAttachment && isPdfFile(previewAttachment.type, previewAttachment.name) ? (
+            <iframe 
+              src={previewAttachment.url} 
+              title={previewAttachment.name} 
+              className="w-full h-[60vh] rounded-lg border border-border" 
+            />
+          ) : (
+            <div className="p-8 text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground/60" />
+              <p className="font-semibold text-foreground">{previewAttachment?.name}</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">This document format can be downloaded directly.</p>
+              {previewAttachment && (
+                <AppButton onClick={() => downloadAttachment(previewAttachment)}>
+                  <Download className="h-4 w-4 mr-2" /> Download File
+                </AppButton>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 pt-3 border-t border-border">
+          {previewAttachment && (
+            <AppButton variant="outline" onClick={() => downloadAttachment(previewAttachment)}>
+              <Download className="h-4 w-4 mr-2" /> Download
+            </AppButton>
+          )}
+          <AppButton variant="secondary" onClick={() => setPreviewAttachment(null)}>Close</AppButton>
+        </div>
+      </AppDialog>
     </PageContainer>
   );
 }

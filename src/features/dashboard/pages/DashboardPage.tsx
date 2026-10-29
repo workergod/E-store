@@ -9,8 +9,11 @@ import { AppButton } from '../../../shared/app/AppButton'
 import { AppTable } from '../../../shared/tables/AppTable'
 import { 
   Package, AlertCircle, RefreshCw, ArrowRight, ArrowUpRight, ArrowDownLeft, 
-  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Plus
+  Wrench, Hammer, RotateCcw, ShoppingCart, CheckCircle2, Plus, Printer,
+  Calendar, Sparkles
 } from 'lucide-react'
+import { cn } from '../../../shared/utils/cn'
+import { printLowStockList } from '../utils/printLowStockList'
 
 import { useAuthStore } from "../../../store/authStore"
 import { Role } from '../../../constants/roles'
@@ -82,6 +85,21 @@ export default function DashboardPage() {
     if (r === Role.OWNER) return 'Managing Director (MD)';
     return r || 'Store Keeper';
   }, [user]);
+
+  const greetingMessage = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  const todayFormatted = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+  }, []);
 
   useEffect(() => {
     if (!companyId) return
@@ -257,6 +275,15 @@ export default function DashboardPage() {
     if (toolFilter === 'ALL') return recentToolMovements.slice(0, 8);
     return recentToolMovements.filter(t => t.movementType === toolFilter).slice(0, 8);
   }, [recentToolMovements, toolFilter]);
+
+  const handlePrintLowStock = () => {
+    const lowStockList = productsList.filter(p => (Number(p.currentStock) || 0) <= (Number(p.minimumStock) || 0));
+    printLowStockList(
+      lowStockList,
+      company,
+      user?.displayName || user?.email || 'Store In-Charge'
+    );
+  };
 
   const lowStockItems = useMemo(() => {
     return productsList
@@ -558,71 +585,123 @@ export default function DashboardPage() {
 
   return (
     <PageContainer>
-      {/* PERSONALIZED WELCOME & FAST ACTIONS HEADER */}
-      <div className="space-y-4 pb-4 border-b border-border/40">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      {/* EXECUTIVE WELCOME & FAST OPERATIONS HERO */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.04] p-5 sm:p-7 shadow-xs">
+        {/* Ambient subtle glow effects */}
+        <div 
+          className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-60 dark:opacity-30" 
+          aria-hidden="true" 
+        />
+        <div 
+          className="pointer-events-none absolute -left-12 -bottom-12 h-48 w-48 rounded-full bg-blue-500/10 blur-2xl opacity-40 dark:opacity-20" 
+          aria-hidden="true" 
+        />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2 max-w-2xl">
+            {/* Top Workspace Badge & Date Pill (Cryodeal Central Store removed) */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 inline-flex items-center gap-2 backdrop-blur-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
                 {roleLabel} Workspace
               </span>
-              <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                {company?.companyName || 'Cryodeal'} Central Store
+
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1 rounded-full bg-muted/60 border border-border/40 font-medium">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground/80" />
+                {todayFormatted}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Welcome, <span className="text-primary">{welcomeName}</span>! 👋
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            {/* Personalized Welcome Header */}
+            <div>
+              <p className="text-xs sm:text-sm font-semibold text-muted-foreground tracking-wide">
+                {greetingMessage},
+              </p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground flex items-center gap-2.5 mt-0.5">
+                Welcome, <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">{welcomeName}</span>! 👋
+              </h1>
+            </div>
+
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium leading-relaxed max-w-xl">
               Real-time control center for inventory, tools, technician site dispatches & purchases.
             </p>
           </div>
+
+          {/* Quick Metrics Glance on right side for desktop */}
+          <div className="hidden lg:flex flex-col items-end gap-1.5 p-3 rounded-xl bg-muted/40 border border-border/60 shrink-0">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Overview</span>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-base font-black text-foreground">{metrics.totalProducts}</div>
+                <div className="text-[10px] text-muted-foreground font-medium">Products</div>
+              </div>
+              <div className="h-7 w-px bg-border/80" />
+              <div className="text-right">
+                <div className={cn("text-base font-black", metrics.lowStock > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
+                  {metrics.lowStock}
+                </div>
+                <div className="text-[10px] text-muted-foreground font-medium">Low Stock</div>
+              </div>
+              <div className="h-7 w-px bg-border/80" />
+              <div className="text-right">
+                <div className="text-base font-black text-foreground">{metrics.openPurchases}</div>
+                <div className="text-[10px] text-muted-foreground font-medium">Active POs</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 1-Click Action Buttons Strip - Clean, full-width, guaranteed no wrapping collision */}
-        <div className="flex items-center gap-2 flex-wrap pt-1">
-          <AppButton 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/issue')}
-            className="border-blue-600/50 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-medium"
-          >
-            <ArrowUpRight className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Materials
-          </AppButton>
-          <AppButton 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/returns')}
-            className="border-emerald-600/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium"
-          >
-            <ArrowDownLeft className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Materials
-          </AppButton>
-          <AppButton 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/tools/issue')}
-            className="border-amber-600/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-medium"
-          >
-            <Hammer className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Issue Tools
-          </AppButton>
-          <AppButton 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/tools/return')}
-            className="border-purple-600/50 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 font-medium"
-          >
-            <RotateCcw className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Return Tools
-          </AppButton>
-          <AppButton 
-            size="sm" 
-            onClick={() => navigate('/purchases')}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold shadow-xs"
-          >
-            <ShoppingCart className="h-4 w-4 mr-1.5 stroke-[2.5]" /> Purchase
-          </AppButton>
+        {/* 1-Click Fast Operations Strip - Clean, elevated designer operations dock */}
+        <div className="relative z-10 mt-5 pt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span>Fast Operations</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <AppButton 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/issue')}
+              className="border-blue-600/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 hover:border-blue-500/60 font-semibold text-xs transition-all shadow-2xs"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-blue-600 dark:text-blue-400" /> Issue Materials
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/returns')}
+              className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/60 font-semibold text-xs transition-all shadow-2xs"
+            >
+              <ArrowDownLeft className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-emerald-600 dark:text-emerald-400" /> Return Materials
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/tools/issue')}
+              className="border-amber-600/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/60 font-semibold text-xs transition-all shadow-2xs"
+            >
+              <Hammer className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-amber-600 dark:text-amber-400" /> Issue Tools
+            </AppButton>
+            <AppButton 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/tools/return')}
+              className="border-purple-600/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 hover:border-purple-500/60 font-semibold text-xs transition-all shadow-2xs"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5 stroke-[2.5] text-purple-600 dark:text-purple-400" /> Return Tools
+            </AppButton>
+            <AppButton 
+              size="sm" 
+              onClick={() => navigate('/purchases')}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs shadow-xs"
+            >
+              <ShoppingCart className="h-3.5 w-3.5 mr-1.5 stroke-[2.5]" /> Purchase
+            </AppButton>
+          </div>
         </div>
       </div>
 
@@ -925,13 +1004,23 @@ export default function DashboardPage() {
         {/* Tab 3 Content: Urgent Low Stock */}
         {activeTab === 'low-stock' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-                  {lowStockItems.length} products below minimum stock threshold
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse" />
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                  {metrics.lowStock} store product(s) are low in stock or out of stock
                 </span>
               </div>
+
+              {metrics.lowStock > 0 && (
+                <AppButton
+                  size="sm"
+                  onClick={handlePrintLowStock}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs self-start sm:self-auto"
+                >
+                  <Printer className="h-3.5 w-3.5 mr-1.5" /> Print Out of Stock List
+                </AppButton>
+              )}
             </div>
 
             <AppTable
