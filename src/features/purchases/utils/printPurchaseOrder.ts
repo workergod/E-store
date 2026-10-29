@@ -1,6 +1,7 @@
 import type { PurchaseOrder } from '../../../shared/types/PurchaseOrder';
 import type { Supplier } from '../../../shared/types/Supplier';
 import type { Company } from '../../../types/Company';
+import { CRYODEAL_LOGO_BASE64 } from './logoDataUri';
 
 export function generatePurchaseOrderHtml(
   po: PurchaseOrder,
@@ -21,20 +22,20 @@ export function generatePurchaseOrderHtml(
 
     return `
       <tr>
-        <td style="text-align: center; color: #64748b; font-weight: 700; padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px;">
+        <td style="text-align: center; color: #475569; font-weight: 800; padding: 16px 12px; border-bottom: 1px solid #e2e8f0; font-size: 15px;">
           ${idx + 1}
         </td>
-        <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">
-          <div style="font-weight: 800; color: #0f172a; font-size: 14px; line-height: 1.3;">
+        <td style="padding: 16px 16px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 850; color: #0f172a; font-size: 16px; line-height: 1.35;">
             ${item.productName || 'Item'}
           </div>
-          ${item.sku ? `<div style="font-family: monospace; font-size: 11px; color: #64748b; margin-top: 3px;">SKU: ${item.sku}</div>` : ''}
+          ${item.sku ? `<div style="font-family: monospace; font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500;">SKU: ${item.sku}</div>` : ''}
         </td>
-        <td style="text-align: right; font-weight: 900; color: #0f172a; white-space: nowrap; font-size: 15px; padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">
-          ${qty} <span style="font-size: 12px; color: #475569; font-weight: 600;">${item.unit || 'pcs'}</span>
+        <td style="text-align: right; font-weight: 950; color: #0f172a; white-space: nowrap; font-size: 17px; padding: 16px 18px; border-bottom: 1px solid #e2e8f0;">
+          ${qty} <span style="font-size: 13px; color: #475569; font-weight: 700;">${item.unit || 'pcs'}</span>
         </td>
-        <td style="text-align: center; padding: 12px 10px; border-bottom: 1px solid #e2e8f0;">
-          <div style="display: inline-block; width: 18px; height: 18px; border: 2px solid #94a3b8; border-radius: 4px; background: #ffffff;"></div>
+        <td style="text-align: center; padding: 16px 12px; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: inline-block; width: 22px; height: 22px; border: 2.5px solid #64748b; border-radius: 5px; background: #ffffff;"></div>
         </td>
       </tr>
     `;
@@ -62,14 +63,14 @@ export function generatePurchaseOrderHtml(
             background: #ffffff !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
-            font-size: 13px;
-            line-height: 1.4;
+            font-size: 15px;
+            line-height: 1.5;
           }
           .po-wrapper {
             width: 100%;
             max-width: 100%;
             box-sizing: border-box;
-            padding: 16mm 18mm;
+            padding: 22mm 24mm;
             margin: 0 auto;
             background: #ffffff;
           }
@@ -77,25 +78,26 @@ export function generatePurchaseOrderHtml(
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 18px;
-            border-bottom: 2.5px solid #0f172a;
+            padding-bottom: 22px;
+            border-bottom: 3px solid #0f172a;
           }
           .logo-box {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
           }
           .logo-img {
-            width: 52px;
-            height: 52px;
+            width: 72px;
+            height: 72px;
             object-fit: contain;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
             background: #ffffff;
+            display: block;
           }
           .company-title {
-            font-size: 26px;
-            font-weight: 900;
+            font-size: 32px;
+            font-weight: 950;
             letter-spacing: -0.5px;
             color: #0f172a;
             text-transform: uppercase;
@@ -103,51 +105,51 @@ export function generatePurchaseOrderHtml(
             line-height: 1;
           }
           .company-tagline {
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            color: #64748b;
-            margin-top: 4px;
+            color: #475569;
+            margin-top: 5px;
           }
           .meta-box {
             text-align: right;
           }
           .doc-badge {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 5px 14px;
             background: #0f172a;
             color: #ffffff;
-            font-size: 11px;
-            font-weight: 800;
+            font-size: 13px;
+            font-weight: 900;
             letter-spacing: 1.5px;
             text-transform: uppercase;
-            border-radius: 4px;
-            margin-bottom: 5px;
+            border-radius: 5px;
+            margin-bottom: 6px;
           }
           .po-number-val {
             font-family: monospace;
-            font-size: 17px;
-            font-weight: 900;
+            font-size: 20px;
+            font-weight: 950;
             color: #0f172a;
             line-height: 1.2;
           }
           .po-date-val {
-            font-size: 12px;
-            color: #475569;
-            margin-top: 2px;
-            font-weight: 600;
+            font-size: 13px;
+            color: #334155;
+            margin-top: 3px;
+            font-weight: 700;
           }
           .supplier-line {
-            font-size: 11px;
-            color: #64748b;
-            margin-top: 2px;
+            font-size: 12px;
+            color: #475569;
+            margin-top: 3px;
           }
           .supplier-line strong {
-            color: #1e293b;
+            color: #0f172a;
           }
           .table-container {
-            margin: 22px 0 16px 0;
+            margin: 26px 0 18px 0;
           }
           table {
             width: 100%;
@@ -155,11 +157,11 @@ export function generatePurchaseOrderHtml(
           }
           thead th {
             background: #f1f5f9;
-            border-top: 1.5px solid #0f172a;
-            border-bottom: 2px solid #0f172a;
-            padding: 10px 12px;
-            font-size: 11px;
-            font-weight: 800;
+            border-top: 2px solid #0f172a;
+            border-bottom: 2.5px solid #0f172a;
+            padding: 13px 16px;
+            font-size: 13px;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             color: #0f172a;
@@ -168,84 +170,87 @@ export function generatePurchaseOrderHtml(
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 14px;
+            padding: 14px 20px;
             background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            margin-top: 14px;
-            font-size: 12px;
-            font-weight: 700;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            margin-top: 18px;
+            font-size: 14px;
+            font-weight: 800;
             color: #334155;
           }
           .summary-val {
             font-family: monospace;
-            font-size: 14px;
-            font-weight: 800;
+            font-size: 16px;
+            font-weight: 950;
             color: #0f172a;
           }
           .note-section {
-            margin-top: 18px;
-            padding: 12px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
+            margin-top: 22px;
+            padding: 16px 20px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
             background: #f8fafc;
           }
           .note-label {
-            font-size: 10px;
-            font-weight: 800;
+            font-size: 12px;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #475569;
-            margin-bottom: 4px;
+            color: #334155;
+            margin-bottom: 6px;
           }
           .note-content {
-            font-size: 12px;
+            font-size: 14px;
+            font-weight: 600;
             color: #0f172a;
             margin: 0;
-            line-height: 1.45;
+            line-height: 1.6;
             white-space: pre-wrap;
           }
           .signatures-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 80px;
-            margin-top: 55px;
+            gap: 120px;
+            margin-top: 75px;
             padding-top: 10px;
           }
           .sig-block {
             text-align: center;
           }
           .sig-line {
-            border-bottom: 1.5px dashed #64748b;
-            height: 44px;
-            margin-bottom: 8px;
+            border-bottom: 2px dashed #475569;
+            height: 52px;
+            margin-bottom: 10px;
           }
           .sig-title {
-            font-size: 12px;
-            font-weight: 800;
+            font-size: 14px;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
             color: #0f172a;
             margin: 0;
           }
           .sig-sub {
-            font-size: 10px;
+            font-size: 12px;
+            font-weight: 600;
             color: #64748b;
-            margin: 2px 0 0 0;
+            margin: 3px 0 0 0;
           }
           .sig-date-line {
-            font-size: 10px;
+            font-size: 12px;
+            font-weight: 500;
             color: #94a3b8;
-            margin-top: 6px;
+            margin-top: 8px;
           }
         </style>
       </head>
       <body>
         <div class="po-wrapper">
-          <!-- Header: Logo, Name, Document Type, PO Number, Date -->
+          <!-- Header: Logo (Base64 embedded), Name, Document Type, PO Number, Date -->
           <div class="header-row">
             <div class="logo-box">
-              <img src="/logo.jpg" alt="Cryodeal Logo" class="logo-img" />
+              <img src="${CRYODEAL_LOGO_BASE64}" alt="Cryodeal Logo" class="logo-img" />
               <div>
                 <h1 class="company-title">CRYODEAL</h1>
                 <div class="company-tagline">Store & Inventory Solutions</div>
@@ -265,10 +270,10 @@ export function generatePurchaseOrderHtml(
             <table>
               <thead>
                 <tr>
-                  <th style="width: 45px; text-align: center;">#</th>
+                  <th style="width: 50px; text-align: center;">#</th>
                   <th style="text-align: left;">Item Description / Products to Buy</th>
-                  <th style="width: 140px; text-align: right;">Qty to Buy</th>
-                  <th style="width: 75px; text-align: center;">Bought</th>
+                  <th style="width: 150px; text-align: right;">Qty to Buy</th>
+                  <th style="width: 80px; text-align: center;">Bought</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,7 +351,7 @@ export function printPurchaseOrder(
   doc.write(html);
   doc.close();
 
-  // Wait for images and styling to paint, then trigger print
+  // Wait for DOM and base64 images to paint, then trigger print
   setTimeout(() => {
     try {
       iframe.contentWindow?.focus();
@@ -358,7 +363,7 @@ export function printPurchaseOrder(
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe);
         }
-      }, 1500);
+      }, 2000);
     }
-  }, 250);
+  }, 350);
 }
