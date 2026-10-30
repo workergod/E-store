@@ -575,7 +575,7 @@ export default function PurchaseOrdersPage() {
                     const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : (item.unit || 'pcs');
 
                     return (
-                      <tr key={idx} className="hover:bg-muted/10 transition-colors">
+                      <tr key={idx} className="hover:bg-muted/10 transition-colors relative focus-within:z-50">
                         <td className="p-2.5 relative">
                           <ProductSearchSelect
                             value={item.productId || ''}

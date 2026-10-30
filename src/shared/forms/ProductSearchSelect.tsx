@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { Search, X, Check, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import type { Product } from '../types/Product';
@@ -29,7 +28,7 @@ export function ProductSearchSelect({
 }: ProductSearchSelectProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const selectedProduct = useMemo(() => {
     return products.find(p => p.id === value);
@@ -38,38 +37,23 @@ export function ProductSearchSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(() => productName || selectedProduct?.name || '');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-  const [dropdownPos, setDropdownPos] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    placement: 'bottom' | 'top';
-  } | null>(null);
+  const [openAbove, setOpenAbove] = useState(false);
 
-  const updatePosition = useCallback(() => {
+  const updateDirection = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const estimatedHeight = 320;
-    const placeAbove = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
-
-    const width = Math.max(rect.width, 360);
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-
-    setDropdownPos({
-      top: placeAbove ? rect.top - 4 : rect.bottom + 4,
-      left,
-      width,
-      placement: placeAbove ? 'top' : 'bottom'
-    });
+    // If less than 280px below and more space above, open upwards
+    setOpenAbove(spaceBelow < 280 && rect.top > 250);
   }, []);
 
-  // Update floating dropdown coordinates on open, scroll, or resize
+  // Update opening direction when opening or on scroll/resize
   useEffect(() => {
     if (!isOpen) return;
-    updatePosition();
+    updateDirection();
 
     const handleScrollOrResize = () => {
-      updatePosition();
+      updateDirection();
     };
 
     window.addEventListener('resize', handleScrollOrResize);
@@ -78,7 +62,7 @@ export function ProductSearchSelect({
       window.removeEventListener('resize', handleScrollOrResize);
       window.removeEventListener('scroll', handleScrollOrResize, true);
     };
-  }, [isOpen, updatePosition]);
+  }, [isOpen, updateDirection]);
 
   // Synchronize search term when value or productName changes from outside
   useEffect(() => {
@@ -91,15 +75,20 @@ export function ProductSearchSelect({
     }
   }, [productName, selectedProduct, allowCustom, value]);
 
-  // Handle click outside (checks both input container and portaled dropdown)
+  // Scroll highlighted item into view on keyboard navigation
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0 && itemRefs.current[highlightedIndex]) {
+      itemRefs.current[highlightedIndex]?.scrollIntoView({
+        block: 'nearest'
+      });
+    }
+  }, [isOpen, highlightedIndex]);
+
+  // Handle click outside to close dropdown and commit typed value if custom allowed
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        containerRef.current && 
-        !containerRef.current.contains(target) &&
-        (!dropdownRef.current || !dropdownRef.current.contains(target))
-      ) {
+      if (containerRef.current && !containerRef.current.contains(target)) {
         setIsOpen(false);
         if (allowCustom) {
           const trimmed = searchTerm.trim();
@@ -146,8 +135,7 @@ export function ProductSearchSelect({
 
       // Smart sorting:
       // 1. Starts with search term
-      // 2. Contains search term
-      // 3. Alphabetical order
+      // 2. Alphabetical order
       list.sort((a, b) => {
         const aName = (a.name || '').toLowerCase();
         const bName = (b.name || '').toLowerCase();
@@ -193,14 +181,14 @@ export function ProductSearchSelect({
     onChange('', '');
     setSearchTerm('');
     setIsOpen(true);
+    updateDirection();
     inputRef.current?.focus();
-    updatePosition();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       setIsOpen(true);
-      updatePosition();
+      updateDirection();
       return;
     }
 
@@ -230,13 +218,13 @@ export function ProductSearchSelect({
   const hasValue = Boolean(value || (allowCustom && searchTerm.trim()));
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
       <div 
         onClick={() => {
           if (!disabled) {
             setIsOpen(true);
+            updateDirection();
             inputRef.current?.focus();
-            updatePosition();
           }
         }}
         className={cn(
@@ -254,19 +242,19 @@ export function ProductSearchSelect({
           placeholder={placeholder}
           onFocus={() => {
             setIsOpen(true);
-            updatePosition();
+            updateDirection();
           }}
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(true);
-            updatePosition();
+            updateDirection();
           }}
           onChange={(e) => {
             const val = e.target.value;
             setSearchTerm(val);
             setIsOpen(true);
             setHighlightedIndex(-1);
-            updatePosition();
+            updateDirection();
             if (allowCustom) {
               const matched = products.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
               if (matched) {
@@ -294,9 +282,12 @@ export function ProductSearchSelect({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setIsOpen(!isOpen);
-              inputRef.current?.focus();
-              updatePosition();
+              const nextOpen = !isOpen;
+              setIsOpen(nextOpen);
+              if (nextOpen) {
+                updateDirection();
+                inputRef.current?.focus();
+              }
             }}
             className="p-1 mr-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
@@ -305,28 +296,24 @@ export function ProductSearchSelect({
         )}
       </div>
 
-      {/* Unclipped Floating Dropdown Menu rendered via Portal into document.body */}
-      {isOpen && dropdownPos && createPortal(
+      {/* Floating Dropdown Menu rendered inside DOM tree for guaranteed mouse/hover & dialog compatibility */}
+      {isOpen && (
         <div 
-          ref={dropdownRef}
-          style={{
-            position: 'fixed',
-            top: dropdownPos.placement === 'top' ? undefined : `${dropdownPos.top}px`,
-            bottom: dropdownPos.placement === 'top' ? `${window.innerHeight - dropdownPos.top}px` : undefined,
-            left: `${dropdownPos.left}px`,
-            width: `${dropdownPos.width}px`,
-            zIndex: 999999
-          }}
-          className="max-w-lg bg-popover text-popover-foreground border-2 border-primary/40 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          className={cn(
+            "absolute left-0 w-full min-w-[320px] max-w-lg bg-popover text-popover-foreground border border-border/80 rounded-xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-100",
+            openAbove ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          )}
         >
           {/* Quick Option to use typed text as Custom Item */}
           {allowCustom && searchTerm.trim() && !hasExactMatch && (
             <div 
+              onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 handleSelectCustom(searchTerm);
               }}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border-b border-border text-xs font-semibold cursor-pointer transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border-b border-border text-xs font-semibold cursor-pointer transition-colors select-none"
             >
               <Plus className="h-4 w-4 shrink-0" />
               <span className="truncate">
@@ -357,13 +344,19 @@ export function ProductSearchSelect({
                 return (
                   <div
                     key={p.id}
+                    ref={(el) => { itemRefs.current[idx] = el; }}
+                    onMouseDown={(e) => {
+                      // Prevent input blur before selection
+                      e.preventDefault();
+                    }}
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       handleSelect(p);
                     }}
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm cursor-pointer transition-colors",
+                      "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-colors select-none",
                       isHighlighted ? "bg-muted text-foreground" : "text-foreground hover:bg-muted/60",
                       isSelected && "bg-primary/10 font-medium text-primary"
                     )}
@@ -394,8 +387,7 @@ export function ProductSearchSelect({
               })
             )}
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

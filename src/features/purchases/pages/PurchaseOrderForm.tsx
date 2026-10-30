@@ -667,7 +667,7 @@ export default function PurchaseOrderForm() {
                     <tr 
                       key={item.id} 
                       className={cn(
-                        "transition-colors",
+                        "transition-colors relative focus-within:z-50",
                         item.restockNow ? "bg-emerald-500/[0.03] hover:bg-emerald-500/[0.07]" : "hover:bg-muted/20"
                       )}
                     >
