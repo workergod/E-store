@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { ArrowLeft, Plus, Trash2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { printMaterialReceipt } from '../utils/printMaterialReceipt';
 
 import { useAuthStore } from "../../../store/authStore";
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
@@ -153,7 +154,32 @@ export default function IssueMaterialsPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    const empName = methods.getValues().employeeName;
+    const selectedEmp = employees.find(e => `${e.firstName} ${e.lastName}`.toLowerCase() === empName.toLowerCase().trim());
+    printMaterialReceipt(
+      {
+        id: issuedId || '',
+        type: 'ISSUE',
+        issueNumber: issuedCode || issuedId || undefined,
+        date: methods.getValues().issueDate || new Date(),
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: `${selectedEmp?.firstName || ''} ${selectedEmp?.lastName || ''}`.trim() || empName,
+        employeeRole: selectedEmp?.role,
+        siteName: methods.getValues().siteName,
+        additionalTechnicians: methods.getValues().additionalTechnicians?.map(t => t.name),
+        notes: methods.getValues().notes,
+        items: watchedItems.map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          return {
+            name: prod?.name || 'Item',
+            sku: prod?.sku || '-',
+            qty: Number(item.issuedQty) || 0,
+            unit: prod?.unitId || (prod as any)?.unit || 'pcs'
+          };
+        })
+      },
+      company?.companyName || 'CRYODEAL'
+    );
   };
 
   if (issuedId) {
@@ -228,14 +254,26 @@ export default function IssueMaterialsPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-16 mt-16 text-center text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 text-center text-sm border-t border-border pt-8">
               <div className="flex flex-col items-center">
-                <div className="border-b-2 border-dashed border-border w-56 mb-3"></div>
-                <p className="font-bold text-muted-foreground uppercase tracking-wider text-xs">Issued By</p>
+                <div className="border-b-2 border-dashed border-foreground/40 w-full max-w-[140px] mb-3"></div>
+                <p className="font-extrabold text-foreground uppercase tracking-wider text-[11px]">Issued By</p>
+                <p className="text-xs text-muted-foreground mt-0.5">({user?.fullName || 'Store Keeper'})</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="border-b-2 border-dashed border-border w-56 mb-3"></div>
-                <p className="font-bold text-muted-foreground uppercase tracking-wider text-xs">Received By (Signature)</p>
+                <div className="border-b-2 border-dashed border-foreground/40 w-full max-w-[140px] mb-3"></div>
+                <p className="font-extrabold text-foreground uppercase tracking-wider text-[11px]">Received By</p>
+                <p className="text-xs text-muted-foreground mt-0.5">({empName || 'Technician'})</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="border-b-2 border-dashed border-foreground/40 w-full max-w-[140px] mb-3"></div>
+                <p className="font-extrabold text-foreground uppercase tracking-wider text-[11px]">Supervisor / Project Engr</p>
+                <p className="text-xs text-muted-foreground mt-0.5">(Sign & Date)</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="border-b-2 border-dashed border-foreground/40 w-full max-w-[140px] mb-3"></div>
+                <p className="font-extrabold text-foreground uppercase tracking-wider text-[11px]">Approved By</p>
+                <p className="text-xs text-muted-foreground mt-0.5">(Authorized Signatory)</p>
               </div>
             </div>
 

@@ -175,68 +175,135 @@ export default function IssueToolsPage() {
 
   const printSlip = () => {
     if (!issuedSlip) return;
-    const w = window.open('', '_blank', 'width=800,height=600');
-    if (!w) return;
-    w.document.write(`
-      <html><head><title>Tool Issue Slip - ${issuedSlip.issueNumber}</title>
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en"><head><meta charset="utf-8"/><title></title>
       <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; padding: 30px; color: #111; }
-        .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 20px; }
-        .title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f0f0f0; border: 1px solid #ccc; padding: 8px; font-size: 11px; text-align: left; }
-        td { border: 1px solid #ccc; padding: 8px; font-size: 12px; }
-        .sig { margin-top: 50px; display: flex; justify-content: space-between; }
-        .sig-box { width: 200px; border-top: 1px solid #333; text-align: center; padding-top: 6px; font-size: 11px; }
+        @page { size: A4 portrait; margin: 0mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; padding: 16mm 18mm; color: #000000; margin: 0; background: #ffffff; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #000000; padding-bottom: 12px; margin-bottom: 16px; }
+        .title { font-size: 22px; font-weight: 900; color: #000000; }
+        .sub { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-grid { display: flex; justify-content: space-between; border: 2px solid #000000; padding: 12px 16px; margin-bottom: 18px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000000; }
+        th { background: #000000 !important; color: #ffffff !important; border: 1px solid #000000; padding: 10px; font-size: 11.5px; font-weight: 900; text-align: left; text-transform: uppercase; }
+        td { border: 1.5px solid #000000; padding: 9px 12px; font-size: 12.5px; color: #000000; }
+        .sig { margin-top: 50px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; page-break-inside: avoid; }
+        .sig-box { display: flex; flex-direction: column; justify-content: flex-end; }
+        .sig-space { height: 50px; }
+        .sig-line { border-top: 1.5px solid #000000; margin-bottom: 5px; }
+        .sig-title { font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: #000000; }
+        .sig-desc { font-size: 9.5px; font-weight: 700; color: #000000; margin-top: 2px; }
       </style></head><body>
       <div class="header">
-        <div class="title">${escapeHtml(company?.companyName || 'Cryodeal')}</div>
-        <div style="font-size: 14px; font-weight: bold; color: #444;">TOOL ISSUE SLIP</div>
-        <div>Slip #: <b>${issuedSlip.issueNumber}</b></div>
+        <div>
+          <div class="title">${escapeHtml(company?.companyName || 'Cryodeal')}</div>
+          <div class="sub">Central Store • Tool & Equipment Issue Voucher</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; font-weight: 900; text-transform: uppercase;">Issue Slip #</div>
+          <div style="font-family: monospace; font-size: 18px; font-weight: 950;">${issuedSlip.issueNumber}</div>
+        </div>
       </div>
       <div class="info-grid">
         <div>
-          <div>Technician: <b>${escapeHtml(issuedSlip.techName)}</b></div>
-          <div>Site / Location: <b>${escapeHtml(issuedSlip.siteName || 'N/A')}</b></div>
+          <div style="font-size: 10.5px; font-weight: 900; text-transform: uppercase;">Technician:</div>
+          <div style="font-size: 15px; font-weight: 900; margin-top: 2px;">${escapeHtml(issuedSlip.techName)}</div>
+          <div style="font-size: 12px; font-weight: 800; margin-top: 4px;">Site / Location: <b>${escapeHtml(issuedSlip.siteName || 'N/A')}</b></div>
         </div>
         <div style="text-align: right;">
-          <div>Issue Date: <b>${issuedSlip.date}</b></div>
-          <div>Issued By: <b>${escapeHtml(user?.fullName || 'Store Keeper')}</b></div>
+          <div style="font-size: 10.5px; font-weight: 900; text-transform: uppercase;">Issue Date:</div>
+          <div style="font-size: 14px; font-weight: 850; margin-top: 2px;">${issuedSlip.date}</div>
+          <div style="font-size: 11px; font-weight: 800; margin-top: 4px;">Issued By: <b>${escapeHtml(user?.fullName || 'Store Keeper')}</b></div>
         </div>
       </div>
       <table>
         <thead>
           <tr>
-            <th>Tool Code</th>
+            <th style="width: 140px;">Tool Code</th>
             <th>Tool Name & Description</th>
-            <th style="text-align: center;">Qty</th>
-            <th style="text-align: center;">Condition Out</th>
+            <th style="text-align: right; width: 70px;">Qty</th>
+            <th style="text-align: center; width: 130px;">Condition Out</th>
           </tr>
         </thead>
         <tbody>
           ${issuedSlip.items.map(it => `
             <tr>
-              <td><b>${escapeHtml(it.code)}</b></td>
-              <td>${escapeHtml(it.name)}</td>
-              <td style="text-align: center; font-weight: bold;">${it.qty}</td>
-              <td style="text-align: center;">${it.condition}</td>
+              <td style="font-family: monospace; font-weight: 900;">${escapeHtml(it.code)}</td>
+              <td style="font-weight: 850;">${escapeHtml(it.name)}</td>
+              <td style="text-align: right; font-weight: 950; font-size: 14px;">${it.qty}</td>
+              <td style="text-align: center; font-weight: 750;">${it.condition}</td>
             </tr>
           `).join('')}
         </tbody>
       </table>
-      <div style="margin-top: 25px; font-size: 11px; color: #555;">
-        * Note: The technician is responsible for the care and safety of all tools listed above until returned in good condition.
+      <div style="margin-top: 18px; font-size: 11px; font-weight: 700; color: #000000; border: 1.5px solid #000000; padding: 8px 12px;">
+        * Notice: The technician is fully responsible for the care and safety of all tools listed above until returned in good condition.
       </div>
       <div class="sig">
-        <div class="sig-box">Technician Signature</div>
-        <div class="sig-box">Store Keeper / Issuer Signature</div>
+        <div class="sig-box">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-title">ISSUED BY</div>
+          <div class="sig-desc">${escapeHtml(user?.fullName || 'Store Keeper')}</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-title">RECEIVED BY</div>
+          <div class="sig-desc">${escapeHtml(issuedSlip.techName)}</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-title">SUPERVISOR / PROJECT ENGR</div>
+          <div class="sig-desc">(Sign & Date)</div>
+        </div>
+        <div class="sig-box" style="text-align: right;">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-title">APPROVED BY</div>
+          <div class="sig-desc">(Authorized Signatory)</div>
+        </div>
       </div>
       </body></html>
     `);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 250);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 2000);
+      }
+    }, 300);
   };
 
   const validToolsCount = watchedItems.filter(i => i.toolId).length;

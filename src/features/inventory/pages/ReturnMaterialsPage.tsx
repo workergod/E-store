@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Save, Plus, Trash2, RotateCcw, PlusCircle, PackageCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, RotateCcw, PlusCircle, PackageCheck, AlertCircle, Printer, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuthStore } from "../../../store/authStore";
@@ -19,8 +19,10 @@ import { AppForm, FormActions } from '../../../shared/forms/FormLayout';
 import { FormSection } from '../../../shared/forms/FormSection';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
+import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
 import { cn } from '../../../shared/utils/cn';
+import { printMaterialReceipt, type MaterialReceiptData } from '../utils/printMaterialReceipt';
 
 const returnSchema = z.object({
   returns: z.array(z.object({
@@ -52,6 +54,7 @@ export default function ReturnMaterialsPage() {
   const [allActiveIssues, setAllActiveIssues] = useState<IssueTransaction[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [returnedSlipData, setReturnedSlipData] = useState<MaterialReceiptData | null>(null);
 
   // 1. "From Active Issue" State
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
@@ -164,8 +167,36 @@ export default function ReturnMaterialsPage() {
     try {
       setIsSaving(true);
       await issueRepository.returnItems(selectedIssueId, data.returns, companyId, user.uid, linkedSiteName.trim());
+      
+      const currentIssue = issues.find(i => i.id === selectedIssueId);
+      const tech = employees.find(e => e.id === selectedEmpId);
+      const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : 'Technician';
+
+      const returnedItems = data.returns
+        .filter((r: any) => Number(r.returnQty) > 0)
+        .map((r: any) => {
+          const originalItem = currentIssue?.items.find(it => it.productId === r.productId);
+          const prod = products.find(p => p.id === r.productId);
+          return {
+            name: originalItem?.productName || prod?.name || 'Product',
+            qty: Number(r.returnQty),
+            unit: originalItem?.unit || prod?.unitId || (prod as any)?.unit || 'pcs',
+            sku: prod?.sku || originalItem?.sku || '-'
+          };
+        });
+
       toast.success("Materials returned successfully and restocked!");
-      navigate('/products');
+      setReturnedSlipData({
+        id: selectedIssueId,
+        type: 'RETURN',
+        isDirectReturn: false,
+        issueNumber: currentIssue?.issueNumber || selectedIssueId,
+        date: new Date(),
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: techName,
+        siteName: linkedSiteName.trim(),
+        items: returnedItems
+      });
     } catch (error: any) {
       toast.error(error.message || "Failed to return materials");
     } finally {
@@ -267,8 +298,28 @@ export default function ReturnMaterialsPage() {
         notes: directNotes.trim()
       }, companyId, user.uid);
 
+      const tech = employees.find(e => e.id === directEmpId);
+      const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : (directEmpId === 'UNLINKED' ? 'Direct Store Return' : 'Technician');
+      const returnedItems = validRows.map(r => ({
+        name: r.productName,
+        qty: Number(r.returnQty),
+        unit: r.unit || 'pcs',
+        sku: r.sku || '-'
+      }));
+
       toast.success(`Direct return ${res.directReturnNumber} processed successfully and inventory restocked!`);
-      navigate('/products');
+      setReturnedSlipData({
+        id: res.directReturnNumber,
+        type: 'RETURN',
+        isDirectReturn: true,
+        directReturnNumber: res.directReturnNumber,
+        date: new Date(),
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: techName,
+        siteName: directSiteName.trim(),
+        notes: directNotes.trim(),
+        items: returnedItems
+      });
     } catch (error: any) {
       toast.error(error.message || "Failed to process direct return");
     } finally {
@@ -637,6 +688,47 @@ export default function ReturnMaterialsPage() {
             </AppButton>
           </div>
         </form>
+      )}
+
+      {/* Success Dialog with Print Option */}
+      {returnedSlipData && (
+        <AppDialog
+          open={!!returnedSlipData}
+          onOpenChange={(open) => {
+            if (!open) {
+              setReturnedSlipData(null);
+              navigate('/products');
+            }
+          }}
+          title="Materials Returned Successfully"
+          description={`Return Voucher #${returnedSlipData.directReturnNumber || returnedSlipData.issueNumber || returnedSlipData.id} processed and inventory restocked.`}
+          className="max-w-md"
+        >
+          <div className="py-3 text-center space-y-4">
+            <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+
+            <div className="bg-muted/40 p-3 rounded-lg border border-border text-left text-xs space-y-1">
+              <div>Voucher No: <b className="font-mono text-emerald-700 dark:text-emerald-400">{returnedSlipData.directReturnNumber || returnedSlipData.issueNumber || returnedSlipData.id}</b></div>
+              <div>Returned By: <b>{returnedSlipData.customerOrTech}</b></div>
+              {returnedSlipData.siteName && <div>Site / Project: <b>{returnedSlipData.siteName}</b></div>}
+              <div>Items Restocked: <b>{returnedSlipData.items.length} item(s) ({returnedSlipData.items.reduce((s, it) => s + (Number(it.qty) || 0), 0)} units)</b></div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <AppButton
+                variant="outline"
+                onClick={() => printMaterialReceipt(returnedSlipData, company?.companyName || 'CRYODEAL')}
+              >
+                <Printer className="h-4 w-4 mr-1.5" /> Print Return Receipt
+              </AppButton>
+              <AppButton onClick={() => { setReturnedSlipData(null); navigate('/products'); }}>
+                Done
+              </AppButton>
+            </div>
+          </div>
+        </AppDialog>
       )}
     </PageContainer>
   );

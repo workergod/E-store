@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { escapeHtml } from '../../../shared/utils/security';
+import { printMaterialReceipt } from '../../inventory/utils/printMaterialReceipt';
 
 interface LogItem {
   productId: string;
@@ -720,134 +721,92 @@ export default function TransactionLogPage() {
   const handlePrint = () => {
     const content = printRef.current?.innerHTML;
     if (!content) return;
-    const w = window.open('', '_blank', 'width=900,height=700');
-    if (!w) { window.print(); return; }
-    w.document.write(`
-      <html><head><title>Transaction Log Report</title>
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en"><head><meta charset="utf-8"/><title></title>
       <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
-        h2 { text-align: center; margin-bottom: 4px; }
-        p.sub { text-align: center; color: #666; margin-bottom: 16px; font-size: 11px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f3f4f6; padding: 8px; text-align: left; font-size: 11px; border: 1px solid #ddd; }
-        td { padding: 7px 8px; border: 1px solid #e5e7eb; font-size: 11px; vertical-align: top; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: bold; }
-        .ISSUE { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-        .RETURN { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .PURCHASE { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        @page { size: A4 landscape; margin: 0mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 11px; padding: 14mm 16mm; color: #000000; margin: 0; background: #ffffff; }
+        h2 { text-align: center; margin-bottom: 4px; font-size: 18px; font-weight: 900; color: #000000; }
+        p.sub { text-align: center; color: #000000; margin-bottom: 16px; font-size: 11px; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; border: 1.5px solid #000000; }
+        th { background: #000000 !important; color: #ffffff !important; padding: 8px; text-align: left; font-size: 11px; font-weight: 800; border: 1px solid #000000; }
+        td { padding: 7px 8px; border: 1px solid #000000; font-size: 11px; vertical-align: top; color: #000000; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; border: 1px solid #000000; color: #000000; }
+        .ISSUE { background: #f4f4f4; }
+        .RETURN { background: #e5e5e5; }
+        .PURCHASE { background: #f0f0f0; }
       </style></head><body>
       ${content}
-      <p style="text-align:center;margin-top:20px;font-size:10px;color:#999;">
+      <p style="text-align:center;margin-top:20px;font-size:10px;color:#000000;font-weight:700;">
         Printed on ${new Date().toLocaleString('en-IN')} • ${company?.companyName || 'Cryodeal'}
       </p>
       </body></html>
     `);
-    w.document.close();
-    w.print();
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 2000);
+      }
+    }, 300);
   };
 
   const handlePrintSingle = (log: LogEntry) => {
-    const w = window.open('', '_blank', 'width=800,height=700');
-    if (!w) return;
-    const safeTitle = escapeHtml(`${log.type} Receipt - ${log.id}`);
-    const safeTypeHeading = escapeHtml(log.type === 'ISSUE' ? 'Material Issue Receipt' : log.type === 'RETURN' ? 'Material Return Receipt' : 'Purchase Order Receipt');
-    const safeRefLabel = escapeHtml(log.isDirectReturn ? 'DIRECT RETURN NO' : (log.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID'));
-    const safeRefValue = escapeHtml(log.isDirectReturn ? (log.directReturnNumber || 'CRYO(W/O)-1') : (log.issueNumber || log.id));
-    const safePartyLabel = escapeHtml(log.type === 'PURCHASE' ? 'Supplier' : 'Issued To');
-    const safeCustomerOrTech = escapeHtml(log.customerOrTech);
-    const safeStaffName = escapeHtml(log.staffName);
-    const safeSiteName = log.siteName ? escapeHtml(log.siteName) : '';
-    const safeAdditionalTechs = log.additionalTechnicians && log.additionalTechnicians.length > 0 
-      ? log.additionalTechnicians.map(t => escapeHtml(t)).join(', ') 
-      : '';
-    const safeLastEditor = log.lastEditedByName ? escapeHtml(log.lastEditedByName) : '';
-    const safeLastRole = log.lastEditedByRole ? escapeHtml(log.lastEditedByRole) : 'Staff';
-    const safeNotes = log.notes ? escapeHtml(log.notes) : '';
-
-    w.document.write(`
-      <html><head><title>${safeTitle}</title>
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 13px; padding: 30px; color: #111; }
-        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; }
-        .title { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #2563eb; }
-        .grid { display: flex; justify-content: space-between; background: #f9fafb; padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #2563eb; color: white; padding: 10px; text-align: left; font-size: 12px; }
-        td { padding: 9px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
-        .qty { text-align: right; font-weight: bold; font-size: 14px; color: #2563eb; }
-        .footer { margin-top: 40px; display: flex; justify-content: space-between; }
-        .sig { width: 200px; border-top: 1px dashed #666; text-align: center; padding-top: 6px; font-size: 11px; font-weight: bold; }
-      </style>
-      </head><body>
-        <div class="header">
-          <div>
-            <div class="title">${safeTypeHeading}</div>
-            <div style="font-size: 11px; color: #666; margin-top: 4px;">OFFICIAL RECORD</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 10px; color: #666; font-weight: bold;">
-              ${safeRefLabel}
-            </div>
-            <div style="font-family: monospace; font-weight: bold; font-size: 16px; color: #2563eb;">
-              ${safeRefValue}
-            </div>
-          </div>
-        </div>
-
-        <div class="grid">
-          <div>
-            <div style="font-size: 10px; color: #666; font-weight: bold; text-transform: uppercase;">${safePartyLabel}</div>
-            <div style="font-size: 15px; font-weight: bold; margin-top: 2px;">${safeCustomerOrTech}</div>
-            ${safeAdditionalTechs ? `<div style="font-size: 11px; margin-top: 2px;">+ ${safeAdditionalTechs}</div>` : ''}
-            ${safeSiteName ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">Site: <b>${safeSiteName}</b></div>` : ''}
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 10px; color: #666; font-weight: bold;">DATE & TIME</div>
-            <div style="font-weight: bold; margin-top: 2px;">${formatDate(log.date)}</div>
-            <div style="font-size: 11px; color: #666; margin-top: 4px;">Staff: <b>${safeStaffName}</b></div>
-            ${safeLastEditor ? `
-              <div style="font-size: 10px; color: #b45309; margin-top: 2px; font-weight: bold;">
-                Edited by: ${safeLastEditor} (${safeLastRole})
-              </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px; text-align: center;">#</th>
-              <th>Product Description</th>
-              <th>SKU</th>
-              <th style="text-align: right; width: 120px;">Quantity</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${log.items.map((it, idx) => `
-              <tr>
-                <td style="text-align: center; color: #666;">${idx + 1}</td>
-                <td style="font-weight: 500;">${escapeHtml(it.name)}</td>
-                <td style="font-family: monospace; font-size: 11px; color: #666;">${escapeHtml(it.sku || '-')}</td>
-                <td class="qty">${Number(it.qty) || 0} <span style="font-size: 11px; font-weight: normal; color: #666;">${escapeHtml(it.unit || '')}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        ${safeNotes ? `
-          <div style="margin-top: 20px; padding: 10px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 12px;">
-            <b>Notes:</b> ${safeNotes}
-          </div>
-        ` : ''}
-
-        <div class="footer">
-          <div class="sig">Given By (${safeStaffName})</div>
-          <div class="sig">Received By (Signature)</div>
-        </div>
-      </body></html>
-    `);
-    w.document.close();
-    setTimeout(() => { w.print(); }, 250);
+    printMaterialReceipt(
+      {
+        id: log.id,
+        type: log.type,
+        issueNumber: log.issueNumber,
+        isDirectReturn: log.isDirectReturn,
+        directReturnNumber: log.directReturnNumber,
+        date: log.date,
+        staffName: log.staffName,
+        customerOrTech: log.customerOrTech,
+        siteName: log.siteName,
+        additionalTechnicians: log.additionalTechnicians,
+        notes: log.notes,
+        lastEditedByName: log.lastEditedByName,
+        lastEditedByRole: log.lastEditedByRole,
+        lastEditedAt: log.lastEditedAt,
+        items: log.items.map(it => ({
+          name: it.name,
+          qty: it.qty,
+          unit: it.unit,
+          sku: it.sku
+        }))
+      },
+      company?.companyName || 'CRYODEAL'
+    );
   };
 
   const filtered = logs.filter(l => {
@@ -932,57 +891,57 @@ export default function TransactionLogPage() {
 
       {/* Print-ready content */}
       <div ref={printRef} className="hidden">
-        <h2 style={{ textAlign: 'center', margin: '0 0 4px' }}>Transaction Log Report</h2>
-        <p style={{ textAlign: 'center', fontSize: '11px', color: '#666', marginBottom: '16px' }}>
+        <h2 style={{ textAlign: 'center', margin: '0 0 4px', fontWeight: '900', color: '#000000' }}>Transaction Log Report</h2>
+        <p style={{ textAlign: 'center', fontSize: '11px', color: '#000000', fontWeight: '700', marginBottom: '16px' }}>
           {company?.companyName || 'Cryodeal'} • Filtered: {filter}
         </p>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000000' }}>
           <thead>
             <tr>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Type</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Date & Time</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Technician</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Items</th>
-              <th style={{ background: '#f3f4f6', padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>Given By / Staff</th>
+              <th style={{ background: '#000000', color: '#ffffff', padding: '8px', textAlign: 'left', border: '1px solid #000000', fontWeight: '800' }}>Type & Ref</th>
+              <th style={{ background: '#000000', color: '#ffffff', padding: '8px', textAlign: 'left', border: '1px solid #000000', fontWeight: '800' }}>Date & Time</th>
+              <th style={{ background: '#000000', color: '#ffffff', padding: '8px', textAlign: 'left', border: '1px solid #000000', fontWeight: '800' }}>Technician / Party</th>
+              <th style={{ background: '#000000', color: '#ffffff', padding: '8px', textAlign: 'left', border: '1px solid #000000', fontWeight: '800' }}>Items Dispatched / Returned</th>
+              <th style={{ background: '#000000', color: '#ffffff', padding: '8px', textAlign: 'left', border: '1px solid #000000', fontWeight: '800' }}>Staff / Store Keeper</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(log => (
               <tr key={log.id}>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '7px 8px', border: '1px solid #000000', color: '#000000' }}>
                   <span className={`badge ${log.type}`}>{log.type}</span>
                   {log.isDirectReturn ? (
-                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#15803d' }}>
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#000000' }}>
                       {log.directReturnNumber || 'CRYO(W/O)-1'}
-                      <span style={{ fontSize: '9px', fontWeight: 'normal', color: '#666', display: 'block' }}>(Direct / W/O)</span>
+                      <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#000000', display: 'block' }}>(Direct / W/O)</span>
                     </div>
                   ) : log.issueNumber ? (
-                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px' }}>
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#000000' }}>
                       {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
                     </div>
                   ) : (
-                    <div style={{ fontSize: '10px', fontFamily: 'monospace', color: '#999', marginTop: '2px' }}>
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', color: '#000000', marginTop: '2px' }}>
                       #{log.id.slice(-6)}
                     </div>
                   )}
                 </td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>{formatDate(log.date)}</td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{log.customerOrTech}</td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb', fontSize: '10px' }}>
+                <td style={{ padding: '7px 8px', border: '1px solid #000000', fontSize: '11px', color: '#000000', fontWeight: '600' }}>{formatDate(log.date)}</td>
+                <td style={{ padding: '7px 8px', border: '1px solid #000000', fontWeight: '800', color: '#000000' }}>{log.customerOrTech}</td>
+                <td style={{ padding: '7px 8px', border: '1px solid #000000', fontSize: '11px', color: '#000000', fontWeight: '600' }}>
                   {log.items.map(it => `${it.name} × ${it.qty} ${it.unit || ''}`.trim()).join(', ')}
                 </td>
-                <td style={{ padding: '7px 8px', border: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '7px 8px', border: '1px solid #000000', color: '#000000', fontWeight: '600' }}>
                   <div>{log.staffName}</div>
                   {log.lastEditedByName && (
-                    <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px', fontWeight: 'bold' }}>
-                      Edited by: {log.lastEditedByName} ({log.lastEditedByRole || 'Staff'})
+                    <div style={{ fontSize: '10px', color: '#000000', marginTop: '2px', fontWeight: '800' }}>
+                      Audit: Edited by {log.lastEditedByName} ({log.lastEditedByRole || 'Staff'})
                     </div>
                   )}
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>No transactions found</td></tr>
+              <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#000000', fontWeight: '700' }}>No transactions found</td></tr>
             )}
           </tbody>
         </table>
