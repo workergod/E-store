@@ -713,7 +713,7 @@ export default function ReturnMaterialsPage() {
               <div>Voucher No: <b className="font-mono text-emerald-700 dark:text-emerald-400">{returnedSlipData.directReturnNumber || returnedSlipData.issueNumber || returnedSlipData.id}</b></div>
               <div>Returned By: <b>{returnedSlipData.customerOrTech}</b></div>
               {returnedSlipData.siteName && <div>Site / Project: <b>{returnedSlipData.siteName}</b></div>}
-              <div>Items Restocked: <b>{returnedSlipData.items.length} item(s) ({returnedSlipData.items.reduce((s, it) => s + (Number(it.qty) || 0), 0)} units)</b></div>
+              <div>Items Restocked: <b>{returnedSlipData.items.length} line item(s)</b></div>
             </div>
 
             <div className="flex items-center justify-center gap-2 pt-2">

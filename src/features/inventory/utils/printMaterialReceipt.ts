@@ -113,7 +113,6 @@ export function generateMaterialReceiptHtml(
   const safeLastRole = data.lastEditedByRole ? escapeHtml(data.lastEditedByRole) : 'Staff';
 
   const items = data.items || [];
-  const totalUnits = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
 
   // Signatures configuration
   let sig1Title = 'GIVEN BY / ISSUED BY';
@@ -464,14 +463,8 @@ export function generateMaterialReceiptHtml(
             <tbody>
               ${rowsHtml}
               <tr class="total-row">
-                <td colspan="2" style="font-weight: 950; font-size: 13px; text-transform: uppercase;">
+                <td colspan="4" style="font-weight: 950; font-size: 13px; text-transform: uppercase;">
                   Total Line Items: ${items.length}
-                </td>
-                <td style="font-weight: 900; font-size: 13px; text-align: right; text-transform: uppercase;">
-                  Total Units:
-                </td>
-                <td style="text-align: right; font-weight: 950; font-size: 16px; white-space: nowrap;">
-                  ${totalUnits} <span style="font-size: 12px; font-weight: 800;">Units</span>
                 </td>
               </tr>
             </tbody>
