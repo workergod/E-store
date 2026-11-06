@@ -44,8 +44,10 @@ export interface PurchaseOrder {
   attachments?: PurchaseAttachment[];
   
   createdBy: string;
+  createdByName?: string;
   approvedBy?: string;
   receivedBy?: string;
+  receivedByName?: string;
   
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;

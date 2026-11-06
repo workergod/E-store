@@ -206,7 +206,9 @@ export default function PurchaseOrdersPage() {
         totalAmount: 0,
         attachments: [],
         attachmentUrls: [],
-        createdBy: user.uid
+        createdBy: user.uid,
+        createdByName: user.fullName || user.username || 'Staff',
+        receivedByName: user.fullName || user.username || 'Staff'
       };
 
       const newId = await purchaseOrderRepository.create(payload, user.uid, Boolean(refillMarkAsReceived));

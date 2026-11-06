@@ -386,7 +386,9 @@ export default function PurchaseOrderForm() {
         totalAmount: 0,
         attachments,
         attachmentUrls: attachments.map(a => a.url),
-        createdBy: user.uid
+        createdBy: user.uid,
+        createdByName: user.fullName || user.username || 'Staff',
+        receivedByName: user.fullName || user.username || 'Staff'
       };
 
       if (isEditing && id) {

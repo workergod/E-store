@@ -164,6 +164,39 @@ export default function TransactionLogPage() {
         }
       });
 
+      // Helper to detect raw Firebase UIDs (e.g. P7fJQTSmUgRpGc9qyFETxQMuqvh2)
+      const isRawUid = (str?: string | null): boolean => {
+        if (!str) return false;
+        return /^[A-Za-z0-9_-]{20,36}$/.test(str.trim());
+      };
+
+      // Load users for UID -> Display Name mapping
+      const userMap: Record<string, string> = {};
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        usersSnap.forEach(uDoc => {
+          const uData = uDoc.data();
+          const name = uData.fullName || uData.username || uData.displayName || '';
+          if (name) userMap[uDoc.id] = name;
+        });
+      } catch (err) {
+        console.warn('Could not load users map in TransactionLogPage', err);
+      }
+      if (user?.uid) {
+        userMap[user.uid] = user.fullName || user.username || userMap[user.uid] || 'Staff';
+      }
+
+      const resolveStaffName = (rawName?: string, rawUid?: string): string => {
+        if (rawName && !isRawUid(rawName)) return rawName;
+        if (rawUid && userMap[rawUid]) return userMap[rawUid];
+        if (rawUid && empMap[rawUid]) return empMap[rawUid];
+        if (rawUid && user?.uid === rawUid) return user.fullName || user.username || 'Staff';
+        if (rawName && userMap[rawName]) return userMap[rawName];
+        if (rawName && empMap[rawName]) return empMap[rawName];
+        if (rawName && user?.uid === rawName) return user.fullName || user.username || 'Staff';
+        return 'Store Keeper';
+      };
+
       // 1. Issues
       const issueSnap = await getDocs(query(
         collection(db, 'issueTransactions'),
@@ -176,7 +209,7 @@ export default function TransactionLogPage() {
           type: 'ISSUE',
           issueNumber: d.issueNumber || null,
           date: d.createdAt,
-          staffName: d.createdByName || 'Staff',
+          staffName: resolveStaffName(d.createdByName, d.createdBy),
           customerOrTech: empMap[d.employeeId] || d.employeeId,
           employeeId: d.employeeId,
           items: (d.items || []).map((it: any) => ({
@@ -218,7 +251,7 @@ export default function TransactionLogPage() {
           isDirectReturn: isDirect,
           directReturnNumber: directReturnNumber || undefined,
           date: d.createdAt,
-          staffName: d.createdByName || 'Staff',
+          staffName: resolveStaffName(d.createdByName, d.createdBy),
           customerOrTech: resolvedTechName,
           employeeId: d.employeeId,
           items: (d.items || []).map((it: any) => ({
@@ -246,12 +279,17 @@ export default function TransactionLogPage() {
       ));
       poSnap.forEach(docSnap => {
         const d = docSnap.data();
+        const resolvedStaff = resolveStaffName(d.createdByName || d.receivedByName, d.createdBy || d.receivedBy);
+        if (!d.createdByName && docSnap.id && resolvedStaff && resolvedStaff !== 'Store Keeper') {
+          updateDoc(doc(db, 'purchaseOrders', docSnap.id), { createdByName: resolvedStaff }).catch(() => {});
+        }
+
         entries.push({
           id: docSnap.id,
           type: 'PURCHASE',
           issueNumber: d.poNumber || null,
           date: d.createdAt,
-          staffName: d.createdBy || 'Staff',
+          staffName: resolvedStaff,
           customerOrTech: d.supplierName || d.supplierId || 'Supplier',
           items: (d.items || []).map((it: any) => ({
             productId: it.productId,
@@ -1206,7 +1244,8 @@ export default function TransactionLogPage() {
                 <p className="text-xs text-muted-foreground font-semibold uppercase">Date & Time</p>
                 <p className="font-medium text-foreground mt-0.5">{formatDate(selectedLog.date)}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Given By / Staff: <span className="font-medium text-foreground">{selectedLog.staffName}</span>
+                  {selectedLog.type === 'PURCHASE' ? 'Received in Store By:' : 'Given By / Staff:'}{' '}
+                  <span className="font-medium text-foreground">{selectedLog.staffName}</span>
                 </p>
               </div>
 

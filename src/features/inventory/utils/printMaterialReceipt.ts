@@ -55,6 +55,20 @@ function formatDate(val: any): string {
   }
 }
 
+function isRawUid(str?: string | null): boolean {
+  if (!str) return false;
+  return /^[A-Za-z0-9_-]{20,36}$/.test(str.trim());
+}
+
+function cleanStaffName(name?: string | null): string {
+  if (!name) return 'Store Keeper';
+  const trimmed = name.trim();
+  if (isRawUid(trimmed)) {
+    return 'Store Keeper';
+  }
+  return trimmed;
+}
+
 export function generateMaterialReceiptHtml(
   data: MaterialReceiptData,
   companyName: string = 'CRYODEAL'
@@ -101,7 +115,7 @@ export function generateMaterialReceiptHtml(
   const safePartyLabel = escapeHtml(partyLabel);
   const safeStaffLabel = escapeHtml(staffLabel);
   const safeCustomerOrTech = escapeHtml(data.customerOrTech || '-');
-  const safeStaffName = escapeHtml(data.staffName || 'Store Keeper');
+  const safeStaffName = escapeHtml(cleanStaffName(data.staffName));
   const safeSiteName = data.siteName ? escapeHtml(data.siteName) : '';
   const safeRole = data.employeeRole ? escapeHtml(data.employeeRole) : '';
   const safeAdditionalTechs =

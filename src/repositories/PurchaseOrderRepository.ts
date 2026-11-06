@@ -129,6 +129,19 @@ export const purchaseOrderRepository = {
     const anyReceived = enrichedItems.some(i => (Number(i.receivedQuantity) || 0) > 0);
     const finalStatus: any = markAsReceived || allReceived ? 'Completed' : (anyReceived ? 'Partially Received' : (poData.status || 'Ordered'));
 
+    let resolvedCreatedByName = (poData as any).createdByName;
+    if (!resolvedCreatedByName && userId) {
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          resolvedCreatedByName = userSnap.data()?.fullName || userSnap.data()?.username || 'Staff';
+        }
+      } catch (e) {
+        console.error("Failed to fetch user name for purchase order", e);
+      }
+    }
+
     const dataToSave: any = {
       ...poData,
       poNumber,
@@ -136,12 +149,14 @@ export const purchaseOrderRepository = {
       totalQuantity,
       totalAmount,
       status: finalStatus,
+      createdByName: resolvedCreatedByName || 'Staff',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
     if (markAsReceived || anyReceived) {
       dataToSave.receivedBy = userId;
+      dataToSave.receivedByName = (poData as any).receivedByName || resolvedCreatedByName || 'Staff';
     }
 
     await setDoc(docRef, dataToSave);
