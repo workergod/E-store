@@ -18,6 +18,7 @@ import { AppButton } from '../../../shared/app/AppButton';
 import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { ToolSearchSelect } from '../../../shared/forms/ToolSearchSelect';
 import { escapeHtml } from '../../../shared/utils/security';
+import { printMaterialReceipt } from '../../inventory/utils/printMaterialReceipt';
 
 const toolIssueItemSchema = z.object({
   toolId: z.string().min(1, 'Please select a tool'),
@@ -57,6 +58,8 @@ export default function IssueToolsPage() {
     techName: string;
     siteName: string;
     date: string;
+    notes?: string;
+    additionalTechnicians?: string[];
     items: { name: string; code: string; qty: number; condition: string }[];
   } | null>(null);
 
@@ -163,6 +166,8 @@ export default function IssueToolsPage() {
         techName,
         siteName: data.siteName || '',
         date: data.issueDate,
+        notes: data.notes?.trim() || '',
+        additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
         items: enrichedItems
       });
 
@@ -176,134 +181,28 @@ export default function IssueToolsPage() {
   const printSlip = () => {
     if (!issuedSlip) return;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
-      document.body.removeChild(iframe);
-      window.print();
-      return;
-    }
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="en"><head><meta charset="utf-8"/><title></title>
-      <style>
-        @page { size: A4 portrait; margin: 0mm; }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; padding: 16mm 18mm; color: #000000; margin: 0; background: #ffffff; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #000000; padding-bottom: 12px; margin-bottom: 16px; }
-        .title { font-size: 22px; font-weight: 900; color: #000000; }
-        .sub { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-grid { display: flex; justify-content: space-between; border: 2px solid #000000; padding: 12px 16px; margin-bottom: 18px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000000; }
-        th { background: #000000 !important; color: #ffffff !important; border: 1px solid #000000; padding: 10px; font-size: 11.5px; font-weight: 900; text-align: left; text-transform: uppercase; }
-        td { border: 1.5px solid #000000; padding: 9px 12px; font-size: 12.5px; color: #000000; }
-        .sig { margin-top: 50px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; page-break-inside: avoid; }
-        .sig-box { display: flex; flex-direction: column; justify-content: flex-end; }
-        .sig-space { height: 50px; }
-        .sig-line { border-top: 1.5px solid #000000; margin-bottom: 5px; }
-        .sig-title { font-size: 10.5px; font-weight: 900; text-transform: uppercase; color: #000000; }
-        .sig-desc { font-size: 9.5px; font-weight: 700; color: #000000; margin-top: 2px; }
-      </style></head><body>
-      <div class="header">
-        <div>
-          <div class="title">${escapeHtml(company?.companyName || 'Cryodeal')}</div>
-          <div class="sub">Central Store • Tool & Equipment Issue Voucher</div>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 11px; font-weight: 900; text-transform: uppercase;">Issue Slip #</div>
-          <div style="font-family: monospace; font-size: 18px; font-weight: 950;">${issuedSlip.issueNumber}</div>
-        </div>
-      </div>
-      <div class="info-grid">
-        <div>
-          <div style="font-size: 10.5px; font-weight: 900; text-transform: uppercase;">Technician:</div>
-          <div style="font-size: 15px; font-weight: 900; margin-top: 2px;">${escapeHtml(issuedSlip.techName)}</div>
-          <div style="font-size: 12px; font-weight: 800; margin-top: 4px;">Site / Location: <b>${escapeHtml(issuedSlip.siteName || 'N/A')}</b></div>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 10.5px; font-weight: 900; text-transform: uppercase;">Issue Date:</div>
-          <div style="font-size: 14px; font-weight: 850; margin-top: 2px;">${issuedSlip.date}</div>
-          <div style="font-size: 11px; font-weight: 800; margin-top: 4px;">Issued By: <b>${escapeHtml(user?.fullName || 'Store Keeper')}</b></div>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 140px;">Tool Code</th>
-            <th>Tool Name & Description</th>
-            <th style="text-align: right; width: 70px;">Qty</th>
-            <th style="text-align: center; width: 130px;">Condition Out</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${issuedSlip.items.map(it => `
-            <tr>
-              <td style="font-family: monospace; font-weight: 900;">${escapeHtml(it.code)}</td>
-              <td style="font-weight: 850;">${escapeHtml(it.name)}</td>
-              <td style="text-align: right; font-weight: 950; font-size: 14px;">${it.qty}</td>
-              <td style="text-align: center; font-weight: 750;">${it.condition}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      <div style="margin-top: 18px; font-size: 11px; font-weight: 700; color: #000000; border: 1.5px solid #000000; padding: 8px 12px;">
-        * Notice: The technician is fully responsible for the care and safety of all tools listed above until returned in good condition.
-      </div>
-      <div class="sig">
-        <div class="sig-box">
-          <div class="sig-space"></div>
-          <div class="sig-line"></div>
-          <div class="sig-title">ISSUED BY</div>
-          <div class="sig-desc">${escapeHtml(user?.fullName || 'Store Keeper')}</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-space"></div>
-          <div class="sig-line"></div>
-          <div class="sig-title">RECEIVED BY</div>
-          <div class="sig-desc">${escapeHtml(issuedSlip.techName)}</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-space"></div>
-          <div class="sig-line"></div>
-          <div class="sig-title">SUPERVISOR / PROJECT ENGR</div>
-          <div class="sig-desc">(Sign & Date)</div>
-        </div>
-        <div class="sig-box" style="text-align: right;">
-          <div class="sig-space"></div>
-          <div class="sig-line"></div>
-          <div class="sig-title">APPROVED BY</div>
-          <div class="sig-desc">(Authorized Signatory)</div>
-        </div>
-      </div>
-      </body></html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch {
-        window.print();
-      } finally {
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
-        }, 2000);
-      }
-    }, 300);
+    printMaterialReceipt(
+      {
+        id: issuedSlip.id,
+        type: 'ISSUE',
+        isToolIssue: true,
+        issueNumber: issuedSlip.issueNumber,
+        date: issuedSlip.date,
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: issuedSlip.techName,
+        siteName: issuedSlip.siteName,
+        notes: issuedSlip.notes,
+        additionalTechnicians: issuedSlip.additionalTechnicians,
+        items: issuedSlip.items.map(it => ({
+          name: it.name,
+          sku: it.code,
+          qty: it.qty,
+          unit: 'pcs',
+          condition: it.condition
+        }))
+      },
+      company?.companyName || 'CRYODEAL'
+    );
   };
 
   const validToolsCount = watchedItems.filter(i => i.toolId).length;
@@ -648,11 +547,11 @@ export default function IssueToolsPage() {
               <div>Tools Issued: <b>{issuedSlip.items.length} items</b></div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <AppButton variant="outline" onClick={printSlip}>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <AppButton onClick={printSlip} className="font-bold shadow-sm">
                 <Printer className="h-4 w-4 mr-1.5" /> Print Issue Slip
               </AppButton>
-              <AppButton onClick={() => { setIssuedSlip(null); navigate('/tools'); }}>
+              <AppButton variant="outline" onClick={() => { setIssuedSlip(null); navigate('/tools'); }}>
                 Done
               </AppButton>
             </div>

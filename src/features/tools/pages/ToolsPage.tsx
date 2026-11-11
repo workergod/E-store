@@ -19,6 +19,7 @@ import { AppCard } from '../../../shared/app/AppCard';
 import { MetricCard } from '../../../shared/widgets/MetricWidget';
 import { ToolFormDialog } from '../components/ToolFormDialog';
 import { escapeHtml } from '../../../shared/utils/security';
+import { printMaterialReceipt } from '../../inventory/utils/printMaterialReceipt';
 
 export default function ToolsPage() {
   const navigate = useNavigate();
@@ -159,6 +160,57 @@ export default function ToolsPage() {
     w.document.close();
     w.focus();
     setTimeout(() => { w.print(); }, 250);
+  };
+
+  const handlePrintIssueSlip = (issue: ToolIssueTransaction) => {
+    const d = (issue.createdAt as any)?.toDate ? (issue.createdAt as any).toDate() : (issue.issueDate || new Date());
+    printMaterialReceipt(
+      {
+        id: issue.id || issue.issueNumber,
+        type: 'ISSUE',
+        isToolIssue: true,
+        issueNumber: issue.issueNumber,
+        date: d,
+        staffName: issue.createdByName || user?.fullName || 'Store Keeper',
+        customerOrTech: issue.employeeName || 'Technician',
+        siteName: issue.siteName || '',
+        notes: issue.notes,
+        additionalTechnicians: issue.additionalTechnicians,
+        items: (issue.items || []).map(it => ({
+          name: it.toolName,
+          sku: it.toolCode,
+          qty: it.quantity,
+          unit: 'pcs',
+          condition: it.conditionOut
+        }))
+      },
+      company?.companyName || 'CRYODEAL'
+    );
+  };
+
+  const handlePrintReturnSlip = (ret: ToolReturnTransaction) => {
+    const d = (ret.createdAt as any)?.toDate ? (ret.createdAt as any).toDate() : (ret.returnDate || new Date());
+    printMaterialReceipt(
+      {
+        id: ret.id || ret.returnNumber,
+        type: 'RETURN',
+        isToolReturn: true,
+        issueNumber: ret.returnNumber,
+        date: d,
+        staffName: ret.createdByName || user?.fullName || 'Store Keeper',
+        customerOrTech: ret.employeeName || 'Technician',
+        siteName: ret.siteName || '',
+        notes: ret.notes,
+        items: (ret.items || []).map(it => ({
+          name: it.toolName,
+          sku: it.toolCode,
+          qty: it.returnQty,
+          unit: 'pcs',
+          condition: it.conditionIn
+        }))
+      },
+      company?.companyName || 'CRYODEAL'
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -495,6 +547,7 @@ export default function ToolsPage() {
                       <th className="px-3 py-2.5">Tools Issued</th>
                       <th className="px-3 py-2.5">Date & Time</th>
                       <th className="px-3 py-2.5 text-center">Status</th>
+                      <th className="px-3 py-2.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -530,6 +583,18 @@ export default function ToolsPage() {
                               {issue.status}
                             </span>
                           </td>
+                          <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                            <AppButton
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintIssueSlip(issue)}
+                              className="h-7 px-2.5 text-xs font-semibold gap-1.5 shadow-2xs hover:border-primary hover:text-primary"
+                              title="Print Tool Issue Voucher"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              <span>Print Slip</span>
+                            </AppButton>
+                          </td>
                         </tr>
                       );
                     })}
@@ -563,6 +628,7 @@ export default function ToolsPage() {
                       <th className="px-3 py-2.5">Tools Returned</th>
                       <th className="px-3 py-2.5">Condition In</th>
                       <th className="px-3 py-2.5">Date & Time</th>
+                      <th className="px-3 py-2.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -591,6 +657,18 @@ export default function ToolsPage() {
                           </td>
                           <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                             {d.toLocaleDateString('en-IN')} {d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                            <AppButton
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintReturnSlip(ret)}
+                              className="h-7 px-2.5 text-xs font-semibold gap-1.5 shadow-2xs hover:border-emerald-600 hover:text-emerald-600"
+                              title="Print Tool Return Acknowledgement"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              <span>Print Slip</span>
+                            </AppButton>
                           </td>
                         </tr>
                       );

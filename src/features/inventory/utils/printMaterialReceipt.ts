@@ -156,7 +156,7 @@ export function generateMaterialReceiptHtml(
   let sig2Name = safeCustomerOrTech;
   let sig2Desc = 'Technician (Sign & Date)';
 
-  if (isReturn) {
+  if (isReturn || isToolReturn) {
     sig1Title = 'RETURNED BY';
     sig1Name = safeCustomerOrTech;
     sig1Desc = 'Technician (Sign & Date)';
@@ -172,6 +172,14 @@ export function generateMaterialReceiptHtml(
     sig2Title = 'DELIVERED BY';
     sig2Name = safeCustomerOrTech;
     sig2Desc = 'Supplier / Delivery Agent';
+  } else if (isToolIssue) {
+    sig1Title = 'ISSUED BY';
+    sig1Name = safeStaffName;
+    sig1Desc = 'Store Keeper / Custodian';
+
+    sig2Title = 'RECEIVED BY';
+    sig2Name = safeCustomerOrTech;
+    sig2Desc = 'Technician (Sign & Date)';
   }
 
   const rowsHtml = items.map((item, idx) => {

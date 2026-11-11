@@ -1601,6 +1601,23 @@ export default function TransactionLogPage() {
                           <AppButton 
                             variant="ghost" 
                             size="icon" 
+                            onClick={() => handlePrintSingle(log)} 
+                            className="text-foreground/80 hover:text-foreground hover:bg-muted h-8 w-8"
+                            title={
+                              log.isToolIssue
+                                ? "Print Tool Issue Voucher"
+                                : log.isToolReturn
+                                ? "Print Tool Return Slip"
+                                : log.type === 'PURCHASE'
+                                ? "Print Goods Inward Receipt"
+                                : "Print Material Receipt"
+                            }
+                          >
+                            <Printer className="h-4 w-4" />
+                          </AppButton>
+                          <AppButton 
+                            variant="ghost" 
+                            size="icon" 
                             onClick={() => setSelectedLog(log)} 
                             className="text-primary hover:bg-primary/10 h-8 w-8"
                             title="View Full Items & Details"
@@ -1663,7 +1680,14 @@ export default function TransactionLogPage() {
           footer={
             <div className="flex justify-between w-full">
               <AppButton variant="outline" size="sm" onClick={() => handlePrintSingle(selectedLog)}>
-                <Printer className="h-4 w-4 mr-2" /> Print Receipt
+                <Printer className="h-4 w-4 mr-2" />
+                {selectedLog.isToolIssue
+                  ? 'Print Issue Voucher'
+                  : selectedLog.isToolReturn
+                  ? 'Print Return Slip'
+                  : selectedLog.type === 'PURCHASE'
+                  ? 'Print Goods Receipt'
+                  : 'Print Receipt'}
               </AppButton>
               <div className="flex gap-2">
                 {canEdit && (
