@@ -18,21 +18,39 @@ import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
 import type { Employee } from '../../../shared/types/Employee';
 import type { Product } from '../../../shared/types/Product';
+import type { Tool, ToolCondition } from '../../../shared/types/Tool';
+import { toolRepository } from '../../../repositories/ToolRepository';
+import { ToolSearchSelect } from '../../../shared/forms/ToolSearchSelect';
 import { 
   Printer, RefreshCw, ArrowUpRight, ArrowDownLeft, ShoppingCart, 
-  Trash2, ArrowUpDown, ArrowUp, ArrowDown, Eye, Pencil, Plus, Clock, History
+  Trash2, ArrowUpDown, ArrowUp, ArrowDown, Eye, Pencil, Plus, Clock, History,
+  Wrench, RotateCcw, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { escapeHtml } from '../../../shared/utils/security';
 import { printMaterialReceipt } from '../../inventory/utils/printMaterialReceipt';
 
+const TOOL_CONDITIONS: { value: ToolCondition; label: string }[] = [
+  { value: 'NEW', label: 'New' },
+  { value: 'EXCELLENT', label: 'Excellent' },
+  { value: 'GOOD', label: 'Good' },
+  { value: 'FAIR', label: 'Fair' },
+  { value: 'NEEDS_REPAIR', label: 'Needs Repair' },
+  { value: 'DAMAGED', label: 'Damaged' },
+];
+
 interface LogItem {
-  productId: string;
+  productId: string; // for tools: toolId
   name: string;
   qty: number;
   unit?: string;
   sku?: string;
   returnedQty?: number;
+  brand?: string;
+  serialNumber?: string;
+  conditionOut?: string;
+  conditionIn?: string;
+  actionNeeded?: string;
 }
 
 interface EditHistoryRecord {
@@ -46,6 +64,8 @@ interface EditHistoryRecord {
 interface LogEntry {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
+  isToolIssue?: boolean;
+  isToolReturn?: boolean;
   issueNumber?: string;
   isDirectReturn?: boolean;
   directReturnNumber?: string;
@@ -58,6 +78,7 @@ interface LogEntry {
   notes?: string;
   status?: string;
   siteName?: string;
+  expectedReturnDate?: string;
   additionalTechnicians?: string[];
   lastEditedByName?: string;
   lastEditedByRole?: string;
@@ -69,6 +90,8 @@ interface LogEntry {
 interface EditFormState {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
+  isToolIssue?: boolean;
+  isToolReturn?: boolean;
   issueNumber?: string;
   isDirectReturn?: boolean;
   directReturnNumber?: string;
@@ -77,23 +100,64 @@ interface EditFormState {
   employeeId: string;
   customerOrTech: string;
   siteName: string;
+  expectedReturnDate?: string;
   additionalTechnicians: string[];
   notes: string;
   items: {
-    productId: string;
+    productId: string; // for tools: toolId
     name: string;
     sku?: string;
     unit?: string;
     qty: number;
     originalQty: number;
+    conditionOut?: string;
+    conditionIn?: string;
+    brand?: string;
+    serialNumber?: string;
+    actionNeeded?: string;
   }[];
   editReason: string;
 }
 
-const typeConfig = {
-  ISSUE:    { label: 'Issue',    color: 'text-orange-600 bg-orange-50 border-orange-200', icon: ArrowUpRight },
-  RETURN:   { label: 'Return',   color: 'text-green-600 bg-green-50 border-green-200',    icon: ArrowDownLeft },
-  PURCHASE: { label: 'Purchase', color: 'text-blue-600 bg-blue-50 border-blue-200',       icon: ShoppingCart },
+const getLogBadge = (log: LogEntry) => {
+  if (log.isToolIssue) {
+    return {
+      label: 'Tool Issue',
+      color: 'text-amber-800 bg-amber-50 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700',
+      icon: Wrench,
+      refClass: 'text-amber-800 dark:text-amber-300 bg-amber-500/10 border-amber-500/30'
+    };
+  }
+  if (log.isToolReturn) {
+    return {
+      label: 'Tool Return',
+      color: 'text-purple-800 bg-purple-50 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700',
+      icon: RotateCcw,
+      refClass: 'text-purple-800 dark:text-purple-300 bg-purple-500/10 border-purple-500/30'
+    };
+  }
+  if (log.type === 'ISSUE') {
+    return {
+      label: 'Issue',
+      color: 'text-orange-600 bg-orange-50 border-orange-200',
+      icon: ArrowUpRight,
+      refClass: 'text-primary bg-primary/10 border-primary/20'
+    };
+  }
+  if (log.type === 'RETURN') {
+    return {
+      label: 'Return',
+      color: 'text-green-600 bg-green-50 border-green-200',
+      icon: ArrowDownLeft,
+      refClass: 'text-primary bg-primary/10 border-primary/20'
+    };
+  }
+  return {
+    label: 'Purchase',
+    color: 'text-blue-600 bg-blue-50 border-blue-200',
+    icon: ShoppingCart,
+    refClass: 'text-blue-700 bg-blue-500/10 border-blue-500/30'
+  };
 };
 
 export default function TransactionLogPage() {
@@ -111,9 +175,10 @@ export default function TransactionLogPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
-  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE'>(
+  const [filter, setFilter] = useState<'ALL' | 'ISSUE' | 'RETURN' | 'PURCHASE' | 'TOOL_ISSUE' | 'TOOL_RETURN'>(
     (location.state as any)?.filter || 'ALL'
   );
   const [search, setSearch] = useState('');
@@ -126,6 +191,9 @@ export default function TransactionLogPage() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [selectedNewProductId, setSelectedNewProductId] = useState<string>('');
   const [newProductQty, setNewProductQty] = useState<string>('1');
+  const [selectedNewToolId, setSelectedNewToolId] = useState<string>('');
+  const [newToolQty, setNewToolQty] = useState<string>('1');
+  const [newToolCondition, setNewToolCondition] = useState<ToolCondition>('GOOD');
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   const handleSort = (field: 'date' | 'type' | 'customerOrTech' | 'staffName') => {
@@ -143,17 +211,22 @@ export default function TransactionLogPage() {
       setIsLoading(true);
       const entries: LogEntry[] = [];
 
-      // Load employees and products for name and unit mapping
-      const [empList, prodList] = await Promise.all([
+      // Load employees, products, and tools for name and unit mapping
+      const [empList, prodList, toolList] = await Promise.all([
         employeeRepository.getAll(companyId),
-        productRepository.getAll(companyId)
+        productRepository.getAll(companyId),
+        toolRepository.getAll(companyId)
       ]);
 
       setEmployees(empList);
       setProducts(prodList);
+      setTools(toolList);
 
       const empMap: Record<string, string> = {};
       empList.forEach(e => { if (e.id) empMap[e.id] = `${e.firstName} ${e.lastName}`; });
+
+      const toolMap: Record<string, Tool> = {};
+      toolList.forEach(t => { if (t.id) toolMap[t.id] = t; });
 
       const prodUnitMap: Record<string, string> = {};
       const prodSkuMap: Record<string, string> = {};
@@ -197,33 +270,59 @@ export default function TransactionLogPage() {
         return 'Store Keeper';
       };
 
-      // 1. Issues
+      // 1. Issues (Material Issues & Tool Issues)
       const issueSnap = await getDocs(query(
         collection(db, 'issueTransactions'),
         where('companyId', '==', companyId)
       ));
       issueSnap.forEach(docSnap => {
         const d = docSnap.data();
+        const isTool = Boolean(d.isToolIssue || (d.issueNumber && d.issueNumber.includes('TISS')));
+        const mappedItems: LogItem[] = isTool
+          ? (d.items || []).map((it: any) => {
+              const toolObj = toolMap[it.toolId] || toolMap[it.productId];
+              const name = it.toolName || it.name || it.productName || toolObj?.name || 'Tool';
+              const sku = it.toolCode || it.sku || toolObj?.toolCode || '';
+              const qty = Number(it.quantity ?? it.issuedQty ?? 1);
+              const returnedQty = Number(it.returnedQuantity ?? it.returnedQty ?? 0);
+              return {
+                productId: it.toolId || it.productId || '',
+                name,
+                qty: isNaN(qty) ? 1 : qty,
+                returnedQty: isNaN(returnedQty) ? 0 : returnedQty,
+                unit: 'pcs',
+                sku,
+                brand: it.brand || toolObj?.brand || '',
+                serialNumber: it.serialNumber || toolObj?.serialNumber || '',
+                conditionOut: it.conditionOut || toolObj?.condition || 'GOOD'
+              };
+            })
+          : (d.items || []).map((it: any) => ({
+              productId: it.productId,
+              name: it.productName,
+              qty: it.issuedQty,
+              returnedQty: it.returnedQty || 0,
+              unit: it.unit || prodUnitMap[it.productId] || '',
+              sku: it.sku || prodSkuMap[it.productId] || ''
+            }));
+
+        const techName = d.employeeName || empMap[d.employeeId] || d.employeeId;
+
         entries.push({
           id: docSnap.id,
           type: 'ISSUE',
+          isToolIssue: isTool,
           issueNumber: d.issueNumber || null,
-          date: d.createdAt,
+          date: d.createdAt || d.issueDate,
           staffName: resolveStaffName(d.createdByName, d.createdBy),
-          customerOrTech: empMap[d.employeeId] || d.employeeId,
+          customerOrTech: techName,
           employeeId: d.employeeId,
-          items: (d.items || []).map((it: any) => ({
-            productId: it.productId,
-            name: it.productName,
-            qty: it.issuedQty,
-            returnedQty: it.returnedQty || 0,
-            unit: it.unit || prodUnitMap[it.productId] || '',
-            sku: it.sku || prodSkuMap[it.productId] || ''
-          })),
+          items: mappedItems,
           rawItems: d.items || [],
           notes: d.notes,
           status: d.status,
           siteName: d.siteName,
+          expectedReturnDate: d.expectedReturnDate,
           additionalTechnicians: d.additionalTechnicians,
           lastEditedByName: d.lastEditedByName,
           lastEditedByRole: d.lastEditedByRole,
@@ -233,34 +332,56 @@ export default function TransactionLogPage() {
         });
       });
 
-      // 2. Returns
+      // 2. Returns (Material Returns & Tool Returns)
       const returnSnap = await getDocs(query(
         collection(db, 'returnTransactions'),
         where('companyId', '==', companyId)
       ));
       returnSnap.forEach(docSnap => {
         const d = docSnap.data();
+        const isTool = Boolean(d.isToolReturn || (d.returnNumber && d.returnNumber.includes('TRET')));
         const isDirect = Boolean(d.isDirectReturn || d.issueId === 'DIRECT_RETURN');
         const directReturnNumber = d.directReturnNumber || (isDirect ? 'CRYO(W/O)-1' : null);
-        const resolvedTechName = empMap[d.employeeId] || (d.employeeName && d.employeeName !== 'UNLINKED' ? d.employeeName : (isDirect ? 'Direct Return' : d.employeeId));
+        const resolvedTechName = d.employeeName || empMap[d.employeeId] || (d.employeeName && d.employeeName !== 'UNLINKED' ? d.employeeName : (isDirect ? 'Direct Return' : d.employeeId));
+
+        const mappedItems: LogItem[] = isTool
+          ? (d.items || []).map((it: any) => {
+              const toolObj = toolMap[it.toolId] || toolMap[it.productId];
+              const name = it.toolName || it.name || it.productName || toolObj?.name || 'Tool';
+              const sku = it.toolCode || it.sku || toolObj?.toolCode || '';
+              const qty = Number(it.returnQty ?? it.quantity ?? it.returnedQty ?? 1);
+              return {
+                productId: it.toolId || it.productId || '',
+                name,
+                qty: isNaN(qty) ? 1 : qty,
+                unit: 'pcs',
+                sku,
+                brand: it.brand || toolObj?.brand || '',
+                serialNumber: it.serialNumber || toolObj?.serialNumber || '',
+                conditionIn: it.conditionIn || 'GOOD',
+                actionNeeded: it.actionNeeded || 'RESTOCK'
+              };
+            })
+          : (d.items || []).map((it: any) => ({
+              productId: it.productId,
+              name: it.productName,
+              qty: it.returnedQty,
+              unit: it.unit || prodUnitMap[it.productId] || '',
+              sku: it.sku || prodSkuMap[it.productId] || ''
+            }));
 
         entries.push({
           id: docSnap.id,
           type: 'RETURN',
-          issueNumber: d.issueNumber || null,
+          isToolReturn: isTool,
+          issueNumber: d.returnNumber || d.issueNumber || null,
           isDirectReturn: isDirect,
           directReturnNumber: directReturnNumber || undefined,
-          date: d.createdAt,
+          date: d.createdAt || d.returnDate,
           staffName: resolveStaffName(d.createdByName, d.createdBy),
           customerOrTech: resolvedTechName,
           employeeId: d.employeeId,
-          items: (d.items || []).map((it: any) => ({
-            productId: it.productId,
-            name: it.productName,
-            qty: it.returnedQty,
-            unit: it.unit || prodUnitMap[it.productId] || '',
-            sku: it.sku || prodSkuMap[it.productId] || ''
-          })),
+          items: mappedItems,
           rawItems: d.items || [],
           siteName: d.siteName || '',
           notes: d.notes,
@@ -340,6 +461,8 @@ export default function TransactionLogPage() {
     setEditForm({
       id: log.id,
       type: log.type,
+      isToolIssue: log.isToolIssue,
+      isToolReturn: log.isToolReturn,
       issueNumber: log.issueNumber,
       isDirectReturn: log.isDirectReturn,
       directReturnNumber: log.directReturnNumber,
@@ -348,26 +471,35 @@ export default function TransactionLogPage() {
       employeeId: log.employeeId || '',
       customerOrTech: log.customerOrTech || '',
       siteName: log.siteName || '',
+      expectedReturnDate: log.expectedReturnDate || '',
       additionalTechnicians: [...(log.additionalTechnicians || [])],
       notes: log.notes || '',
       items: log.items.map(it => ({
         productId: it.productId || '',
         name: it.name,
         sku: it.sku || '',
-        unit: it.unit || '',
+        unit: it.unit || (log.isToolIssue || log.isToolReturn ? 'pcs' : ''),
         qty: it.qty,
-        originalQty: it.qty
+        originalQty: it.qty,
+        conditionOut: it.conditionOut || 'GOOD',
+        conditionIn: it.conditionIn || 'GOOD',
+        brand: it.brand || '',
+        serialNumber: it.serialNumber || '',
+        actionNeeded: it.actionNeeded || 'RESTOCK'
       })),
       editReason: ''
     });
     setSelectedNewProductId('');
     setNewProductQty('1');
+    setSelectedNewToolId('');
+    setNewToolQty('1');
+    setNewToolCondition('GOOD');
   };
 
   const handleSaveEdit = async () => {
     if (!editForm || !companyId) return;
     if (editForm.items.length === 0) {
-      toast.error('Transaction must have at least one product item');
+      toast.error(editForm.isToolIssue ? 'Tool issue must have at least one tool item' : 'Transaction must have at least one product item');
       return;
     }
     for (const it of editForm.items) {
@@ -393,7 +525,195 @@ export default function TransactionLogPage() {
         notes: editForm.editReason.trim() || 'Transaction details edited'
       };
 
-      if (editForm.type === 'ISSUE') {
+      if (editForm.isToolIssue) {
+        const issueRef = doc(db, 'issueTransactions', editForm.id);
+        const issueSnap = await getDoc(issueRef);
+        if (!issueSnap.exists()) throw new Error('Tool issue record not found');
+        const origData = issueSnap.data();
+        const origItems: any[] = origData.items || [];
+
+        // 1. Reconcile Tool Stocks
+        for (const it of editForm.items) {
+          const match = origItems.find((oi: any) => (oi.toolId === it.productId || oi.productId === it.productId));
+          const oldIssued = match ? Number(match.quantity ?? match.issuedQty ?? 0) : 0;
+          const diff = it.qty - oldIssued; // diff > 0 => issued more, available decreases, issued increases
+          if (diff !== 0 && it.productId) {
+            const toolRef = doc(db, 'products', it.productId);
+            const toolSnap = await getDoc(toolRef);
+            if (toolSnap.exists()) {
+              const cur = toolSnap.data();
+              const curAvail = Number(cur.availableQty) || 0;
+              const curIssued = Number(cur.issuedQty) || 0;
+              const newAvail = Math.max(0, curAvail - diff);
+              const newIssued = Math.max(0, curIssued + diff);
+              const newStatus = newAvail === 0 ? 'IN_USE' : (cur.status === 'IN_USE' ? 'AVAILABLE' : cur.status);
+              await updateDoc(toolRef, {
+                availableQty: newAvail,
+                issuedQty: newIssued,
+                status: newStatus,
+                updatedAt: nowTimestamp,
+                updatedBy: editorId
+              });
+            }
+          }
+        }
+
+        // For removed tools
+        for (const oi of origItems) {
+          const oiId = oi.toolId || oi.productId;
+          const stillExists = editForm.items.some(it => it.productId === oiId);
+          if (!stillExists && oiId) {
+            const netIssued = (Number(oi.quantity ?? oi.issuedQty ?? 0)) - (Number(oi.returnedQuantity ?? oi.returnedQty ?? 0));
+            if (netIssued > 0) {
+              const toolRef = doc(db, 'products', oiId);
+              const toolSnap = await getDoc(toolRef);
+              if (toolSnap.exists()) {
+                const cur = toolSnap.data();
+                const curAvail = Number(cur.availableQty) || 0;
+                const curIssued = Number(cur.issuedQty) || 0;
+                await updateDoc(toolRef, {
+                  availableQty: curAvail + netIssued,
+                  issuedQty: Math.max(0, curIssued - netIssued),
+                  status: 'AVAILABLE',
+                  updatedAt: nowTimestamp,
+                  updatedBy: editorId
+                });
+              }
+            }
+          }
+        }
+
+        const updatedToolItems = editForm.items.map(it => {
+          const match = origItems.find((oi: any) => (oi.toolId === it.productId || oi.productId === it.productId));
+          const returnedQuantity = match ? Number(match.returnedQuantity ?? match.returnedQty ?? 0) : 0;
+          return {
+            toolId: it.productId,
+            toolCode: it.sku || '',
+            toolName: it.name,
+            brand: it.brand || '',
+            serialNumber: it.serialNumber || '',
+            quantity: Number(it.qty) || 1,
+            conditionOut: it.conditionOut || 'GOOD',
+            returnedQuantity
+          };
+        });
+
+        const allRet = updatedToolItems.every(it => it.returnedQuantity >= it.quantity);
+        const anyRet = updatedToolItems.some(it => it.returnedQuantity > 0);
+        const status = allRet ? 'CLOSED' : (anyRet ? 'PARTIALLY_RETURNED' : 'ISSUED');
+
+        const existingHistory = origData.editHistory || [];
+
+        await updateDoc(issueRef, {
+          employeeId: editForm.employeeId,
+          employeeName: editForm.customerOrTech,
+          siteName: editForm.siteName,
+          additionalTechnicians: editForm.additionalTechnicians,
+          expectedReturnDate: editForm.expectedReturnDate || '',
+          notes: editForm.notes,
+          items: updatedToolItems,
+          status,
+          createdAt: newTxDate,
+          updatedAt: nowTimestamp,
+          updatedBy: editorId,
+          lastEditedByName: editorName,
+          lastEditedByRole: editorRole,
+          lastEditedById: editorId,
+          lastEditedAt: nowTimestamp,
+          editHistory: [...existingHistory, editAuditRecord]
+        });
+
+      } else if (editForm.isToolReturn) {
+        const returnRef = doc(db, 'returnTransactions', editForm.id);
+        const returnSnap = await getDoc(returnRef);
+        if (!returnSnap.exists()) throw new Error('Tool return record not found');
+        const origData = returnSnap.data();
+        const origItems: any[] = origData.items || [];
+
+        for (const it of editForm.items) {
+          const match = origItems.find((oi: any) => (oi.toolId === it.productId || oi.productId === it.productId));
+          const oldRet = match ? Number(match.returnQty ?? match.quantity ?? 0) : 0;
+          const diff = it.qty - oldRet;
+          if (diff !== 0 && it.productId) {
+            const toolRef = doc(db, 'products', it.productId);
+            const toolSnap = await getDoc(toolRef);
+            if (toolSnap.exists()) {
+              const cur = toolSnap.data();
+              const curAvail = Number(cur.availableQty) || 0;
+              const curIssued = Number(cur.issuedQty) || 0;
+              await updateDoc(toolRef, {
+                availableQty: curAvail + diff,
+                issuedQty: Math.max(0, curIssued - diff),
+                status: 'AVAILABLE',
+                updatedAt: nowTimestamp,
+                updatedBy: editorId
+              });
+            }
+          }
+        }
+
+        if (origData.issueId) {
+          const issueRef = doc(db, 'issueTransactions', origData.issueId);
+          const issueSnap = await getDoc(issueRef);
+          if (issueSnap.exists()) {
+            const issueData = issueSnap.data();
+            const issueItems = (issueData.items || []).map((it: any) => {
+              const retItem = editForm.items.find(ri => ri.productId === (it.toolId || it.productId));
+              const origRetItem = origItems.find((oi: any) => (oi.toolId || oi.productId) === (it.toolId || it.productId));
+              if (retItem) {
+                const delta = Number(retItem.qty) - (origRetItem ? Number(origRetItem.returnQty ?? origRetItem.quantity ?? 0) : 0);
+                const newRet = Math.max(0, (it.returnedQuantity || 0) + delta);
+                return {
+                  ...it,
+                  returnedQuantity: newRet
+                };
+              }
+              return it;
+            });
+            const allRet = issueItems.every((it: any) => (it.returnedQuantity || 0) >= (it.quantity || it.issuedQty || 1));
+            const anyRet = issueItems.some((it: any) => (it.returnedQuantity || 0) > 0);
+            await updateDoc(issueRef, {
+              items: issueItems,
+              status: allRet ? 'CLOSED' : (anyRet ? 'PARTIALLY_RETURNED' : 'ISSUED'),
+              updatedAt: nowTimestamp,
+              updatedBy: editorId
+            });
+          }
+        }
+
+        const updatedReturnItems = editForm.items.map(it => {
+          const match = origItems.find((oi: any) => (oi.toolId === it.productId || oi.productId === it.productId));
+          return {
+            toolId: it.productId,
+            toolCode: it.sku || '',
+            toolName: it.name,
+            serialNumber: it.serialNumber || '',
+            returnQty: Number(it.qty) || 1,
+            conditionIn: it.conditionIn || origMatch?.conditionIn || 'GOOD',
+            actionNeeded: it.actionNeeded || origMatch?.actionNeeded || 'RESTOCK',
+            notes: origMatch?.notes || ''
+          };
+        });
+
+        const existingHistory = origData.editHistory || [];
+
+        await updateDoc(returnRef, {
+          employeeId: editForm.employeeId,
+          employeeName: editForm.customerOrTech,
+          siteName: editForm.siteName,
+          notes: editForm.notes,
+          items: updatedReturnItems,
+          createdAt: newTxDate,
+          updatedAt: nowTimestamp,
+          updatedBy: editorId,
+          lastEditedByName: editorName,
+          lastEditedByRole: editorRole,
+          lastEditedById: editorId,
+          lastEditedAt: nowTimestamp,
+          editHistory: [...existingHistory, editAuditRecord]
+        });
+
+      } else if (editForm.type === 'ISSUE') {
         const issueRef = doc(db, 'issueTransactions', editForm.id);
         const issueSnap = await getDoc(issueRef);
         if (!issueSnap.exists()) throw new Error('Transaction record not found');
@@ -594,7 +914,7 @@ export default function TransactionLogPage() {
         });
       }
 
-      toast.success(`Transaction updated successfully by ${editorName} (${editorRole})`);
+      toast.success(`${editForm.isToolIssue ? 'Tool Issue' : (editForm.isToolReturn ? 'Tool Return' : 'Transaction')} updated successfully by ${editorName} (${editorRole})`);
       setEditForm(null);
       await loadLogs();
     } catch (err: any) {
@@ -605,15 +925,126 @@ export default function TransactionLogPage() {
     }
   };
 
-  const handleDelete = async (id: string, type: string) => {
-    if (!window.confirm('Are you sure you want to delete this transaction log? This will automatically revert the product stock balances.')) return;
+  const handleDelete = async (log: LogEntry) => {
+    const isTool = log.isToolIssue || log.isToolReturn;
+    const confirmMsg = isTool
+      ? `Are you sure you want to delete this ${log.isToolIssue ? 'Tool Issue' : 'Tool Return'} (${log.issueNumber || log.id})? This will automatically restore the tool stock.`
+      : 'Are you sure you want to delete this transaction log? This will automatically revert the product stock balances.';
+    if (!window.confirm(confirmMsg)) return;
+
     try {
       setIsLoading(true);
       const activeCompanyId = companyId || useAuthStore.getState().company?.companyId || 'company_Zu6sHXTq';
       const userId = useAuthStore.getState().user?.uid || 'System';
 
-      if (type === 'ISSUE') {
-        const issueRef = doc(db, 'issueTransactions', id);
+      if (log.isToolIssue) {
+        const issueRef = doc(db, 'issueTransactions', log.id);
+        const issueSnap = await getDoc(issueRef);
+        if (issueSnap.exists()) {
+          const d = issueSnap.data();
+          const items = d.items || [];
+          for (const item of items) {
+            const netQty = (Number(item.quantity ?? item.issuedQty) || 0) - (Number(item.returnedQuantity ?? item.returnedQty) || 0);
+            const toolId = item.toolId || item.productId;
+            if (netQty > 0 && toolId) {
+              try {
+                const toolRef = doc(db, 'products', toolId);
+                const toolSnap = await getDoc(toolRef);
+                if (toolSnap.exists()) {
+                  const tData = toolSnap.data();
+                  const curAvail = Number(tData.availableQty) || 0;
+                  const curIssued = Number(tData.issuedQty) || 0;
+                  await updateDoc(toolRef, {
+                    availableQty: curAvail + netQty,
+                    issuedQty: Math.max(0, curIssued - netQty),
+                    status: 'AVAILABLE',
+                    updatedAt: serverTimestamp(),
+                    updatedBy: userId
+                  });
+                }
+              } catch (toolErr) {
+                console.warn('Failed to revert tool stock:', toolErr);
+              }
+            }
+          }
+
+          try {
+            const returnSnap = await getDocs(query(
+              collection(db, 'returnTransactions'),
+              where('companyId', '==', activeCompanyId),
+              where('issueId', '==', log.id)
+            ));
+            for (const docObj of returnSnap.docs) {
+              await deleteDoc(docObj.ref);
+            }
+          } catch (retErr) {
+            console.warn('Failed to delete linked tool returns:', retErr);
+          }
+        }
+        await deleteDoc(issueRef);
+        toast.success('Tool issue deleted and tool stock restored successfully');
+
+      } else if (log.isToolReturn) {
+        const returnRef = doc(db, 'returnTransactions', log.id);
+        const returnSnap = await getDoc(returnRef);
+        if (returnSnap.exists()) {
+          const d = returnSnap.data();
+          const items = d.items || [];
+          for (const item of items) {
+            const retQty = Number(item.returnQty ?? item.quantity) || 0;
+            const toolId = item.toolId || item.productId;
+            if (retQty > 0 && toolId) {
+              try {
+                const toolRef = doc(db, 'products', toolId);
+                const toolSnap = await getDoc(toolRef);
+                if (toolSnap.exists()) {
+                  const tData = toolSnap.data();
+                  const curAvail = Number(tData.availableQty) || 0;
+                  const curIssued = Number(tData.issuedQty) || 0;
+                  await updateDoc(toolRef, {
+                    availableQty: Math.max(0, curAvail - retQty),
+                    issuedQty: curIssued + retQty,
+                    updatedAt: serverTimestamp(),
+                    updatedBy: userId
+                  });
+                }
+              } catch (toolErr) {
+                console.warn('Failed to revert tool return stock:', toolErr);
+              }
+            }
+          }
+
+          if (d.issueId) {
+            try {
+              const issueRef = doc(db, 'issueTransactions', d.issueId);
+              const issueSnap = await getDoc(issueRef);
+              if (issueSnap.exists()) {
+                const issueData = issueSnap.data();
+                const updatedItems = (issueData.items || []).map((it: any) => {
+                  const retItem = items.find((ri: any) => (ri.toolId || ri.productId) === (it.toolId || it.productId));
+                  if (retItem) {
+                    const newRet = Math.max(0, (it.returnedQuantity || 0) - (retItem.returnQty || retItem.quantity || 0));
+                    return { ...it, returnedQuantity: newRet };
+                  }
+                  return it;
+                });
+                const anyRet = updatedItems.some((it: any) => (it.returnedQuantity || 0) > 0);
+                const allRet = updatedItems.every((it: any) => (it.returnedQuantity || 0) >= (it.quantity || 1));
+                await updateDoc(issueRef, {
+                  items: updatedItems,
+                  status: allRet ? 'CLOSED' : (anyRet ? 'PARTIALLY_RETURNED' : 'ISSUED')
+                });
+              }
+            } catch (syncErr) {
+              console.warn('Failed to sync linked issue doc:', syncErr);
+            }
+          }
+        }
+        await deleteDoc(returnRef);
+        toast.success('Tool return deleted and tool stock restored successfully');
+
+      } else if (log.type === 'ISSUE') {
+        const issueRef = doc(db, 'issueTransactions', log.id);
         const issueSnap = await getDoc(issueRef);
         if (issueSnap.exists()) {
           const d = issueSnap.data();
@@ -629,7 +1060,7 @@ export default function TransactionLogPage() {
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
                   quantity: netQty,
-                  notes: `Reverted Issue deletion (ID: ${id})`,
+                  notes: `Reverted Issue deletion (ID: ${log.id})`,
                   performedBy: userId
                 });
               } catch (stockErr) {
@@ -643,7 +1074,7 @@ export default function TransactionLogPage() {
           const returnSnap = await getDocs(query(
             collection(db, 'returnTransactions'),
             where('companyId', '==', activeCompanyId),
-            where('issueId', '==', id)
+            where('issueId', '==', log.id)
           ));
           for (const docObj of returnSnap.docs) {
             await deleteDoc(docObj.ref);
@@ -652,9 +1083,10 @@ export default function TransactionLogPage() {
           console.warn('Failed to query/delete linked returns:', retErr);
         }
         await deleteDoc(issueRef);
+        toast.success('Transaction deleted and stock reverted successfully');
 
-      } else if (type === 'RETURN') {
-        const returnRef = doc(db, 'returnTransactions', id);
+      } else if (log.type === 'RETURN') {
+        const returnRef = doc(db, 'returnTransactions', log.id);
         const returnSnap = await getDoc(returnRef);
         if (returnSnap.exists()) {
           const d = returnSnap.data();
@@ -670,7 +1102,7 @@ export default function TransactionLogPage() {
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
                   quantity: -returnedQty,
-                  notes: `Reverted Return deletion (ID: ${id})`,
+                  notes: `Reverted Return deletion (ID: ${log.id})`,
                   performedBy: userId
                 });
               } catch (stockErr) {
@@ -709,9 +1141,10 @@ export default function TransactionLogPage() {
           }
         }
         await deleteDoc(returnRef);
+        toast.success('Transaction deleted and stock reverted successfully');
 
-      } else if (type === 'PURCHASE') {
-        const poRef = doc(db, 'purchaseOrders', id);
+      } else if (log.type === 'PURCHASE') {
+        const poRef = doc(db, 'purchaseOrders', log.id);
         const poSnap = await getDoc(poRef);
         if (poSnap.exists()) {
           const d = poSnap.data();
@@ -727,7 +1160,7 @@ export default function TransactionLogPage() {
                   transactionType: 'ADJUSTMENT',
                   referenceType: 'ADJUSTMENT',
                   quantity: -receivedQty,
-                  notes: `Reverted Purchase deletion (ID: ${id})`,
+                  notes: `Reverted Purchase deletion (ID: ${log.id})`,
                   performedBy: userId
                 });
               } catch (stockErr) {
@@ -737,9 +1170,9 @@ export default function TransactionLogPage() {
           }
         }
         await deleteDoc(poRef);
+        toast.success('Transaction deleted and stock reverted successfully');
       }
 
-      toast.success('Transaction deleted and stock reverted successfully');
       loadLogs();
     } catch (e: any) {
       toast.error('Failed to delete transaction: ' + e.message);
@@ -794,6 +1227,8 @@ export default function TransactionLogPage() {
         .ISSUE { background: #f4f4f4; }
         .RETURN { background: #e5e5e5; }
         .PURCHASE { background: #f0f0f0; }
+        .TOOL_ISSUE { background: #fef3c7; }
+        .TOOL_RETURN { background: #f3e8ff; }
       </style></head><body>
       ${content}
       <p style="text-align:center;margin-top:20px;font-size:10px;color:#000000;font-weight:700;">
@@ -824,6 +1259,8 @@ export default function TransactionLogPage() {
       {
         id: log.id,
         type: log.type,
+        isToolIssue: log.isToolIssue,
+        isToolReturn: log.isToolReturn,
         issueNumber: log.issueNumber,
         isDirectReturn: log.isDirectReturn,
         directReturnNumber: log.directReturnNumber,
@@ -839,8 +1276,9 @@ export default function TransactionLogPage() {
         items: log.items.map(it => ({
           name: it.name,
           qty: it.qty,
-          unit: it.unit,
-          sku: it.sku
+          unit: it.unit || 'pcs',
+          sku: it.sku,
+          condition: it.conditionOut || it.conditionIn
         }))
       },
       company?.companyName || 'CRYODEAL'
@@ -848,7 +1286,11 @@ export default function TransactionLogPage() {
   };
 
   const filtered = logs.filter(l => {
-    if (filter !== 'ALL' && l.type !== filter) return false;
+    if (filter === 'ISSUE' && (l.type !== 'ISSUE' || l.isToolIssue)) return false;
+    if (filter === 'RETURN' && (l.type !== 'RETURN' || l.isToolReturn)) return false;
+    if (filter === 'TOOL_ISSUE' && !l.isToolIssue) return false;
+    if (filter === 'TOOL_RETURN' && !l.isToolReturn) return false;
+    if (filter === 'PURCHASE' && l.type !== 'PURCHASE') return false;
     if (search) {
       const s = search.toLowerCase().trim();
       const sClean = s.replace(/[^a-z0-9]/g, '');
@@ -859,12 +1301,14 @@ export default function TransactionLogPage() {
         || (l.directReturnNumber && l.directReturnNumber.toLowerCase().includes(s))
         || (l.directReturnNumber && l.directReturnNumber.toLowerCase().replace(/[^a-z0-9]/g, '').includes(sClean))
         || (l.isDirectReturn && (s.includes('direct') || s.includes('w/o') || s.includes('without')))
+        || (l.isToolIssue && (s.includes('tool') || s.includes('tiss')))
+        || (l.isToolReturn && (s.includes('tool') || s.includes('tret')))
         || (l.lastEditedByName && l.lastEditedByName.toLowerCase().includes(s))
         || (l.lastEditedByRole && l.lastEditedByRole.toLowerCase().includes(s))
         || (l.notes && l.notes.toLowerCase().includes(s))
         || (l.siteName && l.siteName.toLowerCase().includes(s))
         || (l.additionalTechnicians && l.additionalTechnicians.some(t => t.toLowerCase().includes(s)))
-        || l.items.some(it => it.name.toLowerCase().includes(s));
+        || l.items.some(it => it.name.toLowerCase().includes(s) || (it.sku && it.sku.toLowerCase().includes(s)));
     }
     return true;
   }).sort((a, b) => {
@@ -874,7 +1318,8 @@ export default function TransactionLogPage() {
       const timeB = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date || 0).getTime();
       cmp = timeA - timeB;
     } else if (sortField === 'type') {
-      cmp = a.type.localeCompare(b.type);
+      const typeKey = (l: LogEntry) => l.isToolIssue ? 'TOOL_ISSUE' : (l.isToolReturn ? 'TOOL_RETURN' : l.type);
+      cmp = typeKey(a).localeCompare(typeKey(b));
     } else if (sortField === 'customerOrTech') {
       cmp = (a.customerOrTech || '').localeCompare(b.customerOrTech || '');
     } else if (sortField === 'staffName') {
@@ -901,27 +1346,32 @@ export default function TransactionLogPage() {
       />
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {(['ALL', 'ISSUE', 'RETURN', 'PURCHASE'] as const).map(f => (
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        {[
+          { id: 'ALL', label: 'All Transactions', count: logs.length },
+          { id: 'ISSUE', label: 'Material Issues', count: logs.filter(l => l.type === 'ISSUE' && !l.isToolIssue).length },
+          { id: 'RETURN', label: 'Material Returns', count: logs.filter(l => l.type === 'RETURN' && !l.isToolReturn).length },
+          { id: 'TOOL_ISSUE', label: 'Tool Issues', count: logs.filter(l => l.isToolIssue).length },
+          { id: 'TOOL_RETURN', label: 'Tool Returns', count: logs.filter(l => l.isToolReturn).length },
+          { id: 'PURCHASE', label: 'Purchases', count: logs.filter(l => l.type === 'PURCHASE').length },
+        ].map(f => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              filter === f
-                ? 'bg-primary text-primary-foreground border-primary'
+            key={f.id}
+            onClick={() => setFilter(f.id as any)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+              filter === f.id
+                ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs'
                 : 'bg-background text-muted-foreground border-border hover:bg-muted'
             }`}
           >
-            {f === 'ALL' ? 'All Transactions' : f.charAt(0) + f.slice(1).toLowerCase()}
-            {f !== 'ALL' && (
-              <span className="ml-1 opacity-70">({logs.filter(l => l.type === f).length})</span>
-            )}
+            {f.label}
+            <span className="ml-1 opacity-70">({f.count})</span>
           </button>
         ))}
         <input
           type="text"
-          placeholder="Search by name, product, editor..."
-          className="ml-auto h-8 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 w-60"
+          placeholder="Search by name, tool, product, editor..."
+          className="ml-auto h-8 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 w-64"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -947,7 +1397,9 @@ export default function TransactionLogPage() {
             {filtered.map(log => (
               <tr key={log.id}>
                 <td style={{ padding: '7px 8px', border: '1px solid #000000', color: '#000000' }}>
-                  <span className={`badge ${log.type}`}>{log.type}</span>
+                  <span className={`badge ${log.isToolIssue ? 'TOOL_ISSUE' : (log.isToolReturn ? 'TOOL_RETURN' : log.type)}`}>
+                    {log.isToolIssue ? 'TOOL ISSUE' : (log.isToolReturn ? 'TOOL RETURN' : log.type)}
+                  </span>
                   {log.isDirectReturn ? (
                     <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#000000' }}>
                       {log.directReturnNumber || 'CRYO(W/O)-1'}
@@ -955,7 +1407,7 @@ export default function TransactionLogPage() {
                     </div>
                   ) : log.issueNumber ? (
                     <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', marginTop: '2px', color: '#000000' }}>
-                      {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
+                      {log.type === 'RETURN' && !log.isToolReturn ? `Ref: ${log.issueNumber}` : log.issueNumber}
                     </div>
                   ) : (
                     <div style={{ fontSize: '10px', fontFamily: 'monospace', color: '#000000', marginTop: '2px' }}>
@@ -966,7 +1418,7 @@ export default function TransactionLogPage() {
                 <td style={{ padding: '7px 8px', border: '1px solid #000000', fontSize: '11px', color: '#000000', fontWeight: '600' }}>{formatDate(log.date)}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #000000', fontWeight: '800', color: '#000000' }}>{log.customerOrTech}</td>
                 <td style={{ padding: '7px 8px', border: '1px solid #000000', fontSize: '11px', color: '#000000', fontWeight: '600' }}>
-                  {log.items.map(it => `${it.name} × ${it.qty} ${it.unit || ''}`.trim()).join(', ')}
+                  {log.items.map(it => `${it.name} × ${it.qty} ${it.unit || 'pcs'}${it.conditionOut ? ` (${it.conditionOut})` : ''}`).join(', ')}
                 </td>
                 <td style={{ padding: '7px 8px', border: '1px solid #000000', color: '#000000', fontWeight: '600' }}>
                   <div>{log.staffName}</div>
@@ -1054,14 +1506,14 @@ export default function TransactionLogPage() {
               </thead>
               <tbody>
                 {filtered.map(log => {
-                  const cfg = typeConfig[log.type];
-                  const Icon = cfg.icon;
+                  const badge = getLogBadge(log);
+                  const Icon = badge.icon;
                   return (
                     <tr key={log.id} className="border-b border-border hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex flex-col items-start gap-1">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${cfg.color}`}>
-                            <Icon className="h-3 w-3" /> {cfg.label}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${badge.color}`}>
+                            <Icon className="h-3.5 w-3.5" /> {badge.label}
                           </span>
                           {log.isDirectReturn ? (
                             <div className="flex flex-col items-start">
@@ -1073,8 +1525,8 @@ export default function TransactionLogPage() {
                               </span>
                             </div>
                           ) : log.issueNumber ? (
-                            <span className="font-mono text-[11px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 whitespace-nowrap">
-                              {log.type === 'RETURN' ? `Ref: ${log.issueNumber}` : log.issueNumber}
+                            <span className={`font-mono text-[11px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${badge.refClass}`}>
+                              {log.type === 'RETURN' && !log.isToolReturn ? `Ref: ${log.issueNumber}` : log.issueNumber}
                             </span>
                           ) : (
                             <span className="font-mono text-[10px] text-muted-foreground">
@@ -1101,8 +1553,18 @@ export default function TransactionLogPage() {
                         <div className="max-w-xs">
                           {log.items.slice(0, 3).map((it, _i) => (
                             <div key={_i} className="text-xs">
-                              <span className="font-medium">{it.name}</span>
-                              <span className="text-muted-foreground ml-1">× {it.qty} {it.unit || ''}</span>
+                              <span className="font-medium text-foreground">{it.name}</span>
+                              <span className="text-muted-foreground ml-1">× {it.qty} {it.unit || 'pcs'}</span>
+                              {it.conditionOut && (
+                                <span className="ml-1 text-[10px] text-amber-700 dark:text-amber-400 font-semibold uppercase">
+                                  ({it.conditionOut})
+                                </span>
+                              )}
+                              {it.conditionIn && (
+                                <span className="ml-1 text-[10px] text-purple-700 dark:text-purple-400 font-semibold uppercase">
+                                  ({it.conditionIn})
+                                </span>
+                              )}
                             </div>
                           ))}
                           {log.items.length > 3 && (
@@ -1160,7 +1622,7 @@ export default function TransactionLogPage() {
                             <AppButton 
                               variant="ghost" 
                               size="icon" 
-                              onClick={() => handleDelete(log.id, log.type)} 
+                              onClick={() => handleDelete(log)} 
                               className="text-destructive hover:bg-destructive/10 h-8 w-8"
                               title="Delete Transaction"
                             >
@@ -1184,7 +1646,11 @@ export default function TransactionLogPage() {
           isOpen={!!selectedLog}
           onOpenChange={(open) => !open && setSelectedLog(null)}
           title={
-            selectedLog.type === 'ISSUE' 
+            selectedLog.isToolIssue
+              ? `Tool Issue Details (${selectedLog.issueNumber || selectedLog.id})`
+              : selectedLog.isToolReturn
+              ? `Tool Return Details (${selectedLog.issueNumber || selectedLog.id})`
+              : selectedLog.type === 'ISSUE' 
               ? `Material Issue Details ${selectedLog.issueNumber ? `(${selectedLog.issueNumber})` : ''}` 
               : selectedLog.type === 'RETURN' 
               ? (selectedLog.isDirectReturn
@@ -1239,6 +1705,11 @@ export default function TransactionLogPage() {
                     Site: <span className="text-foreground">{selectedLog.siteName}</span>
                   </p>
                 )}
+                {selectedLog.expectedReturnDate && (
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
+                    Expected Return: <span className="font-bold">{selectedLog.expectedReturnDate}</span>
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground font-semibold uppercase">Date & Time</p>
@@ -1277,7 +1748,15 @@ export default function TransactionLogPage() {
             <div>
               <div className="flex justify-between items-center mb-2 px-1">
                 <h4 className="font-semibold text-sm">
-                  {selectedLog.type === 'ISSUE' ? 'Issued' : selectedLog.type === 'RETURN' ? 'Returned' : 'Purchased'} Materials List ({selectedLog.items.length} {selectedLog.items.length === 1 ? 'item' : 'items'})
+                  {selectedLog.isToolIssue
+                    ? 'Issued Tools List'
+                    : selectedLog.isToolReturn
+                    ? 'Returned Tools List'
+                    : selectedLog.type === 'ISSUE'
+                    ? 'Issued Materials List'
+                    : selectedLog.type === 'RETURN'
+                    ? 'Returned Materials List'
+                    : 'Purchased Materials List'} ({selectedLog.items.length} {selectedLog.items.length === 1 ? 'item' : 'items'})
                 </h4>
               </div>
 
@@ -1286,7 +1765,10 @@ export default function TransactionLogPage() {
                   <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
                     <tr>
                       <th className="px-4 py-2.5 w-12 text-center">#</th>
-                      <th className="px-4 py-2.5">Product Name</th>
+                      <th className="px-4 py-2.5">{selectedLog.isToolIssue || selectedLog.isToolReturn ? 'Tool Description' : 'Product Name'}</th>
+                      {(selectedLog.isToolIssue || selectedLog.isToolReturn) && (
+                        <th className="px-4 py-2.5 w-32 text-center">Condition</th>
+                      )}
                       <th className="px-4 py-2.5 text-right w-36">Quantity</th>
                     </tr>
                   </thead>
@@ -1300,9 +1782,16 @@ export default function TransactionLogPage() {
                           <div className="font-medium text-foreground">{it.name}</div>
                           {it.sku && <div className="text-xs text-muted-foreground font-mono">{it.sku}</div>}
                         </td>
+                        {(selectedLog.isToolIssue || selectedLog.isToolReturn) && (
+                          <td className="px-4 py-2.5 text-center">
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground uppercase">
+                              {it.conditionOut || it.conditionIn || 'GOOD'}
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-2.5 text-right">
                           <span className="font-bold text-base text-primary">{it.qty}</span>{' '}
-                          <span className="text-xs font-semibold text-muted-foreground">{it.unit || ''}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{it.unit || 'pcs'}</span>
                         </td>
                       </tr>
                     ))}
@@ -1343,13 +1832,17 @@ export default function TransactionLogPage() {
           isOpen={!!editForm}
           onOpenChange={(open) => !open && !isSavingEdit && setEditForm(null)}
           title={`Edit ${
-            editForm.type === 'ISSUE' 
+            editForm.isToolIssue
+              ? `Tool Issue (${editForm.issueNumber || editForm.id})`
+              : editForm.isToolReturn
+              ? `Tool Return (${editForm.issueNumber || editForm.id})`
+              : editForm.type === 'ISSUE' 
               ? `Material Issue (${editForm.issueNumber || editForm.id})` 
               : editForm.type === 'RETURN' 
               ? (editForm.isDirectReturn ? `Direct Material Return (${editForm.directReturnNumber || 'CRYO(W/O)-1'})` : `Material Return ${editForm.issueNumber ? `(from ${editForm.issueNumber})` : ''}`) 
               : 'Purchase Order'
           }`}
-          description={`Reference: ${editForm.isDirectReturn ? `${editForm.directReturnNumber || 'CRYO(W/O)-1'} (Direct Return - Without Issue)` : (editForm.issueNumber || editForm.id)} • Originally created by ${editForm.staffName}`}
+          description={`Reference: ${editForm.isDirectReturn ? `${editForm.directReturnNumber || 'CRYO(W/O)-1'} (Direct Return - Without Issue)` : (editForm.issueNumber || editForm.id)} • Originally recorded by ${editForm.staffName}`}
           className="max-w-3xl max-h-[92vh] flex flex-col"
           footer={
             <div className="flex justify-end gap-2 w-full">
@@ -1382,7 +1875,9 @@ export default function TransactionLogPage() {
                   <span className="text-muted-foreground ml-1 font-medium">({user?.role || 'Staff'})</span>
                 </div>
               </div>
-              <span className="text-[11px] text-muted-foreground hidden sm:inline">Stock will update automatically</span>
+              <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                {editForm.isToolIssue || editForm.isToolReturn ? 'Tool stock will update automatically' : 'Stock will update automatically'}
+              </span>
             </div>
 
             {/* Header Form Controls */}
@@ -1456,9 +1951,24 @@ export default function TransactionLogPage() {
                 </div>
               )}
 
+              {/* Expected Return Date (for Tool Issue) */}
+              {editForm.isToolIssue && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">
+                    Expected Return Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.expectedReturnDate || ''}
+                    onChange={(e) => setEditForm(prev => prev ? ({ ...prev, expectedReturnDate: e.target.value }) : null)}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+              )}
+
               {/* Additional Technicians (for Issue) */}
               {editForm.type === 'ISSUE' && (
-                <div className="col-span-1 sm:col-span-2">
+                <div className={editForm.isToolIssue ? "col-span-1" : "col-span-1 sm:col-span-2"}>
                   <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">
                     Additional Technicians (Comma Separated)
                   </label>
@@ -1480,45 +1990,70 @@ export default function TransactionLogPage() {
             <div>
               <div className="flex justify-between items-center mb-1.5 px-1">
                 <h4 className="font-semibold text-sm">
-                  Products in Transaction ({editForm.items.length})
+                  {editForm.isToolIssue
+                    ? `Tools in Issue (${editForm.items.length})`
+                    : editForm.isToolReturn
+                    ? `Tools in Return (${editForm.items.length})`
+                    : `Products in Transaction (${editForm.items.length})`}
                 </h4>
                 <span className="text-[11px] text-muted-foreground">Adjust quantity as needed</span>
               </div>
 
-              <div className="border border-border rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
-                    <tr>
-                      <th className="px-3 py-2.5 w-10 text-center">#</th>
-                      <th className="px-3 py-2.5">Product Name</th>
-                      <th className="px-3 py-2.5 w-28 text-right">Original Qty</th>
-                      <th className="px-3 py-2.5 w-36 text-right">New Qty</th>
-                      <th className="px-3 py-2.5 w-12 text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {editForm.items.map((item, idx) => {
-                      const diff = Number(item.qty) - Number(item.originalQty);
-                      return (
-                        <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                          <td className="px-3 py-2 text-center text-xs text-muted-foreground font-mono">{idx + 1}</td>
-                          <td className="px-3 py-2">
-                            <div className="font-medium text-foreground">{item.name}</div>
-                            {item.sku && <div className="text-xs text-muted-foreground font-mono">{item.sku}</div>}
-                          </td>
-                          <td className="px-3 py-2 text-right text-xs text-muted-foreground">
-                            {item.originalQty} {item.unit || ''}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <div className="relative flex items-center">
+              {/* Tools Issue Editable Table */}
+              {editForm.isToolIssue ? (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
+                      <tr>
+                        <th className="px-3 py-2.5 w-10 text-center">#</th>
+                        <th className="px-3 py-2.5">Tool Name & Code</th>
+                        <th className="px-3 py-2.5 w-36 text-center">Condition Out</th>
+                        <th className="px-3 py-2.5 w-24 text-right">Orig Qty</th>
+                        <th className="px-3 py-2.5 w-32 text-right">New Qty</th>
+                        <th className="px-3 py-2.5 w-10 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {editForm.items.map((item, idx) => {
+                        const diff = Number(item.qty) - Number(item.originalQty);
+                        return (
+                          <tr key={idx} className="hover:bg-muted/10 transition-colors">
+                            <td className="px-3 py-2 text-center text-xs text-muted-foreground font-mono">{idx + 1}</td>
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-foreground">{item.name}</div>
+                              {item.sku && <div className="text-xs text-muted-foreground font-mono">{item.sku}</div>}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <select
+                                value={item.conditionOut || 'GOOD'}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    if (!prev) return null;
+                                    const updated = [...prev.items];
+                                    updated[idx] = { ...updated[idx], conditionOut: val };
+                                    return { ...prev, items: updated };
+                                  });
+                                }}
+                                className="h-8 rounded border border-input bg-background px-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                              >
+                                {TOOL_CONDITIONS.map(c => (
+                                  <option key={c.value} value={c.value}>{c.label}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                              {item.originalQty} pcs
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
                                 <input
                                   type="number"
-                                  step="any"
-                                  min="0.0001"
+                                  min="1"
+                                  step="1"
                                   value={item.qty === 0 ? '' : item.qty}
                                   onChange={(e) => {
-                                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                    const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
                                     setEditForm(prev => {
                                       if (!prev) return null;
                                       const updated = [...prev.items];
@@ -1526,169 +2061,376 @@ export default function TransactionLogPage() {
                                       return { ...prev, items: updated };
                                     });
                                   }}
-                                  className="w-28 h-8 rounded border border-input bg-background pl-2 pr-10 text-right text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                                  className="w-20 h-8 rounded border border-input bg-background px-2 text-right text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
-                                <span className="absolute right-2 text-xs font-semibold text-muted-foreground uppercase pointer-events-none">
-                                  {item.unit || ''}
-                                </span>
+                                <span className="text-xs text-muted-foreground">pcs</span>
                               </div>
-                            </div>
-                            {diff !== 0 && (
-                              <span className={`text-[10px] font-semibold block text-right mt-0.5 ${diff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                                {diff > 0 ? `+${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'deducts stock' : 'adds to stock'})` : `${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'restores stock' : 'deducts stock'})`}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {editForm.items.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditForm(prev => {
-                                    if (!prev) return null;
-                                    return { ...prev, items: prev.items.filter((_, i) => i !== idx) };
-                                  });
-                                }}
-                                className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
-                                title="Remove Item"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                              {diff !== 0 && (
+                                <span className={`text-[10px] font-semibold block text-right mt-0.5 ${diff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                  {diff > 0 ? `+${diff} (deducts store)` : `${diff} (returns store)`}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {editForm.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditForm(prev => {
+                                      if (!prev) return null;
+                                      return { ...prev, items: prev.items.filter((_, i) => i !== idx) };
+                                    });
+                                  }}
+                                  className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                                  title="Remove Tool"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                /* Material Products Table */
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
+                      <tr>
+                        <th className="px-3 py-2.5 w-10 text-center">#</th>
+                        <th className="px-3 py-2.5">{editForm.isToolReturn ? 'Tool Name' : 'Product Name'}</th>
+                        <th className="px-3 py-2.5 w-28 text-right">Original Qty</th>
+                        <th className="px-3 py-2.5 w-36 text-right">New Qty</th>
+                        <th className="px-3 py-2.5 w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {editForm.items.map((item, idx) => {
+                        const diff = Number(item.qty) - Number(item.originalQty);
+                        return (
+                          <tr key={idx} className="hover:bg-muted/10 transition-colors">
+                            <td className="px-3 py-2 text-center text-xs text-muted-foreground font-mono">{idx + 1}</td>
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-foreground">{item.name}</div>
+                              {item.sku && <div className="text-xs text-muted-foreground font-mono">{item.sku}</div>}
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                              {item.originalQty} {item.unit || ''}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <div className="relative flex items-center">
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    min="0.0001"
+                                    value={item.qty === 0 ? '' : item.qty}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                      setEditForm(prev => {
+                                        if (!prev) return null;
+                                        const updated = [...prev.items];
+                                        updated[idx] = { ...updated[idx], qty: isNaN(val) ? 0 : val };
+                                        return { ...prev, items: updated };
+                                      });
+                                    }}
+                                    className="w-28 h-8 rounded border border-input bg-background pl-2 pr-10 text-right text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                  <span className="absolute right-2 text-xs font-semibold text-muted-foreground uppercase pointer-events-none">
+                                    {item.unit || ''}
+                                  </span>
+                                </div>
+                              </div>
+                              {diff !== 0 && (
+                                <span className={`text-[10px] font-semibold block text-right mt-0.5 ${diff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                  {diff > 0 ? `+${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'deducts stock' : 'adds to stock'})` : `${diff} ${item.unit || ''} (${editForm.type === 'ISSUE' ? 'restores stock' : 'deducts stock'})`}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {editForm.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditForm(prev => {
+                                      if (!prev) return null;
+                                      return { ...prev, items: prev.items.filter((_, i) => i !== idx) };
+                                    });
+                                  }}
+                                  className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                                  title="Remove Item"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
-            {/* Add another product row */}
-            {(() => {
-              const selectedNewProduct = products.find(p => p.id === selectedNewProductId);
-              const newProdUnit = selectedNewProduct ? (selectedNewProduct.unitId || (selectedNewProduct as any).unit || 'pcs') : '';
-              const newProdStock = selectedNewProduct ? Number(selectedNewProduct.currentStock) || 0 : null;
+            {/* Add another item row */}
+            {editForm.isToolIssue ? (
+              /* Add Tool Row */
+              (() => {
+                const selectedNewTool = tools.find(t => t.id === selectedNewToolId);
+                const newToolAvail = selectedNewTool ? Number(selectedNewTool.availableQty) || 0 : null;
 
-              return (
-                <div className="p-4 bg-muted/20 border border-dashed border-border rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <Plus className="h-3.5 w-3.5 text-primary" /> Add Another Product to Transaction
-                    </label>
-                    {selectedNewProduct && (
-                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                        (newProdStock ?? 0) > 0 
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                          : 'bg-destructive/10 text-destructive border border-destructive/20'
-                      }`}>
-                        Current Stock: <b>{newProdStock}</b> {newProdUnit}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                    <div className="flex-1">
-                      <ProductSearchSelect
-                        products={products}
-                        value={selectedNewProductId}
-                        onChange={(id) => {
-                          setSelectedNewProductId(id);
-                          if (!newProductQty || newProductQty === '0') {
-                            setNewProductQty('1');
-                          }
-                        }}
-                        placeholder="Search product to add (e.g. 3core cable, copper pipe, plug)..."
-                      />
+                return (
+                  <div className="p-4 bg-muted/20 border border-dashed border-border rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Wrench className="h-3.5 w-3.5 text-amber-600" /> Add Another Tool to Issue
+                      </label>
+                      {selectedNewTool && (
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                          (newToolAvail ?? 0) > 0 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-destructive/10 text-destructive border border-destructive/20'
+                        }`}>
+                          Available in Store: <b>{newToolAvail}</b> pcs
+                        </span>
+                      )}
                     </div>
 
-                    {/* Quantity Input with Dynamic Unit Badge */}
-                    <div className="w-full sm:w-40">
-                      <div className="relative flex items-center">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="Qty"
-                          value={newProductQty}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                              setNewProductQty(val);
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      <div className="flex-1">
+                        <ToolSearchSelect
+                          tools={tools}
+                          value={selectedNewToolId}
+                          onChange={(id) => {
+                            setSelectedNewToolId(id);
+                            if (!newToolQty || newToolQty === '0') {
+                              setNewToolQty('1');
                             }
                           }}
-                          className="w-full h-10 rounded-md border border-input bg-background pl-3 pr-14 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                          placeholder="Search tool by name, code, brand, serial..."
                         />
-                        <span className="absolute right-2 px-1.5 py-0.5 bg-muted/80 text-muted-foreground text-xs font-bold rounded uppercase pointer-events-none">
-                          {newProdUnit || 'Unit'}
-                        </span>
                       </div>
-                    </div>
 
-                    <AppButton
-                      type="button"
-                      variant="default"
-                      className="h-10 px-4 shrink-0 font-semibold shadow-sm"
-                      disabled={!selectedNewProductId}
-                      onClick={() => {
-                        if (!selectedNewProductId) {
-                          toast.error('Please select a product first');
-                          return;
-                        }
-                        const qtyNum = parseFloat(newProductQty);
-                        if (isNaN(qtyNum) || qtyNum <= 0) {
-                          toast.error(`Please enter a valid quantity for ${newProdUnit || 'items'}`);
-                          return;
-                        }
-                        const p = products.find(prod => prod.id === selectedNewProductId);
-                        if (!p) return;
-                        const pUnit = p.unitId || (p as any).unit || 'pcs';
+                      <div className="w-full sm:w-32">
+                        <select
+                          value={newToolCondition}
+                          onChange={(e) => setNewToolCondition(e.target.value as ToolCondition)}
+                          className="w-full h-10 rounded-md border border-input bg-background px-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          {TOOL_CONDITIONS.map(c => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                        setEditForm(prev => {
-                          if (!prev) return null;
-                          const alreadyIdx = prev.items.findIndex(it => it.productId === p.id);
-                          if (alreadyIdx >= 0) {
-                            const copy = [...prev.items];
-                            copy[alreadyIdx].qty = Math.round((copy[alreadyIdx].qty + qtyNum) * 10000) / 10000;
-                            return { ...prev, items: copy };
+                      <div className="w-full sm:w-24">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Qty"
+                          value={newToolQty}
+                          onChange={(e) => setNewToolQty(e.target.value)}
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-center"
+                        />
+                      </div>
+
+                      <AppButton
+                        type="button"
+                        variant="default"
+                        className="h-10 px-4 shrink-0 font-semibold shadow-sm"
+                        disabled={!selectedNewToolId}
+                        onClick={() => {
+                          if (!selectedNewToolId) {
+                            toast.error('Please select a tool first');
+                            return;
                           }
-                          return {
-                            ...prev,
-                            items: [
-                              ...prev.items,
-                              {
-                                productId: p.id,
-                                name: p.name,
-                                sku: p.sku || '',
-                                unit: pUnit,
-                                qty: qtyNum,
-                                originalQty: 0
-                              }
-                            ]
-                          };
-                        });
+                          const qtyNum = parseInt(newToolQty, 10);
+                          if (isNaN(qtyNum) || qtyNum <= 0) {
+                            toast.error('Please enter a valid tool quantity');
+                            return;
+                          }
+                          const t = tools.find(tool => tool.id === selectedNewToolId);
+                          if (!t) return;
 
-                        toast.success(`Added ${qtyNum} ${pUnit} of "${p.name}"`);
-                        setSelectedNewProductId('');
-                        setNewProductQty('1');
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Product
-                    </AppButton>
-                  </div>
+                          setEditForm(prev => {
+                            if (!prev) return null;
+                            const alreadyIdx = prev.items.findIndex(it => it.productId === t.id);
+                            if (alreadyIdx >= 0) {
+                              const copy = [...prev.items];
+                              copy[alreadyIdx].qty += qtyNum;
+                              return { ...prev, items: copy };
+                            }
+                            return {
+                              ...prev,
+                              items: [
+                                ...prev.items,
+                                {
+                                  productId: t.id!,
+                                  name: t.name,
+                                  sku: t.toolCode || '',
+                                  unit: 'pcs',
+                                  qty: qtyNum,
+                                  originalQty: 0,
+                                  conditionOut: newToolCondition,
+                                  brand: t.brand || '',
+                                  serialNumber: t.serialNumber || ''
+                                }
+                              ]
+                            };
+                          });
 
-                  {/* Selected Product info footer */}
-                  {selectedNewProduct && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1.5 border-t border-border/40">
-                      <span>Unit of Measure: <b className="text-foreground uppercase">{newProdUnit}</b></span>
-                      <span>•</span>
-                      <span>SKU: <code className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded">{selectedNewProduct.sku || 'N/A'}</code></span>
-                      <span>•</span>
-                      <span>Available in Store: <b className="text-foreground">{newProdStock} {newProdUnit}</b></span>
+                          toast.success(`Added ${qtyNum} pcs of "${t.name}"`);
+                          setSelectedNewToolId('');
+                          setNewToolQty('1');
+                          setNewToolCondition('GOOD');
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Tool
+                      </AppButton>
                     </div>
-                  )}
-                </div>
-              );
-            })()}
+
+                    {selectedNewTool && (
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1.5 border-t border-border/40">
+                        <span>Tool Code: <code className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded">{selectedNewTool.toolCode || 'N/A'}</code></span>
+                        {selectedNewTool.brand && <span>• Brand: <b className="text-foreground">{selectedNewTool.brand}</b></span>}
+                        <span>• Available: <b className="text-foreground">{newToolAvail} pcs</b></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              /* Add Product Row */
+              (() => {
+                const selectedNewProduct = products.find(p => p.id === selectedNewProductId);
+                const newProdUnit = selectedNewProduct ? (selectedNewProduct.unitId || (selectedNewProduct as any).unit || 'pcs') : '';
+                const newProdStock = selectedNewProduct ? Number(selectedNewProduct.currentStock) || 0 : null;
+
+                return (
+                  <div className="p-4 bg-muted/20 border border-dashed border-border rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Plus className="h-3.5 w-3.5 text-primary" /> Add Another Product to Transaction
+                      </label>
+                      {selectedNewProduct && (
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                          (newProdStock ?? 0) > 0 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-destructive/10 text-destructive border border-destructive/20'
+                        }`}>
+                          Current Stock: <b>{newProdStock}</b> {newProdUnit}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      <div className="flex-1">
+                        <ProductSearchSelect
+                          products={products}
+                          value={selectedNewProductId}
+                          onChange={(id) => {
+                            setSelectedNewProductId(id);
+                            if (!newProductQty || newProductQty === '0') {
+                              setNewProductQty('1');
+                            }
+                          }}
+                          placeholder="Search product to add (e.g. 3core cable, copper pipe, plug)..."
+                        />
+                      </div>
+
+                      {/* Quantity Input with Dynamic Unit Badge */}
+                      <div className="w-full sm:w-40">
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Qty"
+                            value={newProductQty}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                setNewProductQty(val);
+                              }
+                            }}
+                            className="w-full h-10 rounded-md border border-input bg-background pl-3 pr-14 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                          />
+                          <span className="absolute right-2 px-1.5 py-0.5 bg-muted/80 text-muted-foreground text-xs font-bold rounded uppercase pointer-events-none">
+                            {newProdUnit || 'Unit'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <AppButton
+                        type="button"
+                        variant="default"
+                        className="h-10 px-4 shrink-0 font-semibold shadow-sm"
+                        disabled={!selectedNewProductId}
+                        onClick={() => {
+                          if (!selectedNewProductId) {
+                            toast.error('Please select a product first');
+                            return;
+                          }
+                          const qtyNum = parseFloat(newProductQty);
+                          if (isNaN(qtyNum) || qtyNum <= 0) {
+                            toast.error(`Please enter a valid quantity for ${newProdUnit || 'items'}`);
+                            return;
+                          }
+                          const p = products.find(prod => prod.id === selectedNewProductId);
+                          if (!p) return;
+                          const pUnit = p.unitId || (p as any).unit || 'pcs';
+
+                          setEditForm(prev => {
+                            if (!prev) return null;
+                            const alreadyIdx = prev.items.findIndex(it => it.productId === p.id);
+                            if (alreadyIdx >= 0) {
+                              const copy = [...prev.items];
+                              copy[alreadyIdx].qty = Math.round((copy[alreadyIdx].qty + qtyNum) * 10000) / 10000;
+                              return { ...prev, items: copy };
+                            }
+                            return {
+                              ...prev,
+                              items: [
+                                ...prev.items,
+                                {
+                                  productId: p.id,
+                                  name: p.name,
+                                  sku: p.sku || '',
+                                  unit: pUnit,
+                                  qty: qtyNum,
+                                  originalQty: 0
+                                }
+                              ]
+                            };
+                          });
+
+                          toast.success(`Added ${qtyNum} ${pUnit} of "${p.name}"`);
+                          setSelectedNewProductId('');
+                          setNewProductQty('1');
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Product
+                      </AppButton>
+                    </div>
+
+                    {/* Selected Product info footer */}
+                    {selectedNewProduct && (
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1.5 border-t border-border/40">
+                        <span>Unit of Measure: <b className="text-foreground uppercase">{newProdUnit}</b></span>
+                        <span>•</span>
+                        <span>SKU: <code className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded">{selectedNewProduct.sku || 'N/A'}</code></span>
+                        <span>•</span>
+                        <span>Available in Store: <b className="text-foreground">{newProdStock} {newProdUnit}</b></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            )}
 
             {/* Notes & Reason for Edit */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1713,7 +2455,7 @@ export default function TransactionLogPage() {
                   value={editForm.editReason}
                   onChange={(e) => setEditForm(prev => prev ? ({ ...prev, editReason: e.target.value }) : null)}
                   className="w-full rounded-md border border-input bg-background p-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  placeholder="e.g. Corrected issued quantity after technician returned extra cable"
+                  placeholder="e.g. Corrected tool condition or issued quantity"
                 />
               </div>
             </div>

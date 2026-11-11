@@ -6,11 +6,14 @@ export interface MaterialReceiptItem {
   qty: number;
   unit?: string;
   sku?: string;
+  condition?: string;
 }
 
 export interface MaterialReceiptData {
   id: string;
   type: 'ISSUE' | 'RETURN' | 'PURCHASE';
+  isToolIssue?: boolean;
+  isToolReturn?: boolean;
   issueNumber?: string;
   isDirectReturn?: boolean;
   directReturnNumber?: string;
@@ -73,8 +76,10 @@ export function generateMaterialReceiptHtml(
   data: MaterialReceiptData,
   companyName: string = 'CRYODEAL'
 ): string {
-  const isIssue = data.type === 'ISSUE';
-  const isReturn = data.type === 'RETURN';
+  const isToolIssue = Boolean(data.isToolIssue || (data.issueNumber && data.issueNumber.includes('TISS')));
+  const isToolReturn = Boolean(data.isToolReturn || (data.issueNumber && data.issueNumber.includes('TRET')));
+  const isIssue = data.type === 'ISSUE' && !isToolIssue;
+  const isReturn = data.type === 'RETURN' && !isToolReturn;
   const isPurchase = data.type === 'PURCHASE';
 
   // Headings
@@ -85,7 +90,21 @@ export function generateMaterialReceiptHtml(
   let refLabel = data.issueNumber ? 'REFERENCE / ISSUE NO' : 'TRANSACTION ID';
   let refValue = data.issueNumber || data.id;
 
-  if (isReturn) {
+  if (isToolIssue) {
+    title = 'TOOL & EQUIPMENT ISSUE VOUCHER';
+    subHeading = 'OFFICIAL STORE TOOL ISSUE RECORD';
+    partyLabel = 'ISSUED TO (TECHNICIAN)';
+    staffLabel = 'ISSUED BY (STORE KEEPER)';
+    refLabel = 'TOOL ISSUE SLIP NO';
+    refValue = data.issueNumber || data.id;
+  } else if (isToolReturn) {
+    title = 'TOOL & EQUIPMENT RETURN ACKNOWLEDGEMENT';
+    subHeading = 'OFFICIAL STORE TOOL RETURN RECORD';
+    partyLabel = 'RETURNED BY (TECHNICIAN)';
+    staffLabel = 'RECEIVED IN STORE BY';
+    refLabel = 'TOOL RETURN SLIP NO';
+    refValue = data.issueNumber || data.id;
+  } else if (isReturn) {
     if (data.isDirectReturn) {
       title = 'DIRECT MATERIAL RETURN RECEIPT';
       subHeading = 'OFFICIAL STORE RETURN RECORD (WITHOUT ISSUE)';
@@ -158,6 +177,12 @@ export function generateMaterialReceiptHtml(
   const rowsHtml = items.map((item, idx) => {
     const qty = Number(item.qty) || 0;
     const unit = item.unit || 'pcs';
+    const conditionHtml = item.condition ? `
+      <div style="font-size: 11px; font-weight: 800; color: #000000; margin-top: 3px;">
+        Condition: <span style="font-weight: 900; text-transform: uppercase;">${escapeHtml(item.condition)}</span>
+      </div>
+    ` : '';
+
     return `
       <tr>
         <td style="text-align: center; font-weight: 800; color: #000000; font-size: 13px; padding: 10px 6px; border-bottom: 1.5px solid #000000; border-right: 1px solid #000000;">
@@ -167,6 +192,7 @@ export function generateMaterialReceiptHtml(
           <div style="font-weight: 900; color: #000000; font-size: 14px; line-height: 1.35;">
             ${escapeHtml(item.name)}
           </div>
+          ${conditionHtml}
         </td>
         <td style="padding: 10px 12px; border-bottom: 1.5px solid #000000; border-right: 1px solid #000000; font-family: monospace; font-size: 12px; font-weight: 800; color: #000000;">
           ${escapeHtml(item.sku || '-')}
@@ -469,8 +495,8 @@ export function generateMaterialReceiptHtml(
             <thead>
               <tr>
                 <th style="width: 42px; text-align: center;">#</th>
-                <th style="text-align: left;">Product / Item Description</th>
-                <th style="width: 180px; text-align: left;">SKU / Code</th>
+                <th style="text-align: left;">${(isToolIssue || isToolReturn) ? 'Tool / Equipment Description' : 'Product / Item Description'}</th>
+                <th style="width: 180px; text-align: left;">${(isToolIssue || isToolReturn) ? 'Tool Code / Tag' : 'SKU / Code'}</th>
                 <th style="width: 140px; text-align: right;">Quantity</th>
               </tr>
             </thead>
