@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Mail, Phone, Calendar, ShieldCheck, 
-  Trash2, MessageCircle, Clock, X, CheckCircle2, User as UserIcon, AlertTriangle
+  Trash2, MessageCircle, Clock, X, CheckCircle2, User as UserIcon, AlertTriangle, Eraser
 } from 'lucide-react';
 import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { AppButton } from '../../../shared/app/AppButton';
@@ -15,6 +15,7 @@ interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onClearChat?: (userId: string) => void;
+  onDeleteChat?: (userId: string) => void;
   onFocusReply?: () => void;
 }
 
@@ -24,6 +25,7 @@ export function UserProfileModal({
   isOpen,
   onClose,
   onClearChat,
+  onDeleteChat,
   onFocusReply
 }: UserProfileModalProps) {
   const [employeeDetails, setEmployeeDetails] = useState<{
@@ -33,12 +35,12 @@ export function UserProfileModal({
     employeeCode?: string;
   } | null>(null);
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'clear' | 'delete' | null>(null);
 
   useEffect(() => {
     if (!user || !isOpen) {
       setEmployeeDetails(null);
-      setShowClearConfirm(false);
+      setConfirmAction(null);
       return;
     }
 
@@ -186,46 +188,90 @@ export function UserProfileModal({
           )}
         </div>
 
-        {/* Clear Confirmation Sub-view */}
-        {showClearConfirm ? (
+        {/* Clear / Delete Confirmation Sub-view */}
+        {confirmAction === 'clear' && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Clear all messages with {user.fullName || user.email}?</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              This will erase all {totalMessages} messages. The user will remain in your Active Chats list so you can continue the conversation.
+            </p>
+            <div className="flex gap-2 pt-1 justify-end">
+              <AppButton size="sm" variant="outline" onClick={() => setConfirmAction(null)}>
+                Cancel
+              </AppButton>
+              <AppButton
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                onClick={() => {
+                  if (onClearChat) onClearChat(user.uid);
+                  setConfirmAction(null);
+                  onClose();
+                }}
+              >
+                <Eraser className="h-3.5 w-3.5 mr-1.5" /> Clear Messages
+              </AppButton>
+            </div>
+          </div>
+        )}
+
+        {confirmAction === 'delete' && (
           <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg space-y-2">
             <div className="flex items-center gap-2 text-destructive font-bold text-xs">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>Confirm clear conversation history?</span>
+              <span>Delete conversation & remove from active chats?</span>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              This will erase all {totalMessages} messages with {user.fullName || user.email} from the Developer Console. This cannot be undone.
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              This will permanently delete the conversation and remove {user.fullName || user.email} from your Active Chats list.
             </p>
             <div className="flex gap-2 pt-1 justify-end">
-              <AppButton size="sm" variant="outline" onClick={() => setShowClearConfirm(false)}>
+              <AppButton size="sm" variant="outline" onClick={() => setConfirmAction(null)}>
                 Cancel
               </AppButton>
               <AppButton
                 size="sm"
                 variant="destructive"
                 onClick={() => {
-                  if (onClearChat) onClearChat(user.uid);
-                  setShowClearConfirm(false);
+                  if (onDeleteChat) onDeleteChat(user.uid);
+                  setConfirmAction(null);
                   onClose();
                 }}
               >
-                Yes, Clear Chat
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Yes, Delete Chat
               </AppButton>
             </div>
           </div>
-        ) : null}
+        )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          {onClearChat && !showClearConfirm && (
-            <AppButton
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive text-xs"
-              onClick={() => setShowClearConfirm(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Clear Chat
-            </AppButton>
+        <div className="flex items-center justify-between pt-2 border-t border-border gap-2">
+          {!confirmAction && (
+            <div className="flex items-center gap-1.5">
+              {onClearChat && (
+                <AppButton
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 text-xs"
+                  onClick={() => setConfirmAction('clear')}
+                  title="Clear chat messages"
+                >
+                  <Eraser className="h-3.5 w-3.5 mr-1.5" /> Clear Chat
+                </AppButton>
+              )}
+              {onDeleteChat && (
+                <AppButton
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive text-xs"
+                  onClick={() => setConfirmAction('delete')}
+                  title="Delete chat thread"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Chat
+                </AppButton>
+              )}
+            </div>
           )}
 
           <div className="flex items-center gap-2 ml-auto">

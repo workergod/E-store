@@ -165,6 +165,20 @@ export default function SupportChatPage() {
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!user) return;
+    try {
+      const updated = messages.filter(m => m.id !== msgId);
+      await updateDoc(doc(db, 'users', user.uid), {
+        supportChats: updated
+      });
+      setMessages(updated);
+      toast.success('Message deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete message');
+    }
+  };
+
   return (
     <PageContainer>
       <PageHeader 
@@ -285,19 +299,34 @@ export default function SupportChatPage() {
                           {msg.text}
                         </div>
 
-                        {/* Hover reply button */}
-                        <button
-                          onClick={() => {
-                            setReplyingTo(msg);
-                            inputRef.current?.focus();
-                          }}
-                          className={`absolute top-1/2 -translate-y-1/2 p-1 rounded-full bg-background border border-border shadow-xs opacity-0 group-hover/bubble:opacity-100 transition-opacity hover:text-primary ${
-                            isMe ? '-left-8' : '-right-8'
+                        {/* Hover action buttons */}
+                        <div
+                          className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity z-10 ${
+                            isMe ? '-left-16' : '-right-8'
                           }`}
-                          title="Reply to this message"
                         >
-                          <Reply className="h-3 w-3" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingTo(msg);
+                              inputRef.current?.focus();
+                            }}
+                            className="p-1 rounded-full bg-background border border-border shadow-xs hover:text-primary transition-colors"
+                            title="Reply to this message"
+                          >
+                            <Reply className="h-3 w-3" />
+                          </button>
+                          {isMe && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="p-1 rounded-full bg-background border border-border shadow-xs hover:text-destructive transition-colors"
+                              title="Delete this message"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

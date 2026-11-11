@@ -7,7 +7,7 @@ import { AppDialog } from '../../../shared/overlays/AppDialog';
 import { 
   Send, Bot, MessageCircle, RefreshCw, Trash2, 
   Reply, X, Info, User as UserIcon, CheckCheck, 
-  AlertTriangle, Search, CheckCircle2, ChevronRight
+  AlertTriangle, Search, CheckCircle2, ChevronRight, Eraser
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../store/authStore';
@@ -41,6 +41,9 @@ export default function DevChatPage() {
 
   // Clear chat confirm modal state
   const [clearTargetUser, setClearTargetUser] = useState<User | null>(null);
+
+  // Delete entire chat thread confirm modal state
+  const [deleteTargetUser, setDeleteTargetUser] = useState<User | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -210,12 +213,42 @@ export default function DevChatPage() {
       await updateDoc(doc(db, 'users', userId), {
         supportChats: []
       });
-      toast.success('Chat history cleared successfully');
+      toast.success('Chat messages cleared');
       setClearTargetUser(null);
-      // Reload user list or update local state
+      // Update local state
       setUsersWithChats(prev => prev.map(u => u.uid === userId ? { ...u, supportChats: [] } : u));
     } catch (err: any) {
       toast.error(err.message || 'Failed to clear chat');
+    }
+  };
+
+  const handleDeleteChat = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        supportChats: []
+      });
+      toast.success('Chat conversation deleted');
+      setDeleteTargetUser(null);
+      setUsersWithChats(prev => prev.filter(u => u.uid !== userId));
+      if (selectedUserId === userId) {
+        const remaining = usersWithChats.filter(u => u.uid !== userId);
+        setSelectedUserId(remaining.length > 0 ? remaining[0].uid : null);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete chat');
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!selectedUserId) return;
+    try {
+      const updated = messages.filter(m => m.id !== msgId);
+      await updateDoc(doc(db, 'users', selectedUserId), {
+        supportChats: updated
+      });
+      toast.success('Message deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete message');
     }
   };
 
@@ -334,14 +367,14 @@ export default function DevChatPage() {
                       )}
                     </div>
 
-                    {/* Quick clear button on hover */}
+                    {/* Quick delete conversation on hover */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setClearTargetUser(u);
+                        setDeleteTargetUser(u);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity"
-                      title="Clear chat history"
+                      title="Delete chat thread"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -410,11 +443,22 @@ export default function DevChatPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setClearTargetUser(selectedUser)}
+                    className="h-8 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 hover:border-amber-500 gap-1.5"
+                    title="Clear All Messages from Chat"
+                  >
+                    <Eraser className="h-3.5 w-3.5" />
+                    <span>Clear Chat</span>
+                  </AppButton>
+
+                  <AppButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteTargetUser(selectedUser)}
                     className="h-8 text-xs font-semibold text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive gap-1.5"
-                    title="Clear Conversation from Console"
+                    title="Delete Chat Thread & Remove from List"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span>Clear Chat</span>
+                    <span>Delete Chat</span>
                   </AppButton>
                 </div>
               </div>
@@ -481,19 +525,32 @@ export default function DevChatPage() {
                                 {msg.text}
                               </div>
 
-                              {/* Hover reply button */}
-                              <button
-                                onClick={() => {
-                                  setReplyingTo(msg);
-                                  inputRef.current?.focus();
-                                }}
-                                className={`absolute top-1/2 -translate-y-1/2 p-1 rounded-full bg-background border border-border shadow-xs opacity-0 group-hover/bubble:opacity-100 transition-opacity hover:text-primary ${
-                                  isMe ? '-left-8' : '-right-8'
+                              {/* Hover actions: Reply & Delete message */}
+                              <div
+                                className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity z-10 ${
+                                  isMe ? '-left-16' : '-right-16'
                                 }`}
-                                title="Reply to this message"
                               >
-                                <Reply className="h-3 w-3" />
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyingTo(msg);
+                                    inputRef.current?.focus();
+                                  }}
+                                  className="p-1 rounded-full bg-background border border-border shadow-xs hover:text-primary transition-colors"
+                                  title="Reply to this message"
+                                >
+                                  <Reply className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="p-1 rounded-full bg-background border border-border shadow-xs hover:text-destructive transition-colors"
+                                  title="Delete this message"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -553,6 +610,7 @@ export default function DevChatPage() {
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           onClearChat={handleClearChat}
+          onDeleteChat={handleDeleteChat}
           onFocusReply={() => inputRef.current?.focus()}
         />
       )}
@@ -567,12 +625,12 @@ export default function DevChatPage() {
           className="max-w-md"
         >
           <div className="py-3 space-y-4">
-            <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
-              <AlertTriangle className="h-6 w-6" />
+            <div className="h-12 w-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+              <Eraser className="h-6 w-6" />
             </div>
 
             <p className="text-center text-xs text-muted-foreground leading-relaxed">
-              This action will permanently erase all message records with <b>{clearTargetUser.fullName || clearTargetUser.email}</b> from the Developer Console. This cannot be undone.
+              This action will clear all message records with <b>{clearTargetUser.fullName || clearTargetUser.email}</b>. The customer will remain in your Active Chats list so you can continue the conversation.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
@@ -580,12 +638,46 @@ export default function DevChatPage() {
                 Cancel
               </AppButton>
               <AppButton 
-                variant="destructive" 
                 size="sm" 
                 onClick={() => handleClearChat(clearTargetUser.uid)}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              >
+                <Eraser className="h-4 w-4 mr-1.5" /> Clear Messages
+              </AppButton>
+            </div>
+          </div>
+        </AppDialog>
+      )}
+
+      {/* Delete Chat Confirmation Dialog */}
+      {deleteTargetUser && (
+        <AppDialog
+          isOpen={true}
+          onOpenChange={(open) => !open && setDeleteTargetUser(null)}
+          title="Delete Entire Chat Thread?"
+          description={`Are you sure you want to delete the chat conversation with ${deleteTargetUser.fullName || deleteTargetUser.email}?`}
+          className="max-w-md"
+        >
+          <div className="py-3 space-y-4">
+            <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+              <Trash2 className="h-6 w-6" />
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground leading-relaxed">
+              This action will permanently delete all messages and <b>remove {deleteTargetUser.fullName || deleteTargetUser.email} from your Active Chats list</b>.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <AppButton variant="outline" size="sm" onClick={() => setDeleteTargetUser(null)}>
+                Cancel
+              </AppButton>
+              <AppButton 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => handleDeleteChat(deleteTargetUser.uid)}
                 className="font-bold"
               >
-                <Trash2 className="h-4 w-4 mr-1.5" /> Yes, Clear Chat
+                <Trash2 className="h-4 w-4 mr-1.5" /> Yes, Delete Chat
               </AppButton>
             </div>
           </div>
