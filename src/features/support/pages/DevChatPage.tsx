@@ -85,12 +85,31 @@ export default function DevChatPage() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'users'));
+      const [snap, empSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'employees')).catch(() => ({ docs: [] } as any))
+      ]);
+
+      const empPhotoMap: Record<string, string> = {};
+      empSnap.docs?.forEach((d: any) => {
+        const emp = d.data();
+        if (emp.photoUrl) {
+          if (emp.username) empPhotoMap[emp.username.toLowerCase().replace('@', '')] = emp.photoUrl;
+          const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toLowerCase();
+          if (fullName) empPhotoMap[fullName] = emp.photoUrl;
+          if (emp.firstName) empPhotoMap[emp.firstName.toLowerCase()] = emp.photoUrl;
+        }
+      });
+
       const list: User[] = [];
       snap.forEach(d => {
         const data = d.data() as User;
         if (data.supportChats && data.supportChats.length > 0) {
-          list.push({ ...data, uid: d.id });
+          const userKey = (data.fullName || '').toLowerCase().trim();
+          const userUname = (data.username || data.email?.split('@')[0] || '').toLowerCase().replace('@', '');
+          const resolvedPhoto = data.photoURL || empPhotoMap[userKey] || empPhotoMap[userUname] || '';
+
+          list.push({ ...data, uid: d.id, photoURL: resolvedPhoto });
         }
       });
 
@@ -120,11 +139,16 @@ export default function DevChatPage() {
       if (snap.exists()) {
         const data = { ...snap.data(), uid: snap.id } as User;
         setUsersWithChats(prev => {
+          const existing = prev.find(u => u.uid === selectedUserId);
+          const resolvedData = {
+            ...data,
+            photoURL: data.photoURL || existing?.photoURL || ''
+          };
           const exists = prev.some(u => u.uid === selectedUserId);
           if (exists) {
-            return prev.map(u => u.uid === selectedUserId ? data : u);
+            return prev.map(u => u.uid === selectedUserId ? resolvedData : u);
           }
-          return [data, ...prev];
+          return [resolvedData, ...prev];
         });
         setTimeout(() => {
           if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -411,6 +435,7 @@ export default function DevChatPage() {
                         <div className={`flex gap-2.5 max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                           <UserAvatar
                             name={msg.senderName}
+                            photoUrl={!isMe && !msg.isBot ? selectedUser?.photoURL : null}
                             isDev={isMe}
                             isBot={msg.isBot}
                             size="sm"

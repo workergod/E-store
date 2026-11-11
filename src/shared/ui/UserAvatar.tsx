@@ -15,24 +15,25 @@ export interface UserAvatarProps {
   isDev?: boolean;
 }
 
-const GRADIENTS = [
-  'from-blue-600 to-indigo-600',
-  'from-emerald-600 to-teal-700',
-  'from-violet-600 to-purple-700',
-  'from-amber-500 to-orange-600',
-  'from-rose-600 to-pink-700',
-  'from-cyan-600 to-blue-700',
-  'from-teal-600 to-emerald-700',
-  'from-fuchsia-600 to-pink-600'
+const PALETTES = [
+  { bg: '#2563eb', color: '#ffffff', border: '#1d4ed8' }, // Blue
+  { bg: '#059669', color: '#ffffff', border: '#047857' }, // Emerald
+  { bg: '#7c3aed', color: '#ffffff', border: '#6d28d9' }, // Violet
+  { bg: '#d97706', color: '#ffffff', border: '#b45309' }, // Amber
+  { bg: '#e11d48', color: '#ffffff', border: '#be123c' }, // Rose
+  { bg: '#0891b2', color: '#ffffff', border: '#0e7490' }, // Cyan
+  { bg: '#4f46e5', color: '#ffffff', border: '#4338ca' }, // Indigo
+  { bg: '#0d9488', color: '#ffffff', border: '#0f766e' }, // Teal
+  { bg: '#c026d3', color: '#ffffff', border: '#a21caf' }, // Fuchsia
 ];
 
-function getGradient(seed: string): string {
+function getPalette(seed: string) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const idx = Math.abs(hash) % GRADIENTS.length;
-  return GRADIENTS[idx];
+  const idx = Math.abs(hash) % PALETTES.length;
+  return PALETTES[idx];
 }
 
 function getInitials(name?: string, email?: string): string {
@@ -81,28 +82,46 @@ export function UserAvatar({
   }[size];
 
   const seed = name || email || role || 'User';
-  const gradient = getGradient(seed);
+  const palette = getPalette(seed);
   const initials = getInitials(name, email);
 
+  const hasValidPhoto = Boolean(photoUrl && photoUrl.trim() && !imgError);
+
   return (
-    <div className={cn('relative inline-flex shrink-0 select-none items-center justify-center rounded-full shadow-2xs', sizeClasses, className)}>
+    <div className={cn('relative inline-flex shrink-0 select-none items-center justify-center rounded-full shadow-xs', sizeClasses, className)}>
       {isBot ? (
-        <div className="h-full w-full rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
+        <div 
+          className="h-full w-full rounded-full flex items-center justify-center text-white shadow-xs border border-indigo-400"
+          style={{ backgroundColor: '#6366f1' }}
+          title="Support Bot"
+        >
           <Bot className={size === 'xs' || size === 'sm' ? 'h-3.5 w-3.5' : size === 'xl' ? 'h-8 w-8' : 'h-5 w-5'} />
         </div>
       ) : isDev ? (
-        <div className="h-full w-full rounded-full bg-linear-to-br from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white font-extrabold shadow-xs">
+        <div 
+          className="h-full w-full rounded-full flex items-center justify-center text-white font-extrabold shadow-xs border border-blue-400"
+          style={{ backgroundColor: '#2563eb' }}
+          title="Developer Support"
+        >
           <Code2 className={size === 'xs' || size === 'sm' ? 'h-3.5 w-3.5' : size === 'xl' ? 'h-8 w-8' : 'h-5 w-5'} />
         </div>
-      ) : photoUrl && !imgError ? (
+      ) : hasValidPhoto ? (
         <img
-          src={photoUrl}
+          src={photoUrl!}
           alt={name || 'User'}
-          className="h-full w-full rounded-full object-cover ring-1 ring-border"
+          className="h-full w-full rounded-full object-cover border border-border"
           onError={() => setImgError(true)}
         />
       ) : (
-        <div className={cn('h-full w-full rounded-full bg-linear-to-br flex items-center justify-center font-bold text-white tracking-wider', gradient)}>
+        <div 
+          className="h-full w-full rounded-full flex items-center justify-center font-black tracking-wider shadow-xs border"
+          style={{ 
+            backgroundColor: palette.bg, 
+            color: palette.color,
+            borderColor: palette.border 
+          }}
+          title={name || 'User Profile'}
+        >
           {initials}
         </div>
       )}
