@@ -21,26 +21,26 @@ function getSmartBotResponse(text: string): string {
   const lower = text.toLowerCase();
 
   if (lower.includes('tool') || lower.includes('kaanun') || lower.includes('patunn') || lower.includes('upakaranam')) {
-    return "I've noted your question regarding Tools & Equipment! You can track active assignments in Tools > Movement Log or find them with the 'Tool Issues' filter in the Transaction Log. Developer Emil has also been alerted and will inspect your tool movement records shortly.";
+    return "I've noted your question regarding Tools & Equipment! You can track active assignments in Tools > Movement Log or find them with the 'Tool Issues' filter in the Transaction Log. Developer has also been alerted and will inspect your tool movement records shortly.";
   }
 
   if (lower.includes('print') || lower.includes('edukan') || lower.includes('slip') || lower.includes('voucher') || lower.includes('receipt')) {
-    return "Looking to print vouchers? You can now click the 'Print Slip' button directly in the Transaction Log table or on the Recent Tool Issues table. Each voucher includes the Cryodeal logo, solid black borders, and 4 signature lines. Developer Emil has also received your message!";
+    return "Looking to print vouchers? You can now click the 'Print Slip' button directly in the Transaction Log table or on the Recent Tool Issues table. Each voucher includes standard company layout, solid black borders, and 4 signature lines. Developer has also received your message!";
   }
 
   if (lower.includes('return') || lower.includes('restock')) {
-    return "For material or tool returns, you can process them via 'Return Materials' or 'Return Tools' in the sidebar or Fast Operations. Developer Emil will review this as well.";
+    return "For material or tool returns, you can process them via 'Return Materials' or 'Return Tools' in the sidebar or Fast Operations. Developer will review this as well.";
   }
 
   if (lower.includes('purchase') || lower.includes('po') || lower.includes('supplier')) {
-    return "For purchases and restock bills, check Purchases & Orders. Developer Emil has been informed of your inquiry.";
+    return "For purchases and restock bills, check Purchases & Orders. Developer has been informed of your inquiry.";
   }
 
   if (lower === 'hi' || lower === 'hello' || lower === 'hai' || lower === 'hey') {
-    return "Hello! How can we help you with the Cryodeal Store system today? Developer Emil is currently away from the console, but your message is logged and they will reply to you directly here soon.";
+    return "Hello! How can we help you today? Developer is currently away from the console, but your message is logged and they will reply to you directly here soon.";
   }
 
-  return "Hi! I'm the Cryodeal automated support assistant. Developer Emil is currently away from the console, but your message has been safely saved and flagged for priority review. They will reply to you directly here as soon as they return.";
+  return "Hi! I'm the automated support assistant. Developer is currently away from the console, but your message has been safely saved and flagged for priority review. They will reply to you directly here as soon as they return.";
 }
 
 export default function SupportChatPage() {
@@ -48,7 +48,6 @@ export default function SupportChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isDeveloperOnline, setIsDeveloperOnline] = useState(false);
-  const [developerName, setDeveloperName] = useState('Developer Emil');
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
@@ -80,13 +79,7 @@ export default function SupportChatPage() {
     );
 
     const unsubscribeDevOnline = onSnapshot(onlineQuery, (snap) => {
-      if (!snap.empty) {
-        setIsDeveloperOnline(true);
-        const devDoc = snap.docs[0].data();
-        setDeveloperName(devDoc.fullName || 'Developer Emil');
-      } else {
-        setIsDeveloperOnline(false);
-      }
+      setIsDeveloperOnline(!snap.empty);
     });
 
     return () => {
@@ -183,7 +176,7 @@ export default function SupportChatPage() {
     <PageContainer>
       <PageHeader 
         title="Live Support Chat" 
-        description="Chat directly with Developer Emil for technical support, feature requests, or troubleshooting."
+        description="Chat directly with Developer for technical support, feature requests, or troubleshooting."
         actions={
           <div className="flex items-center gap-2">
             <AppButton
@@ -204,7 +197,7 @@ export default function SupportChatPage() {
         <div className="p-3.5 px-5 border-b border-border bg-muted/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <UserAvatar
-              name={developerName}
+              name="Developer"
               isDev={true}
               size="lg"
               showOnlineStatus={true}
@@ -212,10 +205,7 @@ export default function SupportChatPage() {
             />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-foreground">{developerName}</h3>
-                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-primary text-primary-foreground">
-                  LEAD DEV
-                </span>
+                <h3 className="font-extrabold text-sm text-foreground">Developer</h3>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`h-2 w-2 rounded-full ${isDeveloperOnline ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`}></span>
@@ -227,8 +217,8 @@ export default function SupportChatPage() {
           </div>
 
           <div className="text-right hidden sm:block">
-            <span className="text-xs font-semibold text-muted-foreground">Cryodeal Engineering Support</span>
-            <p className="text-[11px] text-muted-foreground/80">Real-time developer communication channel</p>
+            <span className="text-xs font-semibold text-muted-foreground">Developer Support</span>
+            <p className="text-[11px] text-muted-foreground/80">{user?.role ? `${user.role} Workspace` : 'Supervisor Workspace'}</p>
           </div>
         </div>
 
@@ -254,7 +244,7 @@ export default function SupportChatPage() {
                     <UserAvatar
                       name={msg.senderName}
                       photoUrl={isMe ? user?.photoURL : null}
-                      isDev={msg.senderName === 'Developer' || msg.senderName === 'Developer Emil'}
+                      isDev={msg.senderName === 'Developer' || msg.senderName === 'Developer Emil' || msg.senderName === 'developeremil'}
                       isBot={msg.isBot}
                       size="sm"
                       className="mt-1"

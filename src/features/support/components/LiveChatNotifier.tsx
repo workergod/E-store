@@ -89,7 +89,7 @@ export function LiveChatNotifier() {
 
         setNotification({
           id: latest.id,
-          senderName: latest.senderName || 'Developer Emil',
+          senderName: latest.senderName || 'Developer',
           text: latest.text,
           userId: user.uid,
           userRole: 'Developer Support',
