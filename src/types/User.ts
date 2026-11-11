@@ -18,6 +18,11 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   isBot?: boolean;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string;
+  };
 }
 
 export interface User {

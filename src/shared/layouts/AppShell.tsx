@@ -12,6 +12,7 @@ import { db } from '../../firebase/firestore'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
 import { WelcomeScreen } from '../overlays/WelcomeScreen'
+import { LiveChatNotifier } from '../../features/support/components/LiveChatNotifier'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, company, logout } = useAuthStore()
@@ -360,6 +361,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         isOpen={showWelcome}
         onClose={handleCloseWelcome}
       />
+
+      <LiveChatNotifier />
     </div>
   )
 }
