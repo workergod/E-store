@@ -91,27 +91,27 @@ export function UserProfileModal({
       onOpenChange={(open) => !open && onClose()}
       title="User Profile & Account Info"
       description={`Detailed profile for ${user.fullName || user.email}`}
-      className="max-w-md"
+      className="max-w-lg w-[95vw] sm:w-full overflow-hidden flex flex-col max-h-[90vh]"
     >
-      <div className="py-2 space-y-5">
+      <div className="overflow-y-auto px-0.5 space-y-4 max-h-[calc(90vh-140px)]">
         {/* Profile Card Header */}
-        <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/30 border border-border">
+        <div className="flex flex-col items-center text-center p-3.5 rounded-xl bg-muted/30 border border-border">
           <UserAvatar
             name={user.fullName}
             email={user.email}
             photoUrl={user.photoURL}
             role={user.role}
-            size="xl"
-            className="ring-4 ring-primary/20 mb-3"
+            size="lg"
+            className="ring-3 ring-primary/20 mb-2"
           />
-          <h3 className="text-lg font-bold text-foreground">
+          <h3 className="text-base font-bold text-foreground">
             {user.fullName || user.email}
           </h3>
           <p className="text-xs font-mono text-muted-foreground mt-0.5">
             {user.username || `@${user.email?.split('@')[0]}`}
           </p>
 
-          <div className="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
+          <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
               {user.role || 'Staff Member'}
             </span>
@@ -123,65 +123,65 @@ export function UserProfileModal({
         </div>
 
         {/* Details Grid */}
-        <div className="space-y-2.5 text-xs">
-          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background">
-            <span className="text-muted-foreground flex items-center gap-2 font-medium">
+        <div className="space-y-2 text-xs">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 gap-3 min-w-0">
+            <span className="text-muted-foreground flex items-center gap-2 font-medium shrink-0">
               <Building2 className="h-4 w-4 text-primary" /> Company / Organization
             </span>
-            <span className="font-bold text-foreground text-sm">
+            <span className="font-bold text-foreground text-xs text-right truncate">
               {companyName}
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background">
-            <span className="text-muted-foreground flex items-center gap-2 font-medium">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 gap-3 min-w-0">
+            <span className="text-muted-foreground flex items-center gap-2 font-medium shrink-0">
               <Mail className="h-4 w-4 text-blue-500" /> Email Address
             </span>
-            <span className="font-semibold text-foreground font-mono">
+            <span className="font-semibold text-foreground font-mono text-xs text-right truncate">
               {user.email || 'N/A'}
             </span>
           </div>
 
           {employeeDetails?.mobile && (
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background">
-              <span className="text-muted-foreground flex items-center gap-2 font-medium">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 gap-3 min-w-0">
+              <span className="text-muted-foreground flex items-center gap-2 font-medium shrink-0">
                 <Phone className="h-4 w-4 text-emerald-500" /> Contact Phone
               </span>
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-foreground text-xs text-right truncate">
                 {employeeDetails.mobile}
               </span>
             </div>
           )}
 
           {employeeDetails?.designation && (
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background">
-              <span className="text-muted-foreground flex items-center gap-2 font-medium">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 gap-3 min-w-0">
+              <span className="text-muted-foreground flex items-center gap-2 font-medium shrink-0">
                 <ShieldCheck className="h-4 w-4 text-purple-500" /> Role & Designation
               </span>
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-foreground text-xs text-right truncate">
                 {employeeDetails.designation} {employeeDetails.department ? `(${employeeDetails.department})` : ''}
               </span>
             </div>
           )}
 
-          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background">
-            <span className="text-muted-foreground flex items-center gap-2 font-medium">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 gap-3 min-w-0">
+            <span className="text-muted-foreground flex items-center gap-2 font-medium shrink-0">
               <MessageCircle className="h-4 w-4 text-amber-500" /> Support History
             </span>
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-foreground text-xs text-right truncate">
               {totalMessages} messages in chat
             </span>
           </div>
 
           {lastMsg && (
-            <div className="p-2.5 rounded-lg border border-border bg-background">
+            <div className="p-2.5 rounded-lg border border-border bg-muted/20">
               <div className="flex items-center justify-between text-muted-foreground mb-1">
-                <span className="flex items-center gap-1.5 font-medium">
+                <span className="flex items-center gap-1.5 font-medium text-xs">
                   <Clock className="h-3.5 w-3.5" /> Latest Message
                 </span>
-                <span>{new Date(lastMsg.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                <span className="text-[11px]">{new Date(lastMsg.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
               </div>
-              <p className="text-xs text-foreground font-medium italic truncate bg-muted/30 p-1.5 rounded">
+              <p className="text-xs text-foreground font-medium italic truncate bg-background p-1.5 rounded border border-border/50">
                 "{lastMsg.text}"
               </p>
             </div>
@@ -246,29 +246,31 @@ export function UserProfileModal({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-2 border-t border-border gap-2">
+        <div className="flex flex-wrap items-center justify-between pt-3 border-t border-border gap-2">
           {!confirmAction && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {onClearChat && (
                 <AppButton
                   variant="outline"
                   size="sm"
-                  className="text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 text-xs"
+                  className="text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 text-xs h-8 px-2.5 gap-1.5"
                   onClick={() => setConfirmAction('clear')}
                   title="Clear chat messages"
                 >
-                  <Eraser className="h-3.5 w-3.5 mr-1.5" /> Clear Chat
+                  <Eraser className="h-3.5 w-3.5" />
+                  <span>Clear Chat</span>
                 </AppButton>
               )}
               {onDeleteChat && (
                 <AppButton
                   variant="outline"
                   size="sm"
-                  className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive text-xs"
+                  className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive text-xs h-8 px-2.5 gap-1.5"
                   onClick={() => setConfirmAction('delete')}
                   title="Delete chat thread"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Chat
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Chat</span>
                 </AppButton>
               )}
             </div>
@@ -282,11 +284,12 @@ export function UserProfileModal({
                   onClose();
                   onFocusReply();
                 }}
+                className="gap-1.5 text-xs font-bold h-8 px-3 shadow-xs"
               >
-                <MessageCircle className="h-4 w-4 mr-1.5" /> Send Message
+                <MessageCircle className="h-3.5 w-3.5" /> Send Message
               </AppButton>
             )}
-            <AppButton variant="outline" size="sm" onClick={onClose}>
+            <AppButton variant="outline" size="sm" onClick={onClose} className="h-8 text-xs px-3">
               Done
             </AppButton>
           </div>
