@@ -23,7 +23,7 @@ export default function ProductsPage() {
   const { user, company } = useAuthStore();
   const companyId = company?.companyId;
 
-  // Permissions: Store Keeper, SuperAdmin, Owner, and MD can delete & manage deleted products
+  // Permissions: Store Keeper, Supervisor, SuperAdmin, Owner, and MD can delete & manage deleted products
   const userRole = (user?.role || '').toLowerCase().trim();
   const isStoreKeeper = 
     user?.role === Role.STORE_KEEPER || 
@@ -31,6 +31,10 @@ export default function ProductsPage() {
     userRole === 'storekeeper' || 
     userRole === 'store_keeper' || 
     userRole.includes('store');
+  const isSupervisor = 
+    user?.role === Role.SUPERVISOR || 
+    userRole === 'supervisor' || 
+    userRole.includes('supervisor');
   const isSuperOrOwner = 
     user?.role === Role.SUPER_ADMIN || 
     user?.role === Role.OWNER || 
@@ -40,7 +44,7 @@ export default function ProductsPage() {
     userRole === 'md' ||
     user?.email === 'workshop9283@gmail.com' ||
     user?.email === 'developeremil@estorepro.internal';
-  const canManageDeleted = isSuperOrOwner || isStoreKeeper;
+  const canManageDeleted = isSuperOrOwner || isStoreKeeper || isSupervisor;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);

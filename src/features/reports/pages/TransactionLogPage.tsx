@@ -165,9 +165,10 @@ export default function TransactionLogPage() {
   const roleLower = (user?.role || '').toString().toLowerCase();
   const isSuperOrOwner = roleLower === 'superadmin' || roleLower === 'owner' || roleLower === 'md' || roleLower === 'admin';
   const isStoreKeeper = roleLower === 'store keeper' || roleLower === 'storekeeper' || roleLower === 'store_keeper';
+  const isSupervisor = roleLower === 'supervisor' || roleLower.includes('supervisor');
   
-  // Both SuperAdmin/Owner/Admin AND Store Keeper can edit & delete transactions
-  const canDelete = isSuperOrOwner || isStoreKeeper;
+  // SuperAdmin/Owner/Admin, Store Keeper, and Supervisor can edit & delete transactions
+  const canDelete = isSuperOrOwner || isStoreKeeper || isSupervisor;
   const canEdit = true;
   const companyId = company?.companyId;
   const printRef = useRef<HTMLDivElement>(null);
@@ -511,8 +512,8 @@ export default function TransactionLogPage() {
 
     setIsSavingEdit(true);
     try {
-      const editorName = user?.fullName || user?.username || (isStoreKeeper ? 'Store Keeper' : 'Staff');
-      const editorRole = (user?.role as string) || (isStoreKeeper ? 'Store Keeper' : 'Staff');
+      const editorName = user?.fullName || user?.username || (isSupervisor ? 'Supervisor' : isStoreKeeper ? 'Store Keeper' : 'Staff');
+      const editorRole = (user?.role as string) || (isSupervisor ? 'Supervisor' : isStoreKeeper ? 'Store Keeper' : 'Staff');
       const editorId = user?.uid || 'System';
       const nowTimestamp = serverTimestamp();
       const newTxDate = Timestamp.fromDate(new Date(editForm.dateStr || Date.now()));
