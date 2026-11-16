@@ -4,12 +4,13 @@ import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { AppCard } from '../../../shared/app/AppCard';
 import { AppButton } from '../../../shared/app/AppButton';
 import { productRepository } from '../../../repositories/ProductRepository';
+import { toolRepository } from '../../../repositories/ToolRepository';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X, Eye, EyeOff } from 'lucide-react';
+import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X, Eye, EyeOff, Wrench, Clock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Role } from '../../../constants/roles';
 import { UserStatus } from '../../../types/User';
@@ -29,12 +30,14 @@ export default function SupervisorCorner() {
     u?.role === Role.SUPER_ADMIN ||
     (u?.role as any) === 'SuperAdmin';
 
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>(
+  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'TOOLS' | 'EMPLOYEES' | 'SETTINGS' | 'PENDING' | 'USERS'>(
     isExecutive ? 'PENDING' : 'PRODUCTS'
   );
   
   const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
+  const [deletedTools, setDeletedTools] = useState<any[]>([]);
   const [deletedEmployees, setDeletedEmployees] = useState<any[]>([]);
+  const [allEmployeesList, setAllEmployeesList] = useState<any[]>([]);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [allUsersList, setAllUsersList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +45,66 @@ export default function SupervisorCorner() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordMeta, setPasswordMeta] = useState<{
+    hasPassword: boolean;
+    updatedAt: any;
+    updatedByName: string | null;
+    updatedByRole: string | null;
+  } | null>(null);
+
+  // Helper to resolve who deleted an item
+  const resolveDeleter = (item: any) => {
+    if (item.deletedByName) {
+      return {
+        name: item.deletedByName,
+        role: item.deletedByRole || ''
+      };
+    }
+    const uid = item.deletedBy || item.updatedBy;
+    if (!uid) return { name: 'Staff / Admin', role: '' };
+    
+    // Match in employees
+    const emp = allEmployeesList.find(e => e.id === uid || e.userId === uid || e.email === uid);
+    if (emp) {
+      return {
+        name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.name,
+        role: emp.role || emp.designation || 'Staff'
+      };
+    }
+    // Match in users
+    const u = allUsersList.find(usr => usr.uid === uid || usr.id === uid);
+    if (u) {
+      return {
+        name: u.fullName || u.username || u.email,
+        role: u.role || 'Staff'
+      };
+    }
+    if (uid === user?.uid) {
+      return {
+        name: user?.fullName || user?.username || 'You',
+        role: (user?.role as string) || 'Supervisor'
+      };
+    }
+    return { name: 'Staff / Admin', role: '' };
+  };
+
+  // Helper to format timestamps
+  const formatDeletedDate = (d: any): string => {
+    if (!d) return '-';
+    try {
+      const date = d?.toDate ? d.toDate() : new Date(d);
+      if (isNaN(date.getTime())) return '-';
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
 
   // Role Selection Modal State
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -71,19 +134,53 @@ export default function SupervisorCorner() {
     // 1. Fetch Products
     try {
       const allProducts = await productRepository.getAll(companyId);
-      setDeletedProducts(allProducts.filter(p => p.status === 'DELETED').sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+      setDeletedProducts(
+        allProducts
+          .filter(p => p.status === 'DELETED')
+          .sort((a, b) => {
+            const timeA = a.deletedAt?.seconds || a.updatedAt?.seconds || 0;
+            const timeB = b.deletedAt?.seconds || b.updatedAt?.seconds || 0;
+            return timeB - timeA;
+          })
+      );
       hasAnySuccess = true;
     } catch (e) {
       console.warn('Failed to load products in supervisor corner:', e);
     }
 
-    // 2. Fetch Employees
+    // 2. Fetch Tools
+    try {
+      const allTools = await toolRepository.getAll(companyId);
+      setDeletedTools(
+        allTools
+          .filter(t => t.status === 'DELETED')
+          .sort((a, b) => {
+            const timeA = (t_item: any) => t_item.deletedAt?.seconds || t_item.updatedAt?.seconds || 0;
+            return timeA(b) - timeA(a);
+          })
+      );
+      hasAnySuccess = true;
+    } catch (e) {
+      console.warn('Failed to load tools in supervisor corner:', e);
+    }
+
+    // 3. Fetch Employees
     try {
       const allEmployees = await employeeRepository.getAll(companyId);
+      setAllEmployeesList(allEmployees);
       setDeletedEmployees(allEmployees.filter(e => e.status === 'DELETED').sort((a, b) => (`${a.firstName} ${a.lastName}`).localeCompare(`${b.firstName} ${b.lastName}`)));
       hasAnySuccess = true;
     } catch (e) {
       console.warn('Failed to load employees in supervisor corner:', e);
+    }
+
+    // 4. Fetch Password Metadata
+    try {
+      const meta = await settingsRepository.getSupervisorPasswordMeta(companyId);
+      setPasswordMeta(meta);
+      hasAnySuccess = true;
+    } catch (e) {
+      console.warn('Failed to load supervisor password meta:', e);
     }
 
     // 3. Fetch Users (Only for executives/owners who have permission)
@@ -122,11 +219,22 @@ export default function SupervisorCorner() {
   const handleRestoreProduct = async (id: string) => {
     if (!companyId || !user?.uid) return;
     try {
-      await productRepository.update(id, { status: 'ACTIVE' }, companyId, user.uid);
+      await productRepository.restore(id, companyId, user.uid);
       toast.success('Product restored successfully');
       fetchData();
     } catch (error) {
       toast.error('Failed to restore product');
+    }
+  };
+
+  const handleRestoreTool = async (id: string) => {
+    if (!companyId || !user?.uid) return;
+    try {
+      await toolRepository.restore(id, companyId, user.uid);
+      toast.success('Tool restored successfully');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to restore tool');
     }
   };
 
@@ -143,14 +251,20 @@ export default function SupervisorCorner() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyId || !newPassword.trim()) return;
+    if (!companyId || !newPassword.trim() || !user) return;
     
     setIsSavingPassword(true);
     try {
       const hash = await settingsRepository.hashPassword(newPassword);
-      await settingsRepository.setSupervisorPasswordHash(companyId, hash);
+      await settingsRepository.setSupervisorPasswordHash(companyId, hash, {
+        userId: user.uid,
+        name: user.fullName || user.username || user.email || 'Supervisor',
+        role: (user.role as string) || 'Supervisor'
+      });
       toast.success('Supervisor password updated successfully');
       setNewPassword('');
+      const meta = await settingsRepository.getSupervisorPasswordMeta(companyId);
+      setPasswordMeta(meta);
     } catch (error) {
       toast.error('Failed to update password');
     } finally {
@@ -301,6 +415,12 @@ export default function SupervisorCorner() {
           <Package className="h-4 w-4 mr-2" /> Deleted Products ({deletedProducts.length})
         </AppButton>
         <AppButton 
+          variant={activeTab === 'TOOLS' ? 'primary' : 'outline'} 
+          onClick={() => setActiveTab('TOOLS')}
+        >
+          <Wrench className="h-4 w-4 mr-2" /> Deleted Tools ({deletedTools.length})
+        </AppButton>
+        <AppButton 
           variant={activeTab === 'EMPLOYEES' ? 'primary' : 'outline'} 
           onClick={() => setActiveTab('EMPLOYEES')}
         >
@@ -447,8 +567,7 @@ export default function SupervisorCorner() {
           </div>
         ) : activeTab === 'PRODUCTS' ? (
           <div>
-             {/* Same as before */}
-             {deletedProducts.length === 0 ? (
+            {deletedProducts.length === 0 ? (
               <div className="p-12 flex flex-col items-center text-muted-foreground">
                 <Trash2 className="h-12 w-12 mb-4 opacity-20" />
                 <p>No deleted products found.</p>
@@ -459,22 +578,118 @@ export default function SupervisorCorner() {
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
                       <th className="px-6 py-3 font-medium">Product Name</th>
-                      <th className="px-6 py-3 font-medium">SKU</th>
+                      <th className="px-6 py-3 font-medium">SKU / Code</th>
+                      <th className="px-6 py-3 font-medium">Category</th>
+                      <th className="px-6 py-3 font-medium">Deleted By</th>
+                      <th className="px-6 py-3 font-medium">Deleted Date</th>
                       <th className="px-6 py-3 font-medium text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {deletedProducts.map(product => (
-                      <tr key={product.id} className="hover:bg-muted/30">
-                        <td className="px-6 py-4 font-medium">{product.name}</td>
-                        <td className="px-6 py-4 text-muted-foreground">{product.sku}</td>
-                        <td className="px-6 py-4 text-right">
-                          <AppButton size="sm" variant="outline" onClick={() => handleRestoreProduct(product.id)}>
-                            <RefreshCw className="h-4 w-4 mr-2" /> Restore
-                          </AppButton>
-                        </td>
-                      </tr>
-                    ))}
+                    {deletedProducts.map(product => {
+                      const deleter = resolveDeleter(product);
+                      const deletedDate = formatDeletedDate(product.deletedAt || product.updatedAt);
+                      return (
+                        <tr key={product.id} className="hover:bg-muted/30">
+                          <td className="px-6 py-4 font-medium flex items-center gap-2">
+                            <Package className="h-4 w-4 text-primary shrink-0" />
+                            <span>{product.name}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted border border-border">
+                              {product.sku || product.barcode || '-'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">
+                            {product.categoryId || product.category || '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-foreground">{deleter.name}</div>
+                            {deleter.role && (
+                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium inline-block mt-0.5">
+                                {deleter.role}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                              <span>{deletedDate}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <AppButton size="sm" variant="outline" onClick={() => handleRestoreProduct(product.id)}>
+                              <RefreshCw className="h-4 w-4 mr-2" /> Restore
+                            </AppButton>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'TOOLS' ? (
+          <div>
+            {deletedTools.length === 0 ? (
+              <div className="p-12 flex flex-col items-center text-muted-foreground">
+                <Wrench className="h-12 w-12 mb-4 opacity-20" />
+                <p>No deleted tools found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 text-muted-foreground">
+                    <tr>
+                      <th className="px-6 py-3 font-medium">Tool Name</th>
+                      <th className="px-6 py-3 font-medium">Tool Code / SKU</th>
+                      <th className="px-6 py-3 font-medium">Category / Brand</th>
+                      <th className="px-6 py-3 font-medium">Deleted By</th>
+                      <th className="px-6 py-3 font-medium">Deleted Date</th>
+                      <th className="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {deletedTools.map(tool => {
+                      const deleter = resolveDeleter(tool);
+                      const deletedDate = formatDeletedDate(tool.deletedAt || tool.updatedAt);
+                      return (
+                        <tr key={tool.id} className="hover:bg-muted/30">
+                          <td className="px-6 py-4 font-medium flex items-center gap-2">
+                            <Wrench className="h-4 w-4 text-primary shrink-0" />
+                            <span>{tool.name}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted border border-border">
+                              {tool.toolCode || (tool as any).sku || '-'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">
+                            {tool.category || (tool as any).categoryId || tool.brand || '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-foreground">{deleter.name}</div>
+                            {deleter.role && (
+                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium inline-block mt-0.5">
+                                {deleter.role}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                              <span>{deletedDate}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <AppButton size="sm" variant="outline" onClick={() => handleRestoreTool(tool.id)}>
+                              <RefreshCw className="h-4 w-4 mr-2" /> Restore
+                            </AppButton>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -482,7 +697,6 @@ export default function SupervisorCorner() {
           </div>
         ) : activeTab === 'EMPLOYEES' ? (
           <div>
-            {/* Same as before */}
             {deletedEmployees.length === 0 ? (
               <div className="p-12 flex flex-col items-center text-muted-foreground">
                 <Trash2 className="h-12 w-12 mb-4 opacity-20" />
@@ -518,13 +732,60 @@ export default function SupervisorCorner() {
             )}
           </div>
         ) : (
-          <div className="p-8 max-w-md">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-primary" /> Update Supervisor Password
-            </h3>
-            <form onSubmit={handleChangePassword} className="space-y-4">
+          <div className="p-8 max-w-xl space-y-6">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-primary" /> Supervisor Password Settings
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Manage the master security password required to unlock Supervisor Corner access.
+              </p>
+            </div>
+
+            {/* Password Info & Last Changed Card */}
+            <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security Status</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${passwordMeta?.hasPassword ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'}`}>
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {passwordMeta?.hasPassword ? 'Password Active & Protected' : 'Not Configured'}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/60 text-xs">
+                <div>
+                  <span className="text-muted-foreground block mb-0.5">Last Changed Password:</span>
+                  <span className="font-medium text-foreground flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatDeletedDate(passwordMeta?.updatedAt) !== '-' 
+                      ? formatDeletedDate(passwordMeta?.updatedAt) 
+                      : (passwordMeta?.hasPassword ? 'Active (Initial Setup)' : 'Never')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-0.5">Last Changed By:</span>
+                  <span className="font-medium text-foreground">
+                    {passwordMeta?.updatedByName ? (
+                      <>
+                        {passwordMeta.updatedByName}
+                        {passwordMeta.updatedByRole && (
+                          <span className="ml-1 text-[11px] text-muted-foreground font-normal">
+                            ({passwordMeta.updatedByRole})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      passwordMeta?.hasPassword ? 'Administrator / Supervisor' : '-'
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Change Password Form */}
+            <form onSubmit={handleChangePassword} className="space-y-4 pt-2">
               <div>
-                <label className="block text-sm font-medium mb-1">New Password</label>
+                <label className="block text-sm font-medium mb-1">New Supervisor Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -549,7 +810,11 @@ export default function SupervisorCorner() {
                     )}
                   </button>
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Keep this password secure. It is required to view deleted archives and manage supervisor controls.
+                </p>
               </div>
+
               <AppButton type="submit" disabled={isSavingPassword || !newPassword.trim()}>
                 <Save className="h-4 w-4 mr-2" /> {isSavingPassword ? 'Saving...' : 'Save New Password'}
               </AppButton>

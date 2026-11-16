@@ -92,7 +92,10 @@ export default function ProductsPage() {
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
       try {
         setIsLoading(true);
-        await productRepository.delete(product.id, companyId, user.uid);
+        await productRepository.delete(product.id, companyId, user.uid, {
+          name: user.fullName || user.username || user.email || 'Staff',
+          role: (user.role as string) || 'Supervisor'
+        });
         toast.success('Product deleted successfully');
         loadProducts();
       } catch (error: any) {
@@ -107,7 +110,7 @@ export default function ProductsPage() {
     if (window.confirm(`Are you sure you want to restore "${product.name}" back to Active inventory?`)) {
       try {
         setIsLoading(true);
-        await productRepository.update(product.id, { status: 'Active' }, companyId, user.uid);
+        await productRepository.restore(product.id, companyId, user.uid);
         toast.success(`Product "${product.name}" restored successfully`);
         loadProducts();
       } catch (error: any) {

@@ -148,7 +148,12 @@ export const toolRepository = {
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'Tool', id, payload);
   },
 
-  delete: async (id: string, companyId: string, userId: string): Promise<void> => {
+  delete: async (
+    id: string, 
+    companyId: string, 
+    userId: string,
+    userMeta?: { name?: string; role?: string }
+  ): Promise<void> => {
     const existing = await toolRepository.getById(id, companyId);
     if (!existing) throw new Error('Tool not found');
 
@@ -158,12 +163,41 @@ export const toolRepository = {
 
     // Soft delete so historical issue/return records remain intact
     const docRef = doc(db, 'products', id);
-    await updateDoc(docRef, {
+    const payload: any = {
       status: 'DELETED',
       updatedAt: serverTimestamp(),
-      updatedBy: userId
-    });
+      updatedBy: userId,
+      deletedAt: serverTimestamp(),
+      deletedBy: userId,
+      deletedByName: userMeta?.name || null,
+      deletedByRole: userMeta?.role || null
+    };
+    await updateDoc(docRef, payload);
 
-    await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Tool', id, { status: 'DELETED' });
+    await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Tool', id, payload);
+  },
+
+  restore: async (id: string, companyId: string, userId: string): Promise<void> => {
+    const existing = await toolRepository.getById(id, companyId);
+    let computedStatus = 'AVAILABLE';
+    if (existing) {
+      if (existing.availableQty <= 0 && existing.issuedQty > 0) {
+        computedStatus = 'IN_USE';
+      } else if (existing.maintenanceQty > 0 && existing.availableQty <= 0) {
+        computedStatus = 'MAINTENANCE';
+      }
+    }
+    const docRef = doc(db, 'products', id);
+    const payload = {
+      status: computedStatus,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByName: null,
+      deletedByRole: null
+    };
+    await updateDoc(docRef, payload);
+    await auditLogRepository.logAction(userId, companyId, 'RESTORE', 'Tool', id, payload);
   }
 };

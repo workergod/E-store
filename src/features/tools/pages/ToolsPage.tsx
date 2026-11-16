@@ -124,7 +124,10 @@ export default function ToolsPage() {
     }
     if (window.confirm(`Are you sure you want to delete tool "${tool.name}" (${tool.toolCode})?`)) {
       try {
-        await toolRepository.delete(tool.id!, companyId, user.uid);
+        await toolRepository.delete(tool.id!, companyId, user.uid, {
+          name: user.fullName || user.username || user.email || 'Staff',
+          role: (user.role as string) || 'Supervisor'
+        });
         toast.success(`Tool "${tool.name}" removed from active inventory`);
         loadData();
       } catch (err: any) {

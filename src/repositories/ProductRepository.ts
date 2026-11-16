@@ -96,10 +96,38 @@ export const productRepository = {
     await auditLogRepository.logAction(userId, companyId, 'UPDATE', 'Product', id, payload);
   },
 
-  delete: async (id: string, companyId: string, userId: string): Promise<void> => {
+  delete: async (
+    id: string, 
+    companyId: string, 
+    userId: string, 
+    userMeta?: { name?: string; role?: string }
+  ): Promise<void> => {
     const docRef = doc(db, 'products', id);
-    const payload = { status: 'DELETED', updatedAt: serverTimestamp(), updatedBy: userId };
+    const payload: any = { 
+      status: 'DELETED', 
+      updatedAt: serverTimestamp(), 
+      updatedBy: userId,
+      deletedAt: serverTimestamp(),
+      deletedBy: userId,
+      deletedByName: userMeta?.name || null,
+      deletedByRole: userMeta?.role || null
+    };
     await updateDoc(docRef, payload);
     await auditLogRepository.logAction(userId, companyId, 'DELETE', 'Product', id, payload);
+  },
+
+  restore: async (id: string, companyId: string, userId: string): Promise<void> => {
+    const docRef = doc(db, 'products', id);
+    const payload: any = { 
+      status: 'Active', 
+      updatedAt: serverTimestamp(), 
+      updatedBy: userId,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByName: null,
+      deletedByRole: null
+    };
+    await updateDoc(docRef, payload);
+    await auditLogRepository.logAction(userId, companyId, 'RESTORE', 'Product', id, payload);
   }
 };

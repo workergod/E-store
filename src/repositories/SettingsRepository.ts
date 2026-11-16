@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firestore';
 
 const CRYODEAL_SALT = 'cryodeal_estore_secure_salt_v2026';
@@ -13,9 +13,43 @@ export const settingsRepository = {
     return null;
   },
 
-  setSupervisorPasswordHash: async (companyId: string, hash: string): Promise<void> => {
+  getSupervisorPasswordMeta: async (companyId: string): Promise<{
+    hasPassword: boolean;
+    updatedAt: any;
+    updatedByName: string | null;
+    updatedByRole: string | null;
+  }> => {
+    try {
+      const docRef = doc(db, 'companies', companyId);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        return {
+          hasPassword: !!data.supervisorPasswordHash,
+          updatedAt: data.supervisorPasswordUpdatedAt || null,
+          updatedByName: data.supervisorPasswordUpdatedByName || null,
+          updatedByRole: data.supervisorPasswordUpdatedByRole || null
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to get supervisor password meta:', e);
+    }
+    return { hasPassword: false, updatedAt: null, updatedByName: null, updatedByRole: null };
+  },
+
+  setSupervisorPasswordHash: async (
+    companyId: string, 
+    hash: string,
+    meta?: { userId?: string; name?: string; role?: string }
+  ): Promise<void> => {
     const docRef = doc(db, 'companies', companyId);
-    await setDoc(docRef, { supervisorPasswordHash: hash }, { merge: true });
+    await setDoc(docRef, { 
+      supervisorPasswordHash: hash,
+      supervisorPasswordUpdatedAt: serverTimestamp(),
+      supervisorPasswordUpdatedBy: meta?.userId || null,
+      supervisorPasswordUpdatedByName: meta?.name || null,
+      supervisorPasswordUpdatedByRole: meta?.role || null
+    }, { merge: true });
   },
 
   /**
