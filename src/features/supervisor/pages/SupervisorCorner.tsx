@@ -9,7 +9,7 @@ import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X } from 'lucide-react';
+import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Role } from '../../../constants/roles';
 import { UserStatus } from '../../../types/User';
@@ -40,6 +40,7 @@ export default function SupervisorCorner() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   // Role Selection Modal State
@@ -524,14 +525,30 @@ export default function SupervisorCorner() {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Enter new strong password"
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Enter new strong password"
+                    className="w-full h-10 pl-3 pr-10 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(prev => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded focus:outline-none cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <AppButton type="submit" disabled={isSavingPassword || !newPassword.trim()}>
                 <Save className="h-4 w-4 mr-2" /> {isSavingPassword ? 'Saving...' : 'Save New Password'}

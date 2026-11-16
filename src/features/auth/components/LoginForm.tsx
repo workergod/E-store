@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../../shared/ui/Button';
 import { Input } from '../../../shared/ui/Input';
 import { Label } from '../../../shared/ui/Label';
 import { signInWithEmail, resetPassword } from '../../../firebase/auth';
-import { UsernameIndexRepository } from '../../../repositories/UsernameIndexRepository';
 import { normalizeUsername, generateAuthEmail } from '../../../utils/username';
 
 const loginSchema = z.object({
@@ -63,6 +63,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginMethods = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema)
@@ -220,12 +221,29 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
             Forgot password?
           </Button>
         </div>
-        <Input 
-          id="password" 
-          type="password" 
-          {...loginMethods.register('password')}
-          disabled={isLoading}
-        />
+        <div className="relative">
+          <Input 
+            id="password" 
+            type={showPassword ? 'text' : 'password'} 
+            {...loginMethods.register('password')}
+            disabled={isLoading}
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(prev => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded focus:outline-none cursor-pointer"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
         {loginMethods.formState.errors.password && (
           <p className="text-sm text-red-500">{loginMethods.formState.errors.password.message}</p>
         )}

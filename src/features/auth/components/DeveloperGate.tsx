@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../../store/authStore';
-import { KeyRound, MonitorCheck, Terminal } from 'lucide-react';
+import { KeyRound, MonitorCheck, Terminal, Eye, EyeOff } from 'lucide-react';
 import { AppButton } from '../../../shared/app/AppButton';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { userRepository } from '../../../repositories/UserRepository';
@@ -13,6 +13,7 @@ interface Props {
 export function DeveloperGate({ children }: Props) {
   const { user, company } = useAuthStore();
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -77,13 +78,27 @@ export function DeveloperGate({ children }: Props) {
               <div className="relative">
                 <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-12 pl-12 pr-4 rounded-lg bg-black/40 border border-zinc-700 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
+                  className="w-full h-12 pl-12 pr-12 rounded-lg bg-black/40 border border-zinc-700 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
                   placeholder="Enter dev password..."
                   autoFocus
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors p-1 rounded focus:outline-none cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
             <AppButton type="submit" className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-500 text-white border-0" disabled={isChecking || !password.trim()}>

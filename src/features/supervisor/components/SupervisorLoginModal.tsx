@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
+import { X, Lock, KeyRound, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AppButton } from '../../../shared/app/AppButton';
@@ -13,6 +13,7 @@ interface Props {
 
 export function SupervisorLoginModal({ onClose }: Props) {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const navigate = useNavigate();
   const { company, user } = useAuthStore();
@@ -97,13 +98,27 @@ export function SupervisorLoginModal({ onClose }: Props) {
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input 
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full h-10 pl-10 pr-3 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full h-10 pl-10 pr-10 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter password..."
                   autoFocus
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded focus:outline-none cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
             <AppButton type="submit" className="w-full" disabled={isChecking || !password.trim()}>

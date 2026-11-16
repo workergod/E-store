@@ -7,7 +7,7 @@ import { userRepository } from '../../../repositories/UserRepository';
 import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { maintenanceRepository, type MaintenanceSettings } from '../../../repositories/MaintenanceRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { Terminal, Activity, KeyRound, Settings, Scale, Save, Wrench } from 'lucide-react';
+import { Terminal, Activity, KeyRound, Settings, Scale, Save, Wrench, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DeveloperConsole() {
@@ -20,6 +20,7 @@ export default function DeveloperConsole() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [newDevPassword, setNewDevPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
@@ -272,14 +273,30 @@ export default function DeveloperConsole() {
               <form onSubmit={handleChangeDevPassword} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-zinc-300">New Password</label>
-                  <input
-                    type="password"
-                    value={newDevPassword}
-                    onChange={e => setNewDevPassword(e.target.value)}
-                    placeholder="Enter new strong password"
-                    className="w-full h-10 px-3 rounded-md border border-zinc-700 bg-black/40 text-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newDevPassword}
+                      onChange={e => setNewDevPassword(e.target.value)}
+                      placeholder="Enter new strong password"
+                      className="w-full h-10 pl-3 pr-10 rounded-md border border-zinc-700 bg-black/40 text-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors p-1 rounded focus:outline-none cursor-pointer"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      title={showPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                   <button type="submit" disabled={isSavingPassword || !newDevPassword.trim()} className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium h-10 px-4 py-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-md w-full disabled:opacity-50">
                     <Save className="h-4 w-4 mr-2" /> {isSavingPassword ? 'Saving...' : 'Save New Password'}
