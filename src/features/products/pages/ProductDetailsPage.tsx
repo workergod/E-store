@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Barcode, History, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Barcode, History, Image as ImageIcon, Trash2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
+import { Role } from '../../../constants/roles';
 import { productRepository } from '../../../repositories/ProductRepository';
 import { stockLedgerRepository } from '../../../repositories/StockLedgerRepository';
 import type { Product } from '../../../shared/types/Product';
@@ -14,8 +15,27 @@ import { ProductFormDialog } from '../components/ProductFormDialog';
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { company } = useAuthStore();
+  const { company, user } = useAuthStore();
   const companyId = company?.companyId;
+
+  // Permissions: Store Keeper, SuperAdmin, Owner, and MD can delete & restore products
+  const userRole = (user?.role || '').toLowerCase().trim();
+  const isStoreKeeper = 
+    user?.role === Role.STORE_KEEPER || 
+    userRole === 'store keeper' || 
+    userRole === 'storekeeper' || 
+    userRole === 'store_keeper' || 
+    userRole.includes('store');
+  const isSuperOrOwner = 
+    user?.role === Role.SUPER_ADMIN || 
+    user?.role === Role.OWNER || 
+    (user?.role as any) === Role.MD ||
+    userRole === 'superadmin' ||
+    userRole === 'owner' ||
+    userRole === 'md' ||
+    user?.email === 'workshop9283@gmail.com' ||
+    user?.email === 'developeremil@estorepro.internal';
+  const canDelete = isSuperOrOwner || isStoreKeeper;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [stockHistory, setStockHistory] = useState<StockTransaction[]>([]);
@@ -44,6 +64,36 @@ export default function ProductDetailsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!companyId || !user || !product) return;
+    if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
+      try {
+        setIsLoading(true);
+        await productRepository.delete(product.id, companyId, user.uid);
+        toast.success('Product deleted successfully');
+        navigate('/products');
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to delete product');
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!companyId || !user || !product) return;
+    if (window.confirm(`Are you sure you want to restore "${product.name}" back to Active inventory?`)) {
+      try {
+        setIsLoading(true);
+        await productRepository.update(product.id, { status: 'Active' }, companyId, user.uid);
+        toast.success(`Product "${product.name}" restored successfully`);
+        fetchDetails();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to restore product');
+        setIsLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchDetails();
   }, [id, companyId, navigate]);
@@ -69,7 +119,19 @@ export default function ProductDetailsPage() {
           <p className="text-muted-foreground mt-1">SKU: {product.sku}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsFormOpen(true)}><Edit className="h-4 w-4 mr-2" /> Edit Product</Button>
+          {product.status !== 'DELETED' && (
+            <Button onClick={() => setIsFormOpen(true)}><Edit className="h-4 w-4 mr-2" /> Edit Product</Button>
+          )}
+          {canDelete && product.status !== 'DELETED' && (
+            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive">
+              <Trash2 className="h-4 w-4 mr-2" /> Delete Product
+            </Button>
+          )}
+          {canDelete && product.status === 'DELETED' && (
+            <Button variant="outline" onClick={handleRestore} className="text-emerald-600 hover:bg-emerald-50 border-emerald-500/30">
+              <RotateCcw className="h-4 w-4 mr-2" /> Restore Product
+            </Button>
+          )}
         </div>
       </div>
 

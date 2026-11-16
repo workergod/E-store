@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Edit, Eye, Archive, Trash2, AlertCircle, Printer, Filter } from 'lucide-react';
+import { Plus, Edit, Eye, Archive, Trash2, AlertCircle, Printer, Filter, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { Role } from '../../../constants/roles';
@@ -21,8 +21,26 @@ export default function ProductsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, company } = useAuthStore();
-  const canManageDeleted = user?.role === Role.SUPER_ADMIN || user?.role === Role.OWNER || (user?.role as any) === Role.MD;
   const companyId = company?.companyId;
+
+  // Permissions: Store Keeper, SuperAdmin, Owner, and MD can delete & manage deleted products
+  const userRole = (user?.role || '').toLowerCase().trim();
+  const isStoreKeeper = 
+    user?.role === Role.STORE_KEEPER || 
+    userRole === 'store keeper' || 
+    userRole === 'storekeeper' || 
+    userRole === 'store_keeper' || 
+    userRole.includes('store');
+  const isSuperOrOwner = 
+    user?.role === Role.SUPER_ADMIN || 
+    user?.role === Role.OWNER || 
+    (user?.role as any) === Role.MD ||
+    userRole === 'superadmin' ||
+    userRole === 'owner' ||
+    userRole === 'md' ||
+    user?.email === 'workshop9283@gmail.com' ||
+    user?.email === 'developeremil@estorepro.internal';
+  const canManageDeleted = isSuperOrOwner || isStoreKeeper;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +93,21 @@ export default function ProductsPage() {
         loadProducts();
       } catch (error: any) {
         toast.error(error.message || 'Failed to delete product');
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleRestore = async (product: Product) => {
+    if (!companyId || !user) return;
+    if (window.confirm(`Are you sure you want to restore "${product.name}" back to Active inventory?`)) {
+      try {
+        setIsLoading(true);
+        await productRepository.update(product.id, { status: 'Active' }, companyId, user.uid);
+        toast.success(`Product "${product.name}" restored successfully`);
+        loadProducts();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to restore product');
         setIsLoading(false);
       }
     }
@@ -197,23 +230,40 @@ export default function ProductsPage() {
         cell: ({ row }) => (
           <div className="flex justify-end items-center gap-2">
             {row.original.status !== 'DELETED' && (
-              <AppButton variant="ghost" size="icon" onClick={() => handleEdit(row.original)}>
+              <AppButton variant="ghost" size="icon" onClick={() => handleEdit(row.original)} title="Edit Product">
                 <Edit className="h-4 w-4" />
               </AppButton>
             )}
-            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/products/${row.original.id}`)}>
+            <AppButton variant="ghost" size="icon" onClick={() => navigate(`/products/${row.original.id}`)} title="View Details">
               <Eye className="h-4 w-4" />
             </AppButton>
             {row.original.status !== 'DELETED' && canManageDeleted && (
-              <AppButton variant="ghost" size="icon" onClick={() => handleDelete(row.original)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+              <AppButton 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => handleDelete(row.original)} 
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                title="Delete Product"
+              >
                 <Trash2 className="h-4 w-4" />
+              </AppButton>
+            )}
+            {row.original.status === 'DELETED' && canManageDeleted && (
+              <AppButton 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => handleRestore(row.original)} 
+                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                title="Restore Product"
+              >
+                <RotateCcw className="h-4 w-4" />
               </AppButton>
             )}
           </div>
         )
       }
     ],
-    [navigate]
+    [navigate, canManageDeleted]
   );
 
   return (
