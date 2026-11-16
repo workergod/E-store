@@ -21,6 +21,7 @@ import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
+import { EmployeeSearchSelect } from '../../../shared/forms/EmployeeSearchSelect';
 
 const itemSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
@@ -537,26 +538,24 @@ export default function IssueMaterialsPage() {
               <FormSection title="Transaction Details" description="Select the employee receiving the items.">
                 <div className="space-y-4">
                   <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
-                    <AppInput 
-                      list="employees-list" 
-                      placeholder="Type name to select or create..." 
-                      {...methods.register('employeeName')} 
+                    <EmployeeSearchSelect
+                      value={methods.watch('employeeName')}
+                      onChange={(empName) => methods.setValue('employeeName', empName, { shouldValidate: true })}
+                      employees={employees}
+                      error={!!methods.formState.errors.employeeName}
+                      placeholder="Type name to select or create..."
                     />
-                    <datalist id="employees-list">
-                      {employees.map(e => (
-                        <option key={e.id} value={`${e.firstName} ${e.lastName}`} />
-                      ))}
-                    </datalist>
                   </FormField>
                   
                   {techFields.map((field, index) => (
                     <div key={field.id} className="flex items-end gap-2">
                       <div className="flex-1">
                         <FormField label={`Additional Technician ${index + 1}`}>
-                          <AppInput 
-                            list="employees-list" 
-                            placeholder="Type name..." 
-                            {...methods.register(`additionalTechnicians.${index}.name` as const)} 
+                          <EmployeeSearchSelect
+                            value={methods.watch(`additionalTechnicians.${index}.name`)}
+                            onChange={(empName) => methods.setValue(`additionalTechnicians.${index}.name`, empName, { shouldValidate: true })}
+                            employees={employees}
+                            placeholder="Type name..."
                           />
                         </FormField>
                       </div>
