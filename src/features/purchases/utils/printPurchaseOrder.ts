@@ -21,21 +21,21 @@ export function generatePurchaseOrderHtml(
     const qty = Number(item.quantity) || 0;
 
     return `
-      <tr>
-        <td style="text-align: center; color: #475569; font-weight: 800; padding: 16px 12px; border-bottom: 1px solid #e2e8f0; font-size: 15px;">
+      <tr style="page-break-inside: avoid; break-inside: avoid;">
+        <td style="text-align: center; color: #475569; font-weight: 700; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 12px;">
           ${idx + 1}
         </td>
-        <td style="padding: 16px 16px; border-bottom: 1px solid #e2e8f0;">
-          <div style="font-weight: 850; color: #0f172a; font-size: 16px; line-height: 1.35;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 800; color: #0f172a; font-size: 13px; line-height: 1.25;">
             ${item.productName || 'Item'}
           </div>
-          ${item.sku ? `<div style="font-family: monospace; font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500;">SKU: ${item.sku}</div>` : ''}
+          ${item.sku ? `<div style="font-family: monospace; font-size: 10px; color: #64748b; margin-top: 1px; font-weight: 500;">SKU: ${item.sku}</div>` : ''}
         </td>
-        <td style="text-align: right; font-weight: 950; color: #0f172a; white-space: nowrap; font-size: 17px; padding: 16px 18px; border-bottom: 1px solid #e2e8f0;">
-          ${qty} <span style="font-size: 13px; color: #475569; font-weight: 700;">${item.unit || 'pcs'}</span>
+        <td style="text-align: right; font-weight: 900; color: #0f172a; white-space: nowrap; font-size: 13px; padding: 6px 12px; border-bottom: 1px solid #e2e8f0;">
+          ${qty} <span style="font-size: 11px; color: #475569; font-weight: 600;">${item.unit || 'pcs'}</span>
         </td>
-        <td style="text-align: center; padding: 16px 12px; border-bottom: 1px solid #e2e8f0;">
-          <div style="display: inline-block; width: 22px; height: 22px; border: 2.5px solid #64748b; border-radius: 5px; background: #ffffff;"></div>
+        <td style="text-align: center; padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: inline-block; width: 17px; height: 17px; border: 2px solid #64748b; border-radius: 4px; background: #ffffff;"></div>
         </td>
       </tr>
     `;
@@ -50,7 +50,7 @@ export function generatePurchaseOrderHtml(
         <style>
           @page {
             size: A4 portrait;
-            margin: 0mm;
+            margin: 8mm 10mm;
           }
           * {
             box-sizing: border-box;
@@ -63,14 +63,14 @@ export function generatePurchaseOrderHtml(
             background: #ffffff !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
-            font-size: 15px;
-            line-height: 1.5;
+            font-size: 12px;
+            line-height: 1.35;
           }
           .po-wrapper {
             width: 100%;
             max-width: 100%;
             box-sizing: border-box;
-            padding: 22mm 24mm;
+            padding: 0;
             margin: 0 auto;
             background: #ffffff;
           }
@@ -78,26 +78,28 @@ export function generatePurchaseOrderHtml(
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 22px;
-            border-bottom: 3px solid #0f172a;
+            padding-bottom: 12px;
+            border-bottom: 2.5px solid #0f172a;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .logo-box {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
           }
           .logo-img {
-            width: 72px;
-            height: 72px;
+            width: 52px;
+            height: 52px;
             object-fit: contain;
-            border-radius: 10px;
-            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
             background: #ffffff;
             display: block;
           }
           .company-title {
-            font-size: 32px;
-            font-weight: 950;
+            font-size: 24px;
+            font-weight: 900;
             letter-spacing: -0.5px;
             color: #0f172a;
             text-transform: uppercase;
@@ -105,143 +107,157 @@ export function generatePurchaseOrderHtml(
             line-height: 1;
           }
           .company-tagline {
-            font-size: 13px;
-            font-weight: 800;
+            font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             color: #475569;
-            margin-top: 5px;
+            margin-top: 3px;
           }
           .meta-box {
             text-align: right;
           }
           .doc-badge {
             display: inline-block;
-            padding: 5px 14px;
+            padding: 3px 10px;
             background: #0f172a;
             color: #ffffff;
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: 1.5px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            border-radius: 5px;
-            margin-bottom: 6px;
+            border-radius: 4px;
+            margin-bottom: 3px;
           }
           .po-number-val {
             font-family: monospace;
-            font-size: 20px;
-            font-weight: 950;
+            font-size: 16px;
+            font-weight: 900;
             color: #0f172a;
             line-height: 1.2;
           }
           .po-date-val {
-            font-size: 13px;
+            font-size: 11px;
             color: #334155;
-            margin-top: 3px;
-            font-weight: 700;
+            margin-top: 2px;
+            font-weight: 600;
           }
           .supplier-line {
-            font-size: 12px;
+            font-size: 11px;
             color: #475569;
-            margin-top: 3px;
+            margin-top: 2px;
           }
           .supplier-line strong {
             color: #0f172a;
           }
           .table-container {
-            margin: 26px 0 18px 0;
+            margin: 12px 0 10px 0;
           }
           table {
             width: 100%;
             border-collapse: collapse;
           }
+          thead tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
           thead th {
             background: #f1f5f9;
             border-top: 2px solid #0f172a;
-            border-bottom: 2.5px solid #0f172a;
-            padding: 13px 16px;
-            font-size: 13px;
+            border-bottom: 2px solid #0f172a;
+            padding: 6px 10px;
+            font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.5px;
             color: #0f172a;
+          }
+          tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .summary-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 14px 20px;
+            padding: 8px 14px;
             background: #f8fafc;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 8px;
-            margin-top: 18px;
-            font-size: 14px;
-            font-weight: 800;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 700;
             color: #334155;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .summary-val {
             font-family: monospace;
-            font-size: 16px;
-            font-weight: 950;
+            font-size: 13px;
+            font-weight: 900;
             color: #0f172a;
           }
           .note-section {
-            margin-top: 22px;
-            padding: 16px 20px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 8px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
             background: #f8fafc;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .note-label {
-            font-size: 12px;
-            font-weight: 900;
+            font-size: 10px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             color: #334155;
-            margin-bottom: 6px;
+            margin-bottom: 2px;
           }
           .note-content {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             color: #0f172a;
             margin: 0;
-            line-height: 1.6;
+            line-height: 1.4;
             white-space: pre-wrap;
           }
           .signatures-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 120px;
-            margin-top: 75px;
-            padding-top: 10px;
+            gap: 60px;
+            margin-top: 24px;
+            padding-top: 4px;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .sig-block {
             text-align: center;
           }
           .sig-line {
-            border-bottom: 2px dashed #475569;
-            height: 52px;
-            margin-bottom: 10px;
+            border-bottom: 1.5px dashed #475569;
+            height: 32px;
+            margin-bottom: 6px;
           }
           .sig-title {
-            font-size: 14px;
-            font-weight: 900;
+            font-size: 11px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             color: #0f172a;
             margin: 0;
           }
           .sig-sub {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 10px;
+            font-weight: 500;
             color: #64748b;
-            margin: 3px 0 0 0;
+            margin: 2px 0 0 0;
           }
           .sig-date-line {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 500;
             color: #94a3b8;
-            margin-top: 8px;
+            margin-top: 4px;
           }
         </style>
       </head>
