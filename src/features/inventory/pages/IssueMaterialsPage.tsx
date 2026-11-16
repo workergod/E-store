@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Plus, Trash2, Printer, CheckCircle2, PackageMinus } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { printMaterialReceipt } from '../utils/printMaterialReceipt';
 
@@ -14,7 +14,10 @@ import { issueRepository } from '../../../repositories/IssueRepository';
 import { offlineSyncService } from '../../offline/services/offlineSyncService';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
-import { AppCard } from '../../../shared/app/AppCard';
+import { PageHeader } from '../../../shared/layouts/PageHeader';
+import { AppForm } from '../../../shared/forms/FormLayout';
+import { FormSection } from '../../../shared/forms/FormSection';
+import { FormField } from '../../../shared/forms/FormField';
 import { AppInput } from '../../../shared/forms/AppInput';
 import { AppButton } from '../../../shared/app/AppButton';
 import { ProductSearchSelect } from '../../../shared/forms/ProductSearchSelect';
@@ -263,102 +266,95 @@ export default function IssueMaterialsPage() {
   };
 
   const handlePrint = () => {
-    const data = methods.getValues();
-    const enrichedItems = data.items.map(item => {
-      const prod = products.find(p => p.id === item.productId);
-      const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
-      return {
-        name: prod?.name || 'Unknown Product',
-        sku: prod?.sku || '-',
-        qty: Number(item.issuedQty),
-        unit: unit
-      };
-    });
-
-    printMaterialReceipt({
-      type: 'ISSUE',
-      issueNumber: issuedCode || issuedId || 'TEMP',
-      date: new Date(data.issueDate),
-      staffName: user?.fullName || 'Store Keeper',
-      customerOrTech: data.employeeName,
-      siteName: data.siteName,
-      additionalTechnicians: data.additionalTechnicians?.map(t => t.name),
-      notes: data.notes,
-      items: enrichedItems
-    }, company?.name || 'CRYODEAL STORE & INVENTORY');
+    const empName = methods.getValues().employeeName;
+    const selectedEmp = employees.find(e => `${e.firstName} ${e.lastName}`.toLowerCase() === empName.toLowerCase().trim());
+    printMaterialReceipt(
+      {
+        id: issuedId || '',
+        type: 'ISSUE',
+        issueNumber: issuedCode || issuedId || undefined,
+        date: methods.getValues().issueDate || new Date(),
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: `${selectedEmp?.firstName || ''} ${selectedEmp?.lastName || ''}`.trim() || empName,
+        employeeRole: selectedEmp?.role,
+        siteName: methods.getValues().siteName,
+        additionalTechnicians: methods.getValues().additionalTechnicians?.map(t => t.name),
+        notes: methods.getValues().notes,
+        items: watchedItems.map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          return {
+            name: prod?.name || 'Item',
+            sku: prod?.sku || '-',
+            qty: Number(item.issuedQty) || 0,
+            unit: prod?.unitId || (prod as any)?.unit || 'pcs'
+          };
+        })
+      },
+      company?.companyName || 'CRYODEAL'
+    );
   };
 
-  // Receipt Preview Mode
   if (issuedId) {
-    const data = methods.getValues();
-    const empName = data.employeeName;
+    const empName = methods.getValues().employeeName;
+    const selectedEmp = employees.find(e => `${e.firstName} ${e.lastName}`.toLowerCase() === empName.toLowerCase().trim());
     return (
       <PageContainer>
-        <div className="flex justify-between items-center mb-6 print:hidden">
-          <AppButton variant="ghost" onClick={() => setIssuedId(null)}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Form
-          </AppButton>
-          <div className="flex gap-2">
-            <AppButton onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" /> Print Receipt
-            </AppButton>
-            <AppButton variant="outline" onClick={() => navigate('/products')}>
-              Done
-            </AppButton>
-          </div>
-        </div>
-
-        <div className="max-w-3xl mx-auto bg-card p-10 rounded-2xl shadow-xl border border-border print:m-0 print:p-0 print:shadow-none print:border-none print:w-full">
-          <div className="text-center pb-6 border-b-2 border-border mb-6">
-            <h1 className="text-3xl font-black tracking-wider uppercase text-foreground">{company?.name || 'CRYODEAL'}</h1>
-            <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground mt-1">STORE & INVENTORY SOLUTIONS</p>
-            <div className="mt-4 inline-block bg-primary/10 text-primary border border-primary/20 px-4 py-1 rounded-full text-xs font-black tracking-widest uppercase">
-              MATERIAL ISSUE SLIP
-            </div>
+        <div className="max-w-2xl mx-auto my-8 p-8 border border-border rounded-xl shadow-lg bg-card text-card-foreground">
+          <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+             <div>
+                <h2 className="text-2xl font-bold">Material Issue Receipt</h2>
+                <p className="text-sm text-muted-foreground">CRYO DEAL Store & Inventory Management</p>
+             </div>
+             <div className="text-right">
+                <p className="text-sm font-semibold text-primary">{issuedCode || `CRYO-ISSUE-${issuedId.slice(0, 6)}`}</p>
+                <p className="text-xs text-muted-foreground">{new Date(methods.getValues().issueDate).toLocaleDateString()}</p>
+             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-xs mb-8 p-4 bg-muted/40 rounded-xl border border-border">
-            <div>
-              <p className="text-muted-foreground uppercase tracking-wider font-semibold text-[10px]">Recipient (Technician)</p>
-              <p className="font-bold text-sm text-foreground mt-0.5">{empName}</p>
-              {data.additionalTechnicians && data.additionalTechnicians.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  <span className="font-medium">With:</span> {data.additionalTechnicians.map(t => t.name).join(', ')}
+          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+             <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Issued To</p>
+                <p className="font-bold text-base">{empName}</p>
+                <p className="text-muted-foreground">{selectedEmp?.role || 'Technician'}</p>
+             </div>
+             <div className="text-right">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Issued By</p>
+                <p className="font-bold text-base">{user?.fullName || 'Store Keeper'}</p>
+                <p className="text-muted-foreground">Store Operations</p>
+             </div>
+          </div>
+
+          {methods.getValues().siteName && (
+             <div className="mb-6 p-3 bg-muted/30 rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Destination Site</p>
+                <p className="font-medium">{methods.getValues().siteName}</p>
+             </div>
+          )}
+
+          {methods.getValues().additionalTechnicians && methods.getValues().additionalTechnicians!.length > 0 && (
+             <div className="mb-6 p-3 bg-muted/30 rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Additional Technicians Assigned</p>
+                <p className="font-medium text-sm">
+                  {methods.getValues().additionalTechnicians?.map(t => t.name).join(', ')}
                 </p>
-              )}
-              {data.siteName && (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  <span className="font-semibold text-foreground">Site:</span> {data.siteName}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              <p className="text-muted-foreground uppercase tracking-wider font-semibold text-[10px]">Reference / Date</p>
-              <p className="font-mono font-bold text-sm text-primary mt-0.5">{issuedCode || `CRYO-ISSUE-${issuedId.slice(0, 6)}`}</p>
-              <p className="font-medium text-foreground mt-1">{new Date(data.issueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-            </div>
-          </div>
+             </div>
+          )}
 
-          <table className="w-full text-sm text-left border-collapse mb-8">
+          <table className="w-full text-sm mb-6 border-collapse">
             <thead>
-              <tr className="border-b-2 border-border text-xs text-muted-foreground uppercase tracking-wider bg-muted/20">
-                <th className="py-2.5 px-3">#</th>
-                <th className="py-2.5 px-3">Item Description</th>
-                <th className="py-2.5 px-3">SKU</th>
-                <th className="py-2.5 px-3 text-right">Qty Issued</th>
+              <tr className="border-b border-border text-left">
+                <th className="py-2 text-muted-foreground font-semibold">Item</th>
+                <th className="py-2 text-right text-muted-foreground font-semibold">Qty</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {data.items.map((item, index) => {
+            <tbody>
+              {watchedItems.map((item, index) => {
                 const prod = products.find(p => p.id === item.productId);
-                const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
                 return (
-                  <tr key={index}>
-                    <td className="py-3 px-3 text-muted-foreground font-mono text-xs">{index + 1}</td>
-                    <td className="py-3 px-3 font-semibold text-foreground">{prod?.name || 'Unknown Item'}</td>
-                    <td className="py-3 px-3 text-muted-foreground font-mono text-xs">{prod?.sku || '-'}</td>
-                    <td className="py-3 px-3 text-right font-bold text-foreground">
-                      {item.issuedQty} <span className="text-xs text-muted-foreground font-normal">{unit}</span>
+                  <tr key={index} className="border-b border-border/50">
+                    <td className="py-2">{prod?.name || 'Item'}</td>
+                    <td className="py-2 text-right font-medium">
+                      {item.issuedQty} {prod?.unitId || (prod as any)?.unit || 'pcs'}
                     </td>
                   </tr>
                 );
@@ -366,405 +362,236 @@ export default function IssueMaterialsPage() {
             </tbody>
           </table>
 
-          {data.notes && (
-            <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground mb-8">
-              <span className="font-semibold text-foreground">Notes:</span> {data.notes}
-            </div>
+          {methods.getValues().notes && (
+             <div className="mb-8 p-3 bg-muted/30 rounded-lg text-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Notes</p>
+                <p className="italic text-muted-foreground">{methods.getValues().notes}</p>
+             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-8 text-center text-xs mt-12 pt-6 border-t border-border">
-            <div>
-              <div className="border-b border-foreground/30 w-36 mx-auto mb-2"></div>
-              <p className="font-bold text-foreground">Issued By (Store)</p>
-              <p className="text-[11px] text-muted-foreground">{user?.fullName || 'Store Keeper'}</p>
-            </div>
-            <div>
-              <div className="border-b border-foreground/30 w-36 mx-auto mb-2"></div>
-              <p className="font-bold text-foreground">Received By</p>
-              <p className="text-[11px] text-muted-foreground">{empName}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-4 mt-12 pt-4 border-t border-border text-center text-xs">
+             <div>
+                <p className="border-b border-dashed border-foreground/40 w-32 mx-auto mb-2"></p>
+                <p className="font-medium">Store Keeper Signature</p>
+             </div>
+             <div>
+                <p className="border-b border-dashed border-foreground/40 w-32 mx-auto mb-2"></p>
+                <p className="font-medium">Technician Signature</p>
+             </div>
+          </div>
+
+          <div className="mt-8 flex justify-end gap-3 print:hidden">
+             <AppButton onClick={() => setIssuedId(null)} variant="outline">Issue More Materials</AppButton>
+             <AppButton onClick={handlePrint}><Printer className="h-4 w-4 mr-2"/> Print Receipt</AppButton>
           </div>
         </div>
       </PageContainer>
     );
   }
 
-  const totalUnits = watchedItems.reduce((acc, curr) => acc + (Number(curr.issuedQty) || 0), 0);
-  const selectedCount = watchedItems.filter(i => i.productId).length;
-
   return (
     <PageContainer>
-      {/* Top Header & Fast Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <div>
-          <AppButton 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/products')} 
-            className="-ml-3 text-muted-foreground mb-1 hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Products
-          </AppButton>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2.5">
-            <PackageMinus className="h-7 w-7 text-primary" />
-            Issue Materials
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Assign store inventory, products, and tools to technicians or project sites.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-          <AppButton
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/products')}
-            disabled={isSaving}
-            className="text-muted-foreground"
-          >
-            Cancel
-          </AppButton>
-          <AppButton
-            type="button"
-            onClick={methods.handleSubmit(onSubmit)}
-            disabled={isSaving}
-            className="bg-primary text-primary-foreground font-semibold shadow-xs"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            {isSaving ? 'Processing...' : 'Issue & Generate Receipt'}
-          </AppButton>
-        </div>
+      <div className="mb-[var(--spacing-md)]">
+        <AppButton variant="ghost" size="sm" onClick={() => navigate('/products')} className="-ml-4 text-muted-foreground">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        </AppButton>
       </div>
 
+      <PageHeader 
+        title="Issue Materials" 
+        description="Assign tools and products from inventory to a technician." 
+      />
+
       <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6 w-full">
-          
-          {/* SECTION 1: Transaction & Dispatch Details (Full Width Card) */}
-          <AppCard className="p-5 md:p-6 border border-border shadow-xs bg-card">
-            <div className="border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-semibold text-foreground">Transaction & Dispatch Details</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Select the recipient technician, issue date, and destination site</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {/* Technician / Employee */}
-              <div>
-                <label className="text-xs font-bold text-foreground uppercase tracking-wider block mb-1.5">
-                  Technician / Employee <span className="text-destructive">*</span>
-                </label>
-                <div className="relative">
-                  <AppInput 
-                    list="employees-list" 
-                    placeholder="Type name to select or create..." 
-                    {...methods.register('employeeName')} 
-                    className="h-10 text-sm font-medium"
-                  />
-                  <datalist id="employees-list">
-                    {employees.map(e => (
-                      <option key={e.id} value={`${e.firstName} ${e.lastName}`} />
-                    ))}
-                  </datalist>
+        <AppForm onSubmit={methods.handleSubmit(onSubmit)} className="max-w-6xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left Column: Items (Span 2) */}
+            <div className="lg:col-span-2 space-y-6">
+              <FormSection title="Items to Issue" description="Select products and quantities.">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
+                  <AppButton type="button" variant="secondary" size="sm" onClick={() => append({ productId: '', issuedQty: 1 })} className="shadow-sm">
+                    <Plus className="h-4 w-4 mr-2" /> Add Item
+                  </AppButton>
                 </div>
-                {methods.formState.errors.employeeName && (
-                  <p className="text-xs text-destructive mt-1 font-medium">{methods.formState.errors.employeeName.message}</p>
-                )}
-              </div>
 
-              {/* Issue Date */}
-              <div>
-                <label className="text-xs font-bold text-foreground uppercase tracking-wider block mb-1.5">
-                  Issue Date <span className="text-destructive">*</span>
-                </label>
-                <AppInput 
-                  type="date" 
-                  {...methods.register('issueDate')} 
-                  className="h-10 text-sm font-medium"
-                />
-                {methods.formState.errors.issueDate && (
-                  <p className="text-xs text-destructive mt-1 font-medium">{methods.formState.errors.issueDate.message}</p>
-                )}
-              </div>
+                <div className="overflow-visible">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
+                      <tr>
+                        <th className="px-3 py-3 font-medium text-left w-[50%]">Product</th>
+                        <th className="px-3 py-3 font-medium text-center w-[15%] whitespace-nowrap">Current Stock</th>
+                        <th className="px-3 py-3 font-medium text-center w-[18%] whitespace-nowrap">Qty to Issue</th>
+                        <th className="px-3 py-3 font-medium text-center w-[12%] whitespace-nowrap">Remaining</th>
+                        <th className="px-2 py-3 font-medium text-center w-[5%]"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map((field, index) => {
+                        const wItem = watchedItems[index];
+                        const prod = products.find(p => p.id === wItem?.productId);
+                        const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
+                        const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
+                        const qtyVal = Number(wItem?.issuedQty) || 0;
+                        const remaining = prod ? Math.round((currentStock - qtyVal) * 10000) / 10000 : null;
+                        const error = methods.formState.errors.items?.[index]?.productId;
+                        return (
+                          <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
+                            <td className="p-2 relative">
+                              <ProductSearchSelect
+                                value={wItem?.productId || ''}
+                                onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
+                                products={products}
+                                error={!!error}
+                                placeholder="Type to search product or SKU..."
+                              />
+                              {prod && (
+                                <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-2 flex-wrap px-1">
+                                  <span className="font-semibold text-foreground">{prod.name}</span>
+                                  {prod.sku && (
+                                    <span className="font-mono bg-muted px-1.5 py-0.5 rounded border border-border/50 text-[10px]">
+                                      SKU: {prod.sku}
+                                    </span>
+                                  )}
+                                  {prod.brandId && prod.brandId !== 'general' && (
+                                    <span className="text-[11px] text-muted-foreground">
+                                      Brand: <span className="font-medium text-foreground capitalize">{prod.brandId}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 font-medium text-center">
+                              {prod ? (
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold" : "text-[hsl(var(--destructive))] font-bold"}>
+                                  {currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/60">-</span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <div className="relative flex items-center w-full min-w-[100px] max-w-[140px] mx-auto">
+                                <input 
+                                  type="number" 
+                                  step="any" 
+                                  min="0.01" 
+                                  {...methods.register(`items.${index}.issuedQty` as const)} 
+                                  className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3 pr-12 shadow-xs transition-all outline-none text-center" 
+                                  placeholder="1" 
+                                />
+                                {unit && (
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded border border-border/50 select-none">
+                                    {unit}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {prod ? (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded inline-block ${remaining !== null && remaining < 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
+                                  {remaining} {unit}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/60">-</span>
+                              )}
+                            </td>
+                            <td className="p-2 text-center">
+                              {fields.length > 1 && (
+                                <AppButton 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => remove(index)} 
+                                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                                  title="Remove item"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </AppButton>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-2 text-xs text-[hsl(var(--destructive))]">
+                   {methods.formState.errors.items?.message}
+                </div>
+              </FormSection>
 
-              {/* Site / Project Location */}
-              <div>
-                <label className="text-xs font-bold text-foreground uppercase tracking-wider block mb-1.5">
-                  Site / Project Location <span className="text-muted-foreground text-[10px] font-normal lowercase">(optional)</span>
-                </label>
-                <AppInput 
-                  placeholder="e.g. Building A, Floor 2 / Unit 104" 
-                  {...methods.register('siteName')} 
-                  className="h-10 text-sm font-medium"
-                />
-              </div>
+              <FormSection title="Additional Notes" description="Any special instructions for the technician.">
+                <FormField label="Site Name (Optional)" error={methods.formState.errors.siteName?.message}>
+                  <AppInput placeholder="e.g. Building A, Floor 2" {...methods.register('siteName')} />
+                </FormField>
+                <FormField label="Notes / Remarks" error={methods.formState.errors.notes?.message}>
+                  <textarea className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent hover:bg-muted/10 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors" {...methods.register('notes')} placeholder="e.g. For AC Installation..."></textarea>
+                </FormField>
+              </FormSection>
             </div>
 
-            {/* Additional Technicians row */}
-            {techFields.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-border/60">
-                <p className="text-xs font-semibold text-muted-foreground mb-3">Additional Helping Technicians:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Right Column: Transaction Details & Submit */}
+            <div className="space-y-6">
+              <FormSection title="Transaction Details" description="Select the employee receiving the items.">
+                <div className="space-y-4">
+                  <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
+                    <AppInput 
+                      list="employees-list" 
+                      placeholder="Type name to select or create..." 
+                      {...methods.register('employeeName')} 
+                    />
+                    <datalist id="employees-list">
+                      {employees.map(e => (
+                        <option key={e.id} value={`${e.firstName} ${e.lastName}`} />
+                      ))}
+                    </datalist>
+                  </FormField>
+                  
                   {techFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
+                    <div key={field.id} className="flex items-end gap-2">
                       <div className="flex-1">
-                        <AppInput 
-                          list="employees-list" 
-                          placeholder={`Helper #${index + 1} name...`} 
-                          {...methods.register(`additionalTechnicians.${index}.name` as const)} 
-                          className="h-9 text-xs"
-                        />
+                        <FormField label={`Additional Technician ${index + 1}`}>
+                          <AppInput 
+                            list="employees-list" 
+                            placeholder="Type name..." 
+                            {...methods.register(`additionalTechnicians.${index}.name` as const)} 
+                          />
+                        </FormField>
                       </div>
-                      <AppButton 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => removeTech(index)} 
-                        className="text-muted-foreground hover:text-destructive h-9 w-9 shrink-0"
-                        title="Remove helper"
-                      >
+                      <AppButton type="button" variant="ghost" size="icon" onClick={() => removeTech(index)} className="text-[hsl(var(--destructive))] mb-2">
                         <Trash2 className="h-4 w-4" />
                       </AppButton>
                     </div>
                   ))}
+
+                  <AppButton type="button" variant="outline" size="sm" onClick={() => appendTech({ name: '' })} className="w-full text-xs border-dashed">
+                    <Plus className="h-4 w-4 mr-2" /> Add Additional Technician
+                  </AppButton>
+
+                  <FormField label="Date" required error={methods.formState.errors.issueDate?.message}>
+                    <AppInput type="date" {...methods.register('issueDate')} />
+                  </FormField>
                 </div>
-              </div>
-            )}
+              </FormSection>
 
-            <div className="mt-3">
-              <AppButton 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={() => appendTech({ name: '' })} 
-                className="text-xs border-dashed text-muted-foreground hover:text-foreground"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Additional Technician
-              </AppButton>
-            </div>
-          </AppCard>
-
-          {/* SECTION 2: Items to Issue (Full Width Table Card) */}
-          <AppCard className="p-5 md:p-6 border border-border shadow-xs bg-card">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-border">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-base font-semibold text-foreground">Items to Issue</h3>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {fields.length} {fields.length === 1 ? 'Line Item' : 'Line Items'}
-                  </span>
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6 sticky top-[90px]">
+                <h3 className="font-semibold mb-4 text-lg border-b border-border pb-2">Summary</h3>
+                <div className="flex justify-between items-center mb-6 text-sm">
+                   <span className="text-muted-foreground">Total Unique Items</span>
+                   <span className="font-bold text-lg text-foreground">{watchedItems.filter(i => i.productId).length}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Select products and quantities. Live stock balances and units update automatically.
-                </p>
-              </div>
-
-              <AppButton 
-                type="button" 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => append({ productId: '', issuedQty: 1 })} 
-                className="shadow-xs font-semibold"
-              >
-                <Plus className="h-4 w-4 mr-1.5" /> Add Item
-              </AppButton>
-            </div>
-
-            {/* FULL WIDTH TABLE WITHOUT SQUEEZING */}
-            <div className="w-full border border-border rounded-xl overflow-hidden bg-card">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="text-xs text-muted-foreground uppercase bg-muted/60 border-b border-border">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold text-left">Product / Material</th>
-                    <th className="px-4 py-3 font-semibold text-center w-32 sm:w-36 whitespace-nowrap">Current Stock</th>
-                    <th className="px-4 py-3 font-semibold text-center w-36 sm:w-44 whitespace-nowrap">Qty to Issue</th>
-                    <th className="px-4 py-3 font-semibold text-center w-32 sm:w-36 whitespace-nowrap">Remaining</th>
-                    <th className="px-3 py-3 text-center w-12"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {fields.map((field, index) => {
-                    const wItem = watchedItems[index];
-                    const prod = products.find(p => p.id === wItem?.productId);
-                    const unit = prod ? (prod.unitId || (prod as any).unit || 'pcs') : '';
-                    const currentStock = prod ? Number(prod.currentStock) || 0 : 0;
-                    const qtyVal = Number(wItem?.issuedQty) || 0;
-                    const remaining = prod ? Math.round((currentStock - qtyVal) * 10000) / 10000 : null;
-                    const error = methods.formState.errors.items?.[index]?.productId;
-                    return (
-                      <tr key={field.id} className="hover:bg-muted/15 transition-colors relative focus-within:z-40">
-                        {/* PRODUCT SELECTOR COLUMN - WIDE & UNCONSTRAINED */}
-                        <td className="p-3 relative">
-                          <ProductSearchSelect
-                            value={wItem?.productId || ''}
-                            onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
-                            products={products}
-                            error={!!error}
-                            placeholder="Type product name, SKU, or brand..."
-                          />
-                          {prod && (
-                            <div className="text-xs text-muted-foreground mt-2 flex items-center gap-2 flex-wrap px-1">
-                              <span className="font-bold text-foreground">{prod.name}</span>
-                              {prod.sku && (
-                                <span className="font-mono bg-muted px-2 py-0.5 rounded text-[11px] font-semibold text-foreground border border-border/60">
-                                  SKU: {prod.sku}
-                                </span>
-                              )}
-                              {prod.brandId && prod.brandId !== 'general' && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  Brand: <span className="font-medium text-foreground capitalize">{prod.brandId}</span>
-                                </span>
-                              )}
-                              {prod.rackLocationId && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  Rack: <span className="font-medium text-foreground">{prod.rackLocationId}</span>
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* CURRENT STOCK */}
-                        <td className="px-4 py-3 text-center">
-                          {prod ? (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${currentStock > 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
-                              {currentStock} <span className="text-[10px] font-medium ml-1 text-muted-foreground">{unit}</span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50 font-medium">-</span>
-                          )}
-                        </td>
-
-                        {/* QTY TO ISSUE */}
-                        <td className="px-4 py-3 text-center">
-                          <div className="relative flex items-center w-full max-w-[150px] mx-auto">
-                            <input 
-                              type="number" 
-                              step="any" 
-                              min="0.01" 
-                              {...methods.register(`items.${index}.issuedQty` as const)} 
-                              className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-bold text-foreground pl-3 pr-14 text-center shadow-xs transition-all outline-none" 
-                              placeholder="1" 
-                            />
-                            {unit && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
-                                {unit}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* REMAINING STOCK */}
-                        <td className="px-4 py-3 text-center">
-                          {prod ? (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${remaining !== null && remaining < 0 ? 'bg-destructive/10 text-destructive border border-destructive/20' : 'bg-muted text-foreground border border-border'}`}>
-                              {remaining} <span className="text-[10px] font-medium ml-1 text-muted-foreground">{unit}</span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50 font-medium">-</span>
-                          )}
-                        </td>
-
-                        {/* DELETE ROW */}
-                        <td className="px-3 py-3 text-center">
-                          {fields.length > 1 && (
-                            <AppButton 
-                              type="button" 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => remove(index)} 
-                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-                              title="Remove item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </AppButton>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {methods.formState.errors.items?.message && (
-              <div className="mt-2 text-xs text-destructive font-medium">
-                {methods.formState.errors.items.message}
-              </div>
-            )}
-
-            {/* Table Footer */}
-            <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2">
-              <AppButton 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={() => append({ productId: '', issuedQty: 1 })}
-                className="text-xs border-dashed"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Another Item
-              </AppButton>
-              <div className="text-xs text-muted-foreground font-medium">
-                Total Units to Issue: <strong className="text-foreground font-bold">{totalUnits}</strong>
+                <AppButton type="submit" disabled={isSaving} className="w-full h-12 text-base font-semibold shadow-premium mb-3">
+                  {isSaving ? 'Processing...' : 'Issue & Generate Receipt'}
+                </AppButton>
+                <AppButton type="button" variant="ghost" onClick={() => navigate('/products')} disabled={isSaving} className="w-full text-muted-foreground">
+                  Cancel Transaction
+                </AppButton>
               </div>
             </div>
-          </AppCard>
-
-          {/* SECTION 3: Notes & Summary Bottom Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* Notes Section (2 Cols on lg) */}
-            <AppCard className="lg:col-span-2 p-5 md:p-6 border border-border shadow-xs bg-card">
-              <h3 className="text-base font-semibold text-foreground mb-1">Additional Notes / Remarks</h3>
-              <p className="text-xs text-muted-foreground mb-3">Optional instructions or project details for the material slip</p>
-              <textarea 
-                className="flex min-h-[90px] w-full rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 p-3 text-sm shadow-xs transition-colors outline-none leading-relaxed" 
-                {...methods.register('notes')} 
-                placeholder="e.g. For AHU fan replacement, Site Contact: John Doe (+91 98765 43210)..."
-              />
-            </AppCard>
-
-            {/* Submit & Summary Card (1 Col on lg) */}
-            <AppCard className="p-5 md:p-6 border border-border shadow-xs bg-card">
-              <h3 className="font-semibold text-base mb-4 border-b border-border pb-2">Issue Summary</h3>
-              <div className="space-y-3 mb-6 text-sm">
-                <div className="flex justify-between items-center py-1 border-b border-border/50">
-                  <span className="text-muted-foreground">Unique Items</span>
-                  <span className="font-bold font-mono text-foreground">{selectedCount}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-border/50">
-                  <span className="text-muted-foreground">Total Units</span>
-                  <span className="font-bold font-mono text-primary text-base">
-                    {totalUnits}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-muted-foreground">Recipient</span>
-                  <span className="font-semibold text-foreground truncate max-w-[150px]">
-                    {methods.watch('employeeName') || 'None selected'}
-                  </span>
-                </div>
-              </div>
-
-              <AppButton 
-                type="submit" 
-                disabled={isSaving} 
-                className="w-full h-11 text-base font-bold shadow-sm mb-3 bg-primary text-primary-foreground hover:bg-primary-dark"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isSaving ? 'Processing Issue...' : 'Issue & Generate Receipt'}
-              </AppButton>
-              
-              <AppButton 
-                type="button" 
-                variant="ghost" 
-                onClick={() => navigate('/products')} 
-                disabled={isSaving} 
-                className="w-full text-muted-foreground text-xs"
-              >
-                Cancel Transaction
-              </AppButton>
-            </AppCard>
           </div>
-
-        </form>
+        </AppForm>
       </FormProvider>
     </PageContainer>
   );
