@@ -11,6 +11,7 @@ import { useAuthStore } from "../../../store/authStore";
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { productRepository } from '../../../repositories/ProductRepository';
 import { issueRepository } from '../../../repositories/IssueRepository';
+import { offlineSyncService } from '../../offline/services/offlineSyncService';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
 import { PageHeader } from '../../../shared/layouts/PageHeader';
@@ -74,12 +75,25 @@ export default function IssueMaterialsPage() {
   useEffect(() => {
     if (!companyId) return;
     const loadData = async () => {
-      const [empData, prodData] = await Promise.all([
-        employeeRepository.getAll(companyId),
-        productRepository.getAll(companyId)
-      ]);
-      setEmployees(empData.filter(e => e.status === 'ACTIVE'));
-      setProducts(prodData.filter(p => !p.status || p.status.toLowerCase() === 'active'));
+      try {
+        const [empData, prodData] = await Promise.all([
+          employeeRepository.getAll(companyId),
+          productRepository.getAll(companyId)
+        ]);
+        const activeEmps = empData.filter(e => e.status === 'ACTIVE');
+        const activeProds = prodData.filter(p => !p.status || p.status.toLowerCase() === 'active');
+        setEmployees(activeEmps);
+        setProducts(activeProds);
+        offlineSyncService.cacheCatalog(companyId, { employees: activeEmps, products: activeProds });
+      } catch (err) {
+        console.warn('Network error loading live catalog, checking offline cache...', err);
+        const cached = offlineSyncService.getCachedCatalog(companyId);
+        if (cached.products.length > 0 || cached.employees.length > 0) {
+          setEmployees(cached.employees);
+          setProducts(cached.products);
+          toast.info('⚡ Offline Mode: Loaded cached products and technicians');
+        }
+      }
     };
     loadData();
   }, [companyId]);
@@ -105,7 +119,6 @@ export default function IssueMaterialsPage() {
           companyId,
           firstName,
           lastName,
-          
           status: 'ACTIVE',
           role: 'Technician',
           mobile: 'N/A',
@@ -141,12 +154,108 @@ export default function IssueMaterialsPage() {
         items: enrichedItems,
       };
 
+      const receiptData = {
+        id: 'OFFLINE_TEMP',
+        type: 'ISSUE' as const,
+        issueNumber: 'OFFLINE',
+        date: new Date(data.issueDate),
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: data.employeeName,
+        siteName: data.siteName,
+        additionalTechnicians: data.additionalTechnicians?.map(t => t.name),
+        notes: data.notes,
+        items: enrichedItems.map(item => ({
+          name: item.productName,
+          sku: item.sku || '-',
+          qty: item.issuedQty,
+          unit: item.unit
+        }))
+      };
+
+      // 1. Proactive Offline check
+      if (!navigator.onLine) {
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'MATERIAL_ISSUE',
+          title: `Material Issue to ${data.employeeName}`,
+          companyId,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: data.employeeName,
+          siteName: data.siteName,
+          itemsSummary: enrichedItems.map(i => `${i.productName} (x${i.issuedQty} ${i.unit})`).join(', '),
+          itemCount: enrichedItems.length,
+          payload,
+          receiptData
+        });
+
+        setIssuedId(pendingSlip.id);
+        setIssuedCode(pendingSlip.slipCode);
+        toast.success(`⚡ Emergency Offline Mode: Slip ${pendingSlip.slipCode} saved! It will sync when internet returns.`, {
+          duration: 6000
+        });
+        return;
+      }
+
       const newId = await issueRepository.issueItems(payload, user.uid);
       const generatedCode = (payload as any).issueNumber || null;
       setIssuedId(newId);
       setIssuedCode(generatedCode);
       toast.success(generatedCode ? `Materials issued successfully (${generatedCode})` : "Materials issued successfully");
     } catch (error: any) {
+      // 2. Fallback to offline if submission fails due to network drop
+      if (!navigator.onLine || error.message?.includes('offline') || error.message?.includes('network') || error.code === 'unavailable') {
+        const enrichedItems = data.items.map(item => {
+          const prod = products.find(p => p.id === item.productId);
+          const unit = prod?.unitId || (prod as any)?.unit || 'pcs';
+          return {
+            productId: item.productId,
+            productName: prod?.name || 'Unknown',
+            sku: prod?.sku || '',
+            unit: unit,
+            issuedQty: Number(item.issuedQty),
+            returnedQty: 0,
+            usedQty: Number(item.issuedQty)
+          };
+        });
+
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'MATERIAL_ISSUE',
+          title: `Material Issue to ${data.employeeName}`,
+          companyId: companyId!,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: data.employeeName,
+          siteName: data.siteName,
+          itemsSummary: enrichedItems.map(i => `${i.productName} (x${i.issuedQty} ${i.unit})`).join(', '),
+          itemCount: enrichedItems.length,
+          payload: {
+            companyId,
+            employeeId: 'OFFLINE_EMP',
+            additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+            siteName: data.siteName || '',
+            issueDate: new Date(data.issueDate),
+            notes: data.notes,
+            items: enrichedItems,
+          },
+          receiptData: {
+            id: 'OFFLINE_TEMP',
+            type: 'ISSUE' as const,
+            issueNumber: 'OFFLINE',
+            date: new Date(data.issueDate),
+            staffName: user?.fullName || 'Store Keeper',
+            customerOrTech: data.employeeName,
+            siteName: data.siteName,
+            notes: data.notes,
+            items: enrichedItems.map(i => ({ name: i.productName, sku: i.sku || '-', qty: i.issuedQty, unit: i.unit }))
+          }
+        });
+
+        setIssuedId(pendingSlip.id);
+        setIssuedCode(pendingSlip.slipCode);
+        toast.warning(`Network disconnected! Saved locally as ${pendingSlip.slipCode} in Emergency Offline Mode.`);
+        return;
+      }
+
       toast.error(error.message || "Failed to issue materials");
     } finally {
       setIsSaving(false);

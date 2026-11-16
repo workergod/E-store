@@ -13,6 +13,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { KeyboardShortcutsModal } from '../overlays/KeyboardShortcutsModal'
 import { WelcomeScreen } from '../overlays/WelcomeScreen'
 import { LiveChatNotifier } from '../../features/support/components/LiveChatNotifier'
+import { OfflineSyncBanner } from '../../features/offline/components/OfflineSyncBanner'
+import { useOfflineSync } from '../../features/offline/hooks/useOfflineSync'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, company, logout } = useAuthStore()
@@ -30,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const [time, setTime] = useState(new Date())
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const { pendingCount, syncAll, isSyncing } = useOfflineSync()
   const [showWelcome, setShowWelcome] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.photoURL || null)
   const [avatarError, setAvatarError] = useState(false)
@@ -190,12 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {isOffline && (
-          <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 px-4 py-1.5 text-xs font-medium flex items-center justify-center gap-2 shrink-0 z-30">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>You're currently offline. Cryodeal will automatically sync when connection returns.</span>
-          </div>
-        )}
+        <OfflineSyncBanner />
         <header className="h-[72px] bg-background/80 backdrop-blur-md border-b border-border flex items-center px-8 justify-between sticky top-0 z-10 shrink-0 print:hidden">
           
           <div className="flex-1 flex items-center max-w-xl">
@@ -231,6 +229,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             
             <div className="flex items-center gap-2">
+              {pendingCount > 0 && (
+                <button
+                  onClick={syncAll}
+                  disabled={isSyncing}
+                  className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5 hover:bg-amber-500/20 transition-all cursor-pointer shadow-2xs"
+                  title="Click to sync offline pending slips to live database"
+                >
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span>{isSyncing ? 'Syncing...' : `${pendingCount} Offline`}</span>
+                </button>
+              )}
+
               <div className="group relative">
                 <button className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">
                   <Bell className="h-5 w-5" />

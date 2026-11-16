@@ -10,6 +10,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { toolRepository } from '../../../repositories/ToolRepository';
 import { toolTransactionRepository } from '../../../repositories/ToolTransactionRepository';
+import { offlineSyncService } from '../../offline/services/offlineSyncService';
 import type { Tool } from '../../../shared/types/Tool';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
@@ -98,14 +99,24 @@ export default function IssueToolsPage() {
       employeeRepository.getAll(companyId),
       toolRepository.getAll(companyId)
     ]).then(([empList, toolList]) => {
-      setEmployees(empList.filter(e => e.status === 'ACTIVE' || !e.status));
-      setTools(toolList.filter(t => t.status !== 'DELETED'));
+      const activeEmps = empList.filter(e => e.status === 'ACTIVE' || !e.status);
+      const activeTools = toolList.filter(t => t.status !== 'DELETED');
+      setEmployees(activeEmps);
+      setTools(activeTools);
+      offlineSyncService.cacheCatalog(companyId, { employees: activeEmps, tools: activeTools });
       if (preselectedToolId) {
         setValue('items.0.toolId', preselectedToolId);
       }
     }).catch(err => {
-      console.error('Failed to load issue page data', err);
-      toast.error('Failed to load employees or tools');
+      console.warn('Network error loading live tools, checking cache...', err);
+      const cached = offlineSyncService.getCachedCatalog(companyId);
+      if (cached.tools.length > 0 || cached.employees.length > 0) {
+        setEmployees(cached.employees);
+        setTools(cached.tools);
+        toast.info('⚡ Offline Mode: Loaded cached tools and technicians');
+      } else {
+        toast.error('Failed to load employees or tools');
+      }
     }).finally(() => {
       setIsLoading(false);
     });
@@ -127,38 +138,91 @@ export default function IssueToolsPage() {
       }
     }
 
+    const selectedEmp = employees.find(e => e.id === data.employeeId);
+    const techName = selectedEmp ? `${selectedEmp.firstName} ${selectedEmp.lastName}`.trim() : 'Technician';
+
+    const enrichedItems = data.items.map(it => {
+      const t = tools.find(tool => tool.id === it.toolId);
+      return {
+        name: t?.name || 'Tool',
+        code: t?.toolCode || '',
+        qty: it.quantity,
+        condition: it.conditionOut
+      };
+    });
+
+    const payload = {
+      companyId,
+      employeeId: data.employeeId,
+      employeeName: techName,
+      additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+      siteName: data.siteName?.trim() || '',
+      issueDate: new Date(data.issueDate),
+      expectedReturnDate: data.expectedReturnDate,
+      notes: data.notes?.trim() || '',
+      items: data.items.map(it => ({
+        toolId: it.toolId,
+        quantity: Number(it.quantity),
+        conditionOut: it.conditionOut
+      }))
+    };
+
+    const receiptData = {
+      id: 'OFFLINE_TEMP',
+      type: 'TOOL_ISSUE' as any,
+      issueNumber: 'OFF-TISS',
+      date: new Date(data.issueDate),
+      staffName: user?.fullName || 'Store Keeper',
+      customerOrTech: techName,
+      siteName: data.siteName?.trim() || '',
+      additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+      notes: data.notes?.trim() || '',
+      items: enrichedItems.map(it => ({
+        name: it.name,
+        sku: it.code || '-',
+        qty: it.qty,
+        unit: 'nos'
+      }))
+    };
+
+    // 1. Proactive Offline Mode check
+    if (!navigator.onLine) {
+      const pendingSlip = offlineSyncService.savePendingSlip({
+        type: 'TOOL_ISSUE',
+        title: `Tool Issue to ${techName}`,
+        companyId,
+        userId: user.uid,
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: techName,
+        siteName: data.siteName?.trim() || '',
+        itemsSummary: enrichedItems.map(i => `${i.name} (x${i.qty})`).join(', '),
+        itemCount: enrichedItems.length,
+        payload,
+        receiptData
+      });
+
+      setIssuedSlip({
+        id: pendingSlip.id,
+        issueNumber: pendingSlip.slipCode,
+        techName,
+        siteName: data.siteName || '',
+        date: data.issueDate,
+        notes: data.notes?.trim() || '',
+        additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+        items: enrichedItems
+      });
+
+      toast.success(`⚡ Emergency Offline Mode: Tool slip ${pendingSlip.slipCode} saved! It will sync when internet returns.`, {
+        duration: 6000
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      const selectedEmp = employees.find(e => e.id === data.employeeId);
-      const techName = selectedEmp ? `${selectedEmp.firstName} ${selectedEmp.lastName}`.trim() : 'Technician';
-
-      const res = await toolTransactionRepository.issueTools({
-        companyId,
-        employeeId: data.employeeId,
-        employeeName: techName,
-        additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
-        siteName: data.siteName?.trim() || '',
-        issueDate: new Date(data.issueDate),
-        expectedReturnDate: data.expectedReturnDate,
-        notes: data.notes?.trim() || '',
-        items: data.items.map(it => ({
-          toolId: it.toolId,
-          quantity: Number(it.quantity),
-          conditionOut: it.conditionOut
-        }))
-      }, user.uid);
+      const res = await toolTransactionRepository.issueTools(payload, user.uid);
 
       toast.success(`Tools issued successfully! Slip #${res.issueNumber}`);
-
-      const enrichedItems = data.items.map(it => {
-        const t = tools.find(tool => tool.id === it.toolId);
-        return {
-          name: t?.name || 'Tool',
-          code: t?.toolCode || '',
-          qty: it.quantity,
-          condition: it.conditionOut
-        };
-      });
 
       setIssuedSlip({
         id: res.id,
@@ -172,6 +236,36 @@ export default function IssueToolsPage() {
       });
 
     } catch (err: any) {
+      // 2. Fallback to offline on connection drop
+      if (!navigator.onLine || err.message?.includes('offline') || err.message?.includes('network') || err.code === 'unavailable') {
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'TOOL_ISSUE',
+          title: `Tool Issue to ${techName}`,
+          companyId,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: techName,
+          siteName: data.siteName?.trim() || '',
+          itemsSummary: enrichedItems.map(i => `${i.name} (x${i.qty})`).join(', '),
+          itemCount: enrichedItems.length,
+          payload,
+          receiptData
+        });
+
+        setIssuedSlip({
+          id: pendingSlip.id,
+          issueNumber: pendingSlip.slipCode,
+          techName,
+          siteName: data.siteName || '',
+          date: data.issueDate,
+          notes: data.notes?.trim() || '',
+          additionalTechnicians: data.additionalTechnicians?.map(t => t.name) || [],
+          items: enrichedItems
+        });
+
+        toast.warning(`Network disconnected! Saved locally as ${pendingSlip.slipCode} in Emergency Offline Mode.`);
+        return;
+      }
       toast.error(err.message || 'Failed to issue tools');
     } finally {
       setIsSubmitting(false);

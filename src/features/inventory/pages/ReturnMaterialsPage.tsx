@@ -10,6 +10,7 @@ import { useAuthStore } from "../../../store/authStore";
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { issueRepository } from '../../../repositories/IssueRepository';
 import { productRepository } from '../../../repositories/ProductRepository';
+import { offlineSyncService } from '../../offline/services/offlineSyncService';
 import type { IssueTransaction } from '../../../shared/types/IssueTransaction';
 import type { Product } from '../../../shared/types/Product';
 
@@ -95,11 +96,26 @@ export default function ReturnMaterialsPage() {
       issueRepository.getAll(companyId),
       productRepository.getAll(companyId)
     ]).then(([empData, issueData, prodData]) => {
-      setEmployees(empData.sort((a, b) => (a.firstName || '').localeCompare(b.firstName || '')));
-      setAllActiveIssues(issueData.filter(i => i.status !== 'CLOSED'));
-      setProducts(prodData.sort((a, b) => a.name.localeCompare(b.name)));
+      const sortedEmps = empData.sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+      const activeIssues = issueData.filter(i => i.status !== 'CLOSED');
+      const sortedProds = prodData.sort((a, b) => a.name.localeCompare(b.name));
+      setEmployees(sortedEmps);
+      setAllActiveIssues(activeIssues);
+      setProducts(sortedProds);
+      offlineSyncService.cacheCatalog(companyId, {
+        employees: sortedEmps,
+        products: sortedProds,
+        activeIssues
+      });
     }).catch(err => {
-      console.error("Failed to load return page data", err);
+      console.warn("Failed to load live return page data, checking cache...", err);
+      const cached = offlineSyncService.getCachedCatalog(companyId);
+      if (cached.products.length > 0 || cached.employees.length > 0) {
+        setEmployees(cached.employees);
+        setProducts(cached.products);
+        setAllActiveIssues(cached.activeIssues || []);
+        toast.info("⚡ Offline Mode: Loaded cached inventory records for returns");
+      }
     });
   }, [companyId]);
 
@@ -164,40 +180,97 @@ export default function ReturnMaterialsPage() {
       return;
     }
 
+    const currentIssue = issues.find(i => i.id === selectedIssueId);
+    const tech = employees.find(e => e.id === selectedEmpId);
+    const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : 'Technician';
+
+    const returnedItems = data.returns
+      .filter((r: any) => Number(r.returnQty) > 0)
+      .map((r: any) => {
+        const originalItem = currentIssue?.items.find(it => it.productId === r.productId);
+        const prod = products.find(p => p.id === r.productId);
+        return {
+          name: originalItem?.productName || prod?.name || 'Product',
+          qty: Number(r.returnQty),
+          unit: originalItem?.unit || prod?.unitId || (prod as any)?.unit || 'pcs',
+          sku: prod?.sku || originalItem?.sku || '-'
+        };
+      });
+
+    const receiptData = {
+      id: selectedIssueId,
+      type: 'RETURN' as const,
+      isDirectReturn: false,
+      issueNumber: currentIssue?.issueNumber || selectedIssueId,
+      date: new Date(),
+      staffName: user?.fullName || 'Store Keeper',
+      customerOrTech: techName,
+      siteName: linkedSiteName.trim(),
+      items: returnedItems
+    };
+
+    // 1. Proactive Offline Mode check
+    if (!navigator.onLine) {
+      const pendingSlip = offlineSyncService.savePendingSlip({
+        type: 'MATERIAL_RETURN_ISSUE',
+        title: `Return against ${currentIssue?.issueNumber || selectedIssueId} (${techName})`,
+        companyId,
+        userId: user.uid,
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: techName,
+        siteName: linkedSiteName.trim(),
+        itemsSummary: returnedItems.map(i => `${i.name} (x${i.qty} ${i.unit})`).join(', '),
+        itemCount: returnedItems.length,
+        payload: {
+          issueId: selectedIssueId,
+          issueNumber: currentIssue?.issueNumber || selectedIssueId,
+          returns: data.returns,
+          siteName: linkedSiteName.trim()
+        },
+        receiptData
+      });
+
+      receiptData.issueNumber = pendingSlip.slipCode;
+      setReturnedSlipData(receiptData);
+      toast.success(`⚡ Emergency Offline Mode: Return slip ${pendingSlip.slipCode} saved! It will sync when internet returns.`, {
+        duration: 6000
+      });
+      return;
+    }
+
     try {
       setIsSaving(true);
       await issueRepository.returnItems(selectedIssueId, data.returns, companyId, user.uid, linkedSiteName.trim());
       
-      const currentIssue = issues.find(i => i.id === selectedIssueId);
-      const tech = employees.find(e => e.id === selectedEmpId);
-      const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : 'Technician';
-
-      const returnedItems = data.returns
-        .filter((r: any) => Number(r.returnQty) > 0)
-        .map((r: any) => {
-          const originalItem = currentIssue?.items.find(it => it.productId === r.productId);
-          const prod = products.find(p => p.id === r.productId);
-          return {
-            name: originalItem?.productName || prod?.name || 'Product',
-            qty: Number(r.returnQty),
-            unit: originalItem?.unit || prod?.unitId || (prod as any)?.unit || 'pcs',
-            sku: prod?.sku || originalItem?.sku || '-'
-          };
+      toast.success("Materials returned successfully and restocked!");
+      setReturnedSlipData(receiptData);
+    } catch (error: any) {
+      // 2. Fallback to offline on connection drop
+      if (!navigator.onLine || error.message?.includes('offline') || error.message?.includes('network') || error.code === 'unavailable') {
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'MATERIAL_RETURN_ISSUE',
+          title: `Return against ${currentIssue?.issueNumber || selectedIssueId} (${techName})`,
+          companyId,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: techName,
+          siteName: linkedSiteName.trim(),
+          itemsSummary: returnedItems.map(i => `${i.name} (x${i.qty} ${i.unit})`).join(', '),
+          itemCount: returnedItems.length,
+          payload: {
+            issueId: selectedIssueId,
+            issueNumber: currentIssue?.issueNumber || selectedIssueId,
+            returns: data.returns,
+            siteName: linkedSiteName.trim()
+          },
+          receiptData
         });
 
-      toast.success("Materials returned successfully and restocked!");
-      setReturnedSlipData({
-        id: selectedIssueId,
-        type: 'RETURN',
-        isDirectReturn: false,
-        issueNumber: currentIssue?.issueNumber || selectedIssueId,
-        date: new Date(),
-        staffName: user?.fullName || 'Store Keeper',
-        customerOrTech: techName,
-        siteName: linkedSiteName.trim(),
-        items: returnedItems
-      });
-    } catch (error: any) {
+        receiptData.issueNumber = pendingSlip.slipCode;
+        setReturnedSlipData(receiptData);
+        toast.warning(`Network disconnected! Return saved locally as ${pendingSlip.slipCode} in Emergency Offline Mode.`);
+        return;
+      }
       toast.error(error.message || "Failed to return materials");
     } finally {
       setIsSaving(false);
@@ -283,6 +356,63 @@ export default function ReturnMaterialsPage() {
       return;
     }
 
+    const tech = employees.find(e => e.id === directEmpId);
+    const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : (directEmpId === 'UNLINKED' ? 'Direct Store Return' : 'Technician');
+    const returnedItems = validRows.map(r => ({
+      name: r.productName,
+      qty: Number(r.returnQty),
+      unit: r.unit || 'pcs',
+      sku: r.sku || '-'
+    }));
+
+    const receiptData = {
+      id: 'OFFLINE_TEMP',
+      type: 'RETURN' as const,
+      isDirectReturn: true,
+      directReturnNumber: 'OFF-RET',
+      date: new Date(),
+      staffName: user?.fullName || 'Store Keeper',
+      customerOrTech: techName,
+      siteName: directSiteName.trim(),
+      notes: directNotes.trim(),
+      items: returnedItems
+    };
+
+    // 1. Proactive Offline Mode check
+    if (!navigator.onLine) {
+      const pendingSlip = offlineSyncService.savePendingSlip({
+        type: 'MATERIAL_RETURN_DIRECT',
+        title: `Direct Return from ${techName}`,
+        companyId,
+        userId: user.uid,
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: techName,
+        siteName: directSiteName.trim(),
+        itemsSummary: validRows.map(r => `${r.productName} (x${r.returnQty} ${r.unit})`).join(', '),
+        itemCount: validRows.length,
+        payload: {
+          employeeId: directEmpId || 'UNLINKED',
+          siteName: directSiteName.trim(),
+          items: validRows.map(r => ({
+            productId: r.productId,
+            productName: r.productName,
+            sku: r.sku,
+            unit: r.unit,
+            returnQty: Number(r.returnQty)
+          })),
+          notes: directNotes.trim()
+        },
+        receiptData
+      });
+
+      receiptData.directReturnNumber = pendingSlip.slipCode;
+      setReturnedSlipData(receiptData);
+      toast.success(`⚡ Emergency Offline Mode: Direct return slip ${pendingSlip.slipCode} saved! It will sync when internet returns.`, {
+        duration: 6000
+      });
+      return;
+    }
+
     try {
       setIsSaving(true);
       const res = await issueRepository.returnDirectItems({
@@ -298,29 +428,45 @@ export default function ReturnMaterialsPage() {
         notes: directNotes.trim()
       }, companyId, user.uid);
 
-      const tech = employees.find(e => e.id === directEmpId);
-      const techName = tech ? `${tech.firstName} ${tech.lastName}`.trim() : (directEmpId === 'UNLINKED' ? 'Direct Store Return' : 'Technician');
-      const returnedItems = validRows.map(r => ({
-        name: r.productName,
-        qty: Number(r.returnQty),
-        unit: r.unit || 'pcs',
-        sku: r.sku || '-'
-      }));
-
       toast.success(`Direct return ${res.directReturnNumber} processed successfully and inventory restocked!`);
       setReturnedSlipData({
+        ...receiptData,
         id: res.directReturnNumber,
-        type: 'RETURN',
-        isDirectReturn: true,
-        directReturnNumber: res.directReturnNumber,
-        date: new Date(),
-        staffName: user?.fullName || 'Store Keeper',
-        customerOrTech: techName,
-        siteName: directSiteName.trim(),
-        notes: directNotes.trim(),
-        items: returnedItems
+        directReturnNumber: res.directReturnNumber
       });
     } catch (error: any) {
+      // 2. Fallback to offline on connection drop
+      if (!navigator.onLine || error.message?.includes('offline') || error.message?.includes('network') || error.code === 'unavailable') {
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'MATERIAL_RETURN_DIRECT',
+          title: `Direct Return from ${techName}`,
+          companyId,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: techName,
+          siteName: directSiteName.trim(),
+          itemsSummary: validRows.map(r => `${r.productName} (x${r.returnQty} ${r.unit})`).join(', '),
+          itemCount: validRows.length,
+          payload: {
+            employeeId: directEmpId || 'UNLINKED',
+            siteName: directSiteName.trim(),
+            items: validRows.map(r => ({
+              productId: r.productId,
+              productName: r.productName,
+              sku: r.sku,
+              unit: r.unit,
+              returnQty: Number(r.returnQty)
+            })),
+            notes: directNotes.trim()
+          },
+          receiptData
+        });
+
+        receiptData.directReturnNumber = pendingSlip.slipCode;
+        setReturnedSlipData(receiptData);
+        toast.warning(`Network disconnected! Saved locally as ${pendingSlip.slipCode} in Emergency Offline Mode.`);
+        return;
+      }
       toast.error(error.message || "Failed to process direct return");
     } finally {
       setIsSaving(false);

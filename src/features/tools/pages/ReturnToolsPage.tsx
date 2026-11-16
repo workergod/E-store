@@ -10,6 +10,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { employeeRepository } from '../../../repositories/EmployeeRepository';
 import { toolRepository } from '../../../repositories/ToolRepository';
 import { toolTransactionRepository } from '../../../repositories/ToolTransactionRepository';
+import { offlineSyncService } from '../../offline/services/offlineSyncService';
 import type { Tool, ToolIssueTransaction, ToolCondition } from '../../../shared/types/Tool';
 
 import { PageContainer } from '../../../shared/layouts/PageContainer';
@@ -88,12 +89,28 @@ export default function ReturnToolsPage() {
       toolRepository.getAll(companyId),
       toolTransactionRepository.getIssueTransactions(companyId)
     ]).then(([empList, toolList, issueList]) => {
-      setEmployees(empList.filter(e => e.status === 'ACTIVE' || !e.status));
-      setTools(toolList.filter(t => t.status !== 'DELETED'));
-      setActiveIssues(issueList.filter(i => i.status !== 'CLOSED'));
+      const activeEmps = empList.filter(e => e.status === 'ACTIVE' || !e.status);
+      const activeTools = toolList.filter(t => t.status !== 'DELETED');
+      const filteredIssues = issueList.filter(i => i.status !== 'CLOSED');
+      setEmployees(activeEmps);
+      setTools(activeTools);
+      setActiveIssues(filteredIssues);
+      offlineSyncService.cacheCatalog(companyId, {
+        employees: activeEmps,
+        tools: activeTools,
+        activeIssues: filteredIssues
+      });
     }).catch(err => {
-      console.error('Failed to load tool return data', err);
-      toast.error('Failed to load data for tool returns');
+      console.warn('Network error loading tool return data, checking cache...', err);
+      const cached = offlineSyncService.getCachedCatalog(companyId);
+      if (cached.tools.length > 0 || cached.employees.length > 0) {
+        setEmployees(cached.employees);
+        setTools(cached.tools);
+        setActiveIssues(cached.activeIssues || []);
+        toast.info('⚡ Offline Mode: Loaded cached tool return records');
+      } else {
+        toast.error('Failed to load data for tool returns');
+      }
     }).finally(() => {
       setIsLoading(false);
     });
@@ -161,6 +178,71 @@ export default function ReturnToolsPage() {
       return;
     }
 
+    const slipItems = returnPayload.map(rp => {
+      const item = selectedIssue.items.find(i => i.toolId === rp.toolId);
+      return {
+        name: item?.toolName || 'Tool',
+        code: item?.toolCode || '',
+        qty: rp.returnQty,
+        condition: rp.conditionIn,
+        action: rp.actionNeeded
+      };
+    });
+
+    const receiptData = {
+      id: selectedIssueId,
+      type: 'TOOL_RETURN' as any,
+      issueNumber: selectedIssue.issueNumber || selectedIssueId,
+      date: new Date(),
+      staffName: user?.fullName || 'Store Keeper',
+      customerOrTech: selectedIssue.employeeName || 'Technician',
+      siteName: linkedSiteName || '',
+      notes: linkedNotes.trim(),
+      items: slipItems.map(it => ({
+        name: it.name,
+        sku: it.code || '-',
+        qty: it.qty,
+        unit: 'nos'
+      }))
+    };
+
+    // 1. Proactive Offline check
+    if (!navigator.onLine) {
+      const pendingSlip = offlineSyncService.savePendingSlip({
+        type: 'TOOL_RETURN',
+        title: `Tool Return against ${selectedIssue.issueNumber || selectedIssueId}`,
+        companyId,
+        userId: user.uid,
+        staffName: user?.fullName || 'Store Keeper',
+        customerOrTech: selectedIssue.employeeName || 'Technician',
+        siteName: linkedSiteName || '',
+        itemsSummary: slipItems.map(i => `${i.name} (x${i.qty})`).join(', '),
+        itemCount: slipItems.length,
+        payload: {
+          issueId: selectedIssueId,
+          returns: returnPayload,
+          siteName: linkedSiteName.trim(),
+          returnNotes: linkedNotes.trim()
+        },
+        receiptData
+      });
+
+      setReturnedSlip({
+        id: pendingSlip.id,
+        returnNumber: pendingSlip.slipCode,
+        techName: selectedIssue.employeeName || 'Technician',
+        siteName: linkedSiteName || '',
+        notes: linkedNotes.trim(),
+        date: new Date(),
+        items: slipItems
+      });
+
+      toast.success(`⚡ Emergency Offline Mode: Tool return slip ${pendingSlip.slipCode} saved! It will sync when internet returns.`, {
+        duration: 6000
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const res = await toolTransactionRepository.returnTools(
@@ -174,17 +256,6 @@ export default function ReturnToolsPage() {
 
       toast.success(`Tools returned successfully! Return #${res.returnNumber}`);
 
-      const slipItems = returnPayload.map(rp => {
-        const item = selectedIssue.items.find(i => i.toolId === rp.toolId);
-        return {
-          name: item?.toolName || 'Tool',
-          code: item?.toolCode || '',
-          qty: rp.returnQty,
-          condition: rp.conditionIn,
-          action: rp.actionNeeded
-        };
-      });
-
       setReturnedSlip({
         id: res.id,
         returnNumber: res.returnNumber,
@@ -196,6 +267,40 @@ export default function ReturnToolsPage() {
       });
 
     } catch (err: any) {
+      // 2. Fallback to offline on connection drop
+      if (!navigator.onLine || err.message?.includes('offline') || err.message?.includes('network') || err.code === 'unavailable') {
+        const pendingSlip = offlineSyncService.savePendingSlip({
+          type: 'TOOL_RETURN',
+          title: `Tool Return against ${selectedIssue.issueNumber || selectedIssueId}`,
+          companyId,
+          userId: user.uid,
+          staffName: user?.fullName || 'Store Keeper',
+          customerOrTech: selectedIssue.employeeName || 'Technician',
+          siteName: linkedSiteName || '',
+          itemsSummary: slipItems.map(i => `${i.name} (x${i.qty})`).join(', '),
+          itemCount: slipItems.length,
+          payload: {
+            issueId: selectedIssueId,
+            returns: returnPayload,
+            siteName: linkedSiteName.trim(),
+            returnNotes: linkedNotes.trim()
+          },
+          receiptData
+        });
+
+        setReturnedSlip({
+          id: pendingSlip.id,
+          returnNumber: pendingSlip.slipCode,
+          techName: selectedIssue.employeeName || 'Technician',
+          siteName: linkedSiteName || '',
+          notes: linkedNotes.trim(),
+          date: new Date(),
+          items: slipItems
+        });
+
+        toast.warning(`Network disconnected! Saved locally as ${pendingSlip.slipCode} in Emergency Offline Mode.`);
+        return;
+      }
       toast.error(err.message || 'Failed to process tool return');
     } finally {
       setIsSubmitting(false);
