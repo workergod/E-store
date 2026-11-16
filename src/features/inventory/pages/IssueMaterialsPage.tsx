@@ -535,7 +535,7 @@ export default function IssueMaterialsPage() {
 
             {/* Right Column: Transaction Details & Submit */}
             <div className="space-y-6">
-              <FormSection title="Transaction Details" description="Select the employee receiving the items.">
+              <FormSection title="Transaction Details" description="Select the employee receiving the items." className="relative z-30">
                 <div className="space-y-4">
                   <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
                     <EmployeeSearchSelect
@@ -575,7 +575,7 @@ export default function IssueMaterialsPage() {
                 </div>
               </FormSection>
 
-              <div className="bg-card rounded-xl shadow-sm border border-border p-6 sticky top-[90px]">
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6 sticky top-[90px] relative z-10">
                 <h3 className="font-semibold mb-4 text-lg border-b border-border pb-2">Summary</h3>
                 <div className="flex justify-between items-center mb-6 text-sm">
                    <span className="text-muted-foreground">Total Unique Items</span>

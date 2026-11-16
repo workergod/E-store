@@ -36,11 +36,37 @@ export function EmployeeSearchSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [openAbove, setOpenAbove] = useState(false);
+
+  const updateDirection = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    // If less than 240px below and more space above, open upwards
+    setOpenAbove(spaceBelow < 240 && rect.top > 240);
+  };
 
   // Sync internal searchTerm when value prop changes
   useEffect(() => {
     setSearchTerm(value || '');
   }, [value]);
+
+  // Update opening direction when opening or on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDirection();
+
+    const handleScrollOrResize = () => {
+      updateDirection();
+    };
+
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
+  }, [isOpen]);
 
   // Handle click outside to close dropdown and commit custom text if applicable
   useEffect(() => {
@@ -195,10 +221,13 @@ export function EmployeeSearchSelect({
         )}
       </div>
 
-      {/* Dropdown Menu - Aligned 100% directly below the input (Right Side) */}
+      {/* Dropdown Menu - Aligned 100% directly with the input (Right Side) */}
       {isOpen && !disabled && (
         <div 
-          className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100"
+          className={cn(
+            "absolute z-[9999] left-0 right-0 bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100",
+            openAbove ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          )}
         >
           {/* Quick Option to use typed text as new/custom technician */}
           {allowCustom && searchTerm.trim() && !hasExactMatch && (
