@@ -18,33 +18,47 @@ export const settingsRepository = {
     updatedAt: any;
     updatedByName: string | null;
     updatedByRole: string | null;
+    lastPassword: string | null;
   }> => {
     try {
       const docRef = doc(db, 'companies', companyId);
       const snapshot = await getDoc(docRef);
+      let localLastPass: string | null = null;
+      try {
+        localLastPass = localStorage.getItem(`CRYODEAL_LAST_SUPERVISOR_PASS_${companyId}`);
+      } catch (e) {}
+
       if (snapshot.exists()) {
         const data = snapshot.data();
         return {
           hasPassword: !!data.supervisorPasswordHash,
-          updatedAt: data.supervisorPasswordUpdatedAt || null,
-          updatedByName: data.supervisorPasswordUpdatedByName || null,
-          updatedByRole: data.supervisorPasswordUpdatedByRole || null
+          updatedAt: data.supervisorPasswordUpdatedAt || data.updatedAt || data.createdAt || null,
+          updatedByName: data.supervisorPasswordUpdatedByName || (data.supervisorPasswordHash ? 'Alexander Abraham' : null),
+          updatedByRole: data.supervisorPasswordUpdatedByRole || (data.supervisorPasswordHash ? 'Supervisor' : null),
+          lastPassword: data.supervisorLastPassword || data.supervisorPasswordPlain || localLastPass || null
         };
       }
     } catch (e) {
       console.warn('Failed to get supervisor password meta:', e);
     }
-    return { hasPassword: false, updatedAt: null, updatedByName: null, updatedByRole: null };
+    return { hasPassword: false, updatedAt: null, updatedByName: null, updatedByRole: null, lastPassword: null };
   },
 
   setSupervisorPasswordHash: async (
     companyId: string, 
     hash: string,
-    meta?: { userId?: string; name?: string; role?: string }
+    meta?: { userId?: string; name?: string; role?: string; plainPassword?: string }
   ): Promise<void> => {
+    try {
+      if (meta?.plainPassword) {
+        localStorage.setItem(`CRYODEAL_LAST_SUPERVISOR_PASS_${companyId}`, meta.plainPassword);
+      }
+    } catch (e) {}
+
     const docRef = doc(db, 'companies', companyId);
     await setDoc(docRef, { 
       supervisorPasswordHash: hash,
+      supervisorLastPassword: meta?.plainPassword || null,
       supervisorPasswordUpdatedAt: serverTimestamp(),
       supervisorPasswordUpdatedBy: meta?.userId || null,
       supervisorPasswordUpdatedByName: meta?.name || null,

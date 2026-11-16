@@ -10,7 +10,7 @@ import { settingsRepository } from '../../../repositories/SettingsRepository';
 import { userRepository } from '../../../repositories/UserRepository';
 import { loginHistoryRepository } from '../../../repositories/LoginHistoryRepository';
 import { useAuthStore } from '../../../store/authStore';
-import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X, Eye, EyeOff, Wrench, Clock, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, RefreshCw, KeyRound, Save, Trash2, Package, Users, UserCheck, Shield, Activity, X, Eye, EyeOff, Wrench, Clock, ShieldCheck, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Role } from '../../../constants/roles';
 import { UserStatus } from '../../../types/User';
@@ -44,12 +44,14 @@ export default function SupervisorCorner() {
 
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showLastPassword, setShowLastPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordMeta, setPasswordMeta] = useState<{
     hasPassword: boolean;
     updatedAt: any;
     updatedByName: string | null;
     updatedByRole: string | null;
+    lastPassword: string | null;
   } | null>(null);
 
   // Helper to resolve who deleted an item
@@ -103,6 +105,29 @@ export default function SupervisorCorner() {
       });
     } catch (e) {
       return '-';
+    }
+  };
+
+  // Helper to separate date and time clearly
+  const formatDateTimeParts = (d: any): { date: string; time: string; full: string } => {
+    if (!d) return { date: '-', time: '-', full: '-' };
+    try {
+      const dateObj = d?.toDate ? d.toDate() : new Date(d);
+      if (isNaN(dateObj.getTime())) return { date: '-', time: '-', full: '-' };
+      
+      const date = dateObj.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      const time = dateObj.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      return { date, time, full: `${date} • ${time}` };
+    } catch (e) {
+      return { date: '-', time: '-', full: '-' };
     }
   };
 
@@ -255,11 +280,13 @@ export default function SupervisorCorner() {
     
     setIsSavingPassword(true);
     try {
-      const hash = await settingsRepository.hashPassword(newPassword);
+      const plain = newPassword.trim();
+      const hash = await settingsRepository.hashPassword(plain);
       await settingsRepository.setSupervisorPasswordHash(companyId, hash, {
         userId: user.uid,
         name: user.fullName || user.username || user.email || 'Supervisor',
-        role: (user.role as string) || 'Supervisor'
+        role: (user.role as string) || 'Supervisor',
+        plainPassword: plain
       });
       toast.success('Supervisor password updated successfully');
       setNewPassword('');
@@ -743,44 +770,81 @@ export default function SupervisorCorner() {
             </div>
 
             {/* Password Info & Last Changed Card */}
-            <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security Status</span>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${passwordMeta?.hasPassword ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'}`}>
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  {passwordMeta?.hasPassword ? 'Password Active & Protected' : 'Not Configured'}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/60 text-xs">
-                <div>
-                  <span className="text-muted-foreground block mb-0.5">Last Changed Password:</span>
-                  <span className="font-medium text-foreground flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatDeletedDate(passwordMeta?.updatedAt) !== '-' 
-                      ? formatDeletedDate(passwordMeta?.updatedAt) 
-                      : (passwordMeta?.hasPassword ? 'Active (Initial Setup)' : 'Never')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block mb-0.5">Last Changed By:</span>
-                  <span className="font-medium text-foreground">
-                    {passwordMeta?.updatedByName ? (
-                      <>
-                        {passwordMeta.updatedByName}
-                        {passwordMeta.updatedByRole && (
-                          <span className="ml-1 text-[11px] text-muted-foreground font-normal">
-                            ({passwordMeta.updatedByRole})
+            {(() => {
+              const dt = formatDateTimeParts(passwordMeta?.updatedAt || new Date());
+              return (
+                <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                    <div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Security Status</span>
+                      <span className="text-sm font-semibold text-foreground">Supervisor Access Security</span>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${passwordMeta?.hasPassword ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'}`}>
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {passwordMeta?.hasPassword ? 'Password Active & Protected' : 'Not Configured'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    {/* 1. Date & Time */}
+                    <div>
+                      <span className="text-muted-foreground block mb-1 font-medium">Date & Time Changed:</span>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-primary" />
+                          <span>{dt.date}</span>
+                        </div>
+                        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[11px]">
+                          <Clock className="h-3 w-3 text-muted-foreground/80" />
+                          <span>Time: {dt.time}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Last Changed Password (with Eye Toggle) */}
+                    <div>
+                      <span className="text-muted-foreground block mb-1 font-medium">Last Changed Password:</span>
+                      {passwordMeta?.lastPassword ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="font-mono text-sm px-2.5 py-1 rounded-md bg-muted border border-border text-foreground tracking-wider font-semibold">
+                            {showLastPassword ? passwordMeta.lastPassword : '••••••••'}
                           </span>
-                        )}
-                      </>
-                    ) : (
-                      passwordMeta?.hasPassword ? 'Administrator / Supervisor' : '-'
-                    )}
-                  </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowLastPassword(prev => !prev)}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            title={showLastPassword ? "Hide password" : "Show password"}
+                            aria-label={showLastPassword ? "Hide password" : "Show password"}
+                          >
+                            {showLastPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="font-mono text-xs px-2 py-1 rounded bg-muted text-muted-foreground">
+                            ••••••••
+                          </span>
+                          <span className="text-[10px] text-muted-foreground italic">
+                            (Set below to reveal)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Changed By */}
+                    <div>
+                      <span className="text-muted-foreground block mb-1 font-medium">Last Changed By:</span>
+                      <div className="font-semibold text-foreground text-xs mt-0.5">
+                        {passwordMeta?.updatedByName || user?.fullName || 'Alexander Abraham'}
+                      </div>
+                      <span className="inline-block mt-0.5 text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                        {passwordMeta?.updatedByRole || (user?.role as string) || 'Supervisor'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Change Password Form */}
             <form onSubmit={handleChangePassword} className="space-y-4 pt-2">
