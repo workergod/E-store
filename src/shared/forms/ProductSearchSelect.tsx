@@ -218,7 +218,7 @@ export function ProductSearchSelect({
   const hasValue = Boolean(value || (allowCustom && searchTerm.trim()));
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
+    <div ref={containerRef} className={cn("relative w-full min-w-[240px]", isOpen ? "z-50" : "z-10", className)}>
       <div 
         onClick={() => {
           if (!disabled) {
@@ -228,7 +228,7 @@ export function ProductSearchSelect({
           }
         }}
         className={cn(
-          "relative flex items-center w-full h-10 rounded-md border bg-background transition-all cursor-text",
+          "relative flex items-center w-full h-10 rounded-lg border bg-background transition-all cursor-text",
           error ? "border-destructive ring-1 ring-destructive/40" : "border-input hover:border-primary/50 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary",
           disabled && "opacity-50 pointer-events-none"
         )}
@@ -240,6 +240,7 @@ export function ProductSearchSelect({
           value={searchTerm}
           disabled={disabled}
           placeholder={placeholder}
+          title={searchTerm || placeholder}
           onFocus={() => {
             setIsOpen(true);
             updateDirection();
@@ -265,7 +266,7 @@ export function ProductSearchSelect({
             }
           }}
           onKeyDown={handleKeyDown}
-          className="w-full h-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground truncate"
+          className="w-full h-full bg-transparent px-3 text-sm font-medium outline-none placeholder:text-muted-foreground truncate"
         />
 
         {hasValue ? (

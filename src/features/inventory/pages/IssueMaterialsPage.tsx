@@ -411,9 +411,9 @@ export default function IssueMaterialsPage() {
 
       <FormProvider {...methods}>
         <AppForm onSubmit={methods.handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column: Items */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-7 xl:col-span-8 space-y-6">
               <FormSection title="Items to Issue" description="Select products and quantities.">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Line Items</p>
@@ -422,15 +422,15 @@ export default function IssueMaterialsPage() {
                   </AppButton>
                 </div>
 
-                <div className="overflow-visible">
-                  <table className="w-full text-sm text-left border-collapse">
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <table className="w-full text-sm text-left border-collapse min-w-[640px]">
                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 rounded-t-lg">
                       <tr>
-                        <th className="px-4 py-3 font-medium text-left w-[38%]">Product</th>
-                        <th className="px-4 py-3 font-medium text-left w-[18%]">Current Stock</th>
-                        <th className="px-4 py-3 font-medium text-left w-[22%] min-w-[130px]">Qty to Issue</th>
-                        <th className="px-4 py-3 font-medium text-left w-[17%]">Remaining</th>
-                        <th className="px-4 py-3 font-medium text-center w-[5%]"></th>
+                        <th className="px-4 py-3 font-semibold text-left min-w-[320px]">Product / Material</th>
+                        <th className="px-3 py-3 font-semibold text-center w-28 whitespace-nowrap">Current Stock</th>
+                        <th className="px-3 py-3 font-semibold text-center w-36 whitespace-nowrap">Qty to Issue</th>
+                        <th className="px-3 py-3 font-semibold text-center w-28 whitespace-nowrap">Remaining</th>
+                        <th className="px-2 py-3 font-semibold text-center w-12"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -444,31 +444,53 @@ export default function IssueMaterialsPage() {
                         const error = methods.formState.errors.items?.[index]?.productId;
                         return (
                           <tr key={field.id} className="border-b border-border hover:bg-muted/10 transition-colors relative focus-within:z-40">
-                            <td className="p-2 relative">
+                            <td className="p-2.5 relative min-w-[320px]">
                               <ProductSearchSelect
                                 value={wItem?.productId || ''}
                                 onChange={(prodId) => methods.setValue(`items.${index}.productId`, prodId, { shouldValidate: true })}
                                 products={products}
                                 error={!!error}
-                                placeholder="Type to search product or SKU..."
+                                placeholder="Type or search product / SKU..."
                               />
+                              {prod && (
+                                <div className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-2 flex-wrap px-1">
+                                  <span className="font-semibold text-foreground text-xs">{prod.name}</span>
+                                  {prod.sku && (
+                                    <span className="font-mono bg-muted px-1.5 py-0.5 rounded border border-border/50 text-[10px]">
+                                      SKU: {prod.sku}
+                                    </span>
+                                  )}
+                                  {prod.brandId && prod.brandId !== 'general' && (
+                                    <span className="text-[11px] text-muted-foreground">
+                                      Brand: <span className="font-medium text-foreground capitalize">{prod.brandId}</span>
+                                    </span>
+                                  )}
+                                  {prod.rackLocationId && (
+                                    <span className="text-[11px] text-muted-foreground">
+                                      Rack: <span className="font-medium text-foreground">{prod.rackLocationId}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </td>
-                            <td className="px-4 py-2 font-medium">
+                            <td className="px-3 py-2 text-center font-medium">
                               {prod ? (
-                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold" : "text-[hsl(var(--destructive))] font-bold"}>
+                                <span className={currentStock > 0 ? "text-[hsl(var(--success))] font-bold text-sm" : "text-[hsl(var(--destructive))] font-bold text-sm"}>
                                   {currentStock} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
                                 </span>
-                              ) : '-'}
+                              ) : (
+                                <span className="text-muted-foreground/50 font-medium">-</span>
+                              )}
                             </td>
                             <td className="p-2">
-                              <div className="relative flex items-center min-w-[120px]">
+                              <div className="relative flex items-center w-full min-w-[120px]">
                                 <input 
                                   type="number" 
                                   step="any" 
                                   min="0.01" 
                                   {...methods.register(`items.${index}.issuedQty` as const)} 
                                   className="w-full h-10 rounded-lg border border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-foreground pl-3.5 pr-14 shadow-xs transition-all outline-none" 
-                                  placeholder="0" 
+                                  placeholder="1" 
                                 />
                                 {unit && (
                                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-xs font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded border border-border/50 select-none">
@@ -477,17 +499,28 @@ export default function IssueMaterialsPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-3 py-2 text-center">
                               {prod ? (
                                 <span className={`text-xs font-semibold px-2 py-1 rounded inline-block ${remaining !== null && remaining < 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
                                   {remaining} {unit}
                                 </span>
-                              ) : '-'}
+                              ) : (
+                                <span className="text-muted-foreground/50 font-medium">-</span>
+                              )}
                             </td>
                             <td className="p-2 text-center">
-                              <AppButton type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] h-8 w-8">
-                                <Trash2 className="h-4 w-4" />
-                              </AppButton>
+                              {fields.length > 1 && (
+                                <AppButton 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => remove(index)} 
+                                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                                  title="Remove item"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </AppButton>
+                              )}
                             </td>
                           </tr>
                         );
@@ -511,7 +544,7 @@ export default function IssueMaterialsPage() {
             </div>
 
             {/* Right Column: Transaction Details & Submit */}
-            <div className="space-y-6">
+            <div className="lg:col-span-5 xl:col-span-4 space-y-6">
               <FormSection title="Transaction Details" description="Select the employee receiving the items.">
                 <div className="space-y-4">
                   <FormField label="Technician / Employee" required error={methods.formState.errors.employeeName?.message}>
