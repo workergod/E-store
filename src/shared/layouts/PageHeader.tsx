@@ -2,8 +2,8 @@ import * as React from "react"
 import { cn } from "../utils/cn"
 
 interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  title: string
-  description?: string
+  title: React.ReactNode
+  description?: React.ReactNode
   actions?: React.ReactNode
 }
 
@@ -11,11 +11,19 @@ export function PageHeader({ title, description, actions, className, ...props }:
   return (
     <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4", className)} {...props}>
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+        {typeof title === 'string' ? (
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+        ) : (
+          <div>{title}</div>
+        )}
         {description && (
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            {description}
-          </p>
+          typeof description === 'string' ? (
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">
+              {description}
+            </p>
+          ) : (
+            <div className="mt-1">{description}</div>
+          )
         )}
       </div>
       {actions && (

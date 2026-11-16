@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Barcode, History, Image as ImageIcon, Trash2, RotateCcw } from 'lucide-react';
+import { 
+  ArrowLeft, Edit, History, Image as ImageIcon, Trash2, RotateCcw, Package 
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from "../../../store/authStore";
 import { Role } from '../../../constants/roles';
@@ -9,8 +11,13 @@ import { stockLedgerRepository } from '../../../repositories/StockLedgerReposito
 import type { Product } from '../../../shared/types/Product';
 import type { StockTransaction } from '../../../shared/types/StockTransaction';
 import { ProductTimeline } from '../../stock/components/ProductTimeline';
-import { Button } from '../../../shared/ui/Button';
 import { ProductFormDialog } from '../components/ProductFormDialog';
+
+import { PageContainer } from '../../../shared/layouts/PageContainer';
+import { PageHeader } from '../../../shared/layouts/PageHeader';
+import { AppButton } from '../../../shared/app/AppButton';
+import { AppCard } from '../../../shared/app/AppCard';
+import { StatusBadge } from '../../../shared/feedback/StatusBadge';
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -106,116 +113,253 @@ export default function ProductDetailsPage() {
   }, [id, companyId, navigate]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading product details...</div>;
+    return (
+      <PageContainer>
+        <div className="p-12 text-center text-muted-foreground font-medium">
+          Loading product details...
+        </div>
+      </PageContainer>
+    );
   }
 
   if (!product) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/products')}>
+    <PageContainer>
+      {/* Top Navigation */}
+      <div className="mb-2">
+        <AppButton 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/products')} 
+          className="-ml-3 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Products
-        </Button>
+        </AppButton>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{product.name}</h1>
-          <p className="text-muted-foreground mt-1">SKU: {product.sku}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {product.status !== 'DELETED' && (
-            <Button onClick={() => setIsFormOpen(true)}><Edit className="h-4 w-4 mr-2" /> Edit Product</Button>
-          )}
-          {canDelete && product.status !== 'DELETED' && (
-            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive">
-              <Trash2 className="h-4 w-4 mr-2" /> Delete Product
-            </Button>
-          )}
-          {canDelete && product.status === 'DELETED' && (
-            <Button variant="outline" onClick={handleRestore} className="text-emerald-600 hover:bg-emerald-50 border-emerald-500/30">
-              <RotateCcw className="h-4 w-4 mr-2" /> Restore Product
-            </Button>
-          )}
-        </div>
-      </div>
+      {/* Main Page Header */}
+      <PageHeader
+        title={
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              {product.name}
+            </h1>
+            <StatusBadge status={product.status || 'Active'} />
+            {product.isTool && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                Tool
+              </span>
+            )}
+          </div>
+        }
+        description={
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-muted text-muted-foreground border border-border">
+              SKU: {product.sku}
+            </span>
+            {product.barcode && (
+              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-muted text-muted-foreground border border-border">
+                Barcode: {product.barcode}
+              </span>
+            )}
+            {product.shortName && (
+              <span className="text-xs text-muted-foreground">
+                Alias: <span className="font-medium text-foreground">{product.shortName}</span>
+              </span>
+            )}
+          </div>
+        }
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {product.status !== 'DELETED' && (
+              <AppButton onClick={() => setIsFormOpen(true)} className="shadow-xs">
+                <Edit className="h-4 w-4 mr-2" /> Edit Product
+              </AppButton>
+            )}
+            {canDelete && product.status !== 'DELETED' && (
+              <AppButton 
+                variant="destructive" 
+                onClick={handleDelete} 
+                className="shadow-xs"
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Product
+              </AppButton>
+            )}
+            {canDelete && product.status === 'DELETED' && (
+              <AppButton 
+                variant="outline" 
+                onClick={handleRestore} 
+                className="text-emerald-600 hover:bg-emerald-50 border-emerald-500/30"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" /> Restore Product
+              </AppButton>
+            )}
+          </div>
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* Left Column: Details */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-            <h3 className="text-lg font-semibold mb-4 border-b border-border pb-2">Overview</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Category</p>
-                <p className="font-medium">{product.categoryId}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Brand</p>
-                <p className="font-medium">{product.brandId}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Status</p>
-                <p className="font-medium">{product.status}</p>
-              </div>
-              <div className="col-span-2 mt-4">
-                <p className="text-muted-foreground">Description</p>
-                <p className="mt-1 text-foreground">{product.description || 'No description provided.'}</p>
+        {/* Left Column: Overview and Stock Ledger History (2 columns on lg) */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Overview Card */}
+          <AppCard className="p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-5">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                <h3 className="text-base font-semibold text-foreground">Overview & Specifications</h3>
               </div>
             </div>
-          </div>
 
-          <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-            <div className="flex items-center gap-2 mb-4 border-b border-border pb-2">
-              <History className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold">Stock History</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-6 text-sm">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</p>
+                <p className="font-semibold text-foreground mt-1 capitalize">{product.categoryId || 'General'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Brand</p>
+                <p className="font-semibold text-foreground mt-1 capitalize">{product.brandId || 'General'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</p>
+                <p className="font-semibold text-foreground mt-1 uppercase">{product.unitId || product.unit || 'pcs'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rack / Location</p>
+                <p className="font-semibold text-foreground mt-1">{product.rackLocationId || 'Not Assigned'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Classification</p>
+                <p className="font-semibold text-foreground mt-1">{product.isTool ? 'Tool / Equipment' : 'Store Material'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Barcode</p>
+                <p className="font-semibold font-mono text-foreground mt-1">{product.barcode || '—'}</p>
+              </div>
+            </div>
+
+            {/* Description Section */}
+            <div className="pt-5 border-t border-border mt-5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Description</p>
+              <div className="p-3.5 rounded-lg bg-muted/40 border border-border/60 text-sm text-foreground leading-relaxed">
+                {product.description?.trim() ? (
+                  product.description
+                ) : (
+                  <span className="text-muted-foreground italic">No description provided.</span>
+                )}
+              </div>
+            </div>
+          </AppCard>
+
+          {/* Stock History & Movements Card */}
+          <AppCard className="p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                <h3 className="text-base font-semibold text-foreground">Stock History</h3>
+              </div>
+              {stockHistory.length > 0 && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {stockHistory.length} Movement{stockHistory.length === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
             
             {stockHistory.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">No stock movements recorded yet.</p>
+              <div className="py-8 text-center flex flex-col items-center justify-center text-muted-foreground">
+                <div className="w-10 h-10 rounded-full bg-muted/70 flex items-center justify-center mb-2">
+                  <History className="h-5 w-5 text-muted-foreground/60" />
+                </div>
+                <p className="text-sm font-medium text-foreground">No stock movements recorded yet</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Transactions and issue/return logs for this item will appear here.</p>
+              </div>
             ) : (
               <ProductTimeline transactions={stockHistory} />
             )}
-          </div>
+          </AppCard>
         </div>
 
-        {/* Right Column: Status & Images */}
+        {/* Right Column: Stock Summary & Product Image */}
         <div className="space-y-6">
-          <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-             <h3 className="text-lg font-semibold mb-4 border-b border-border pb-2">Stock Summary</h3>
-             <div className="text-4xl font-bold text-primary mb-2">
-               {product.currentStock} <span className="text-xl font-medium text-muted-foreground">{product.unitId || (product as any).unit || 'pcs'}</span>
-             </div>
-             <p className="text-sm text-muted-foreground mb-4">Available {product.unitId || (product as any).unit || 'Units'}</p>
-             
-             <div className="space-y-2 text-sm">
-               <div className="flex justify-between">
-                 <span className="text-muted-foreground">Reserved</span>
-                 <span className="font-medium">0</span>
-               </div>
-               <div className="flex justify-between">
-                 <span className="text-muted-foreground">Min / Max Level</span>
-                 <span className="font-medium">{product.minimumStock} / {product.maximumStock || '-'}</span>
-               </div>
-             </div>
-          </div>
+          
+          {/* Stock Summary Card */}
+          <AppCard className="p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <h3 className="text-base font-semibold text-foreground">Stock Summary</h3>
+              <StatusBadge status={product.status || 'Active'} />
+            </div>
 
-          <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-             <div className="flex items-center gap-2 mb-4 border-b border-border pb-2">
-               <ImageIcon className="h-5 w-5 text-muted-foreground" />
-               <h3 className="text-lg font-semibold">Product Image</h3>
-             </div>
-             <div className="aspect-square bg-muted rounded-lg flex items-center justify-center border border-border">
-               {product.primaryImage ? (
-                 <img src={product.primaryImage} alt={product.name} className="object-cover rounded-lg w-full h-full" />
-               ) : (
-                 <span className="text-muted-foreground">No Image</span>
-               )}
-             </div>
-          </div>
+            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 mb-4">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">Current Stock</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-extrabold tracking-tight text-primary">
+                  {product.currentStock}
+                </span>
+                <span className="text-base font-medium text-muted-foreground">
+                  {product.unitId || product.unit || 'nos'}
+                </span>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-primary/10 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Availability</span>
+                {product.currentStock <= (product.minimumStock || 0) ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-destructive/10 text-destructive border border-destructive/20">
+                    Low Stock Alert
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    In Stock & Available
+                  </span>
+                )}
+              </div>
+            </div>
+             
+            <div className="space-y-2.5 text-sm">
+              <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Reserved</span>
+                <span className="font-semibold font-mono text-foreground">0</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Min Alert Level</span>
+                <span className="font-semibold font-mono text-foreground">{product.minimumStock ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Max Capacity Level</span>
+                <span className="font-semibold font-mono text-foreground">{product.maximumStock ? product.maximumStock : '—'}</span>
+              </div>
+            </div>
+          </AppCard>
+
+          {/* Product Image Card */}
+          <AppCard className="p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">Product Image</h3>
+              </div>
+            </div>
+
+            <div className="h-52 w-full bg-muted/30 rounded-xl flex flex-col items-center justify-center border border-dashed border-border overflow-hidden p-2">
+              {product.primaryImage ? (
+                <img 
+                  src={product.primaryImage} 
+                  alt={product.name} 
+                  className="object-contain w-full h-full rounded-lg" 
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted/80 flex items-center justify-center mb-2">
+                    <ImageIcon className="h-6 w-6 text-muted-foreground/60" />
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">No image uploaded</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Use "Edit Product" to upload a photo</p>
+                </div>
+              )}
+            </div>
+          </AppCard>
 
         </div>
       </div>
@@ -228,6 +372,6 @@ export default function ProductDetailsPage() {
           product={product}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
