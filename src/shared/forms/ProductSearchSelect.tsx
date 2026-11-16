@@ -218,7 +218,7 @@ export function ProductSearchSelect({
   const hasValue = Boolean(value || (allowCustom && searchTerm.trim()));
 
   return (
-    <div ref={containerRef} className={cn("relative w-full min-w-[240px]", isOpen ? "z-50" : "z-10", className)}>
+    <div ref={containerRef} className={cn("relative w-full", isOpen ? "z-50" : "z-10", className)}>
       <div 
         onClick={() => {
           if (!disabled) {
